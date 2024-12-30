@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - /train/icassp/table3_ssp-ablations/base
+
+experiment: 1_full_random
+model:
+  target_amp_is_diagonal: false
+  target_amp_bias_only: false
+  apply_target_amp_to_n_layers: 1
+  target_amp_init: random

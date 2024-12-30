@@ -1,0 +1,38 @@
+# @package _global_
+defaults:
+  - /train/icassp/table1_model_comparisons/base
+
+experiment: all_data_turbo_updated_v5
+model:
+  whisper_model: openai/whisper-large-v3-turbo
+  reinit_encoder_from: ${oc.env:PRETRAINED_CTC_MODELS_PATH}/${model.whisper_model}_ctc-pretrain_libri/model.safetensors
+
+data:
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami-sdm_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/libri2mix_both_100_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/libri2mix_both_360_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/lsmix-clean_train_sc_cutset_30s_noa.jsonl.gz
+  dev_cutsets: ${oc.env:MANIFEST_DIR}/notsofar_dev_sc_cutset.jsonl.gz
+  eval_cutsets: ${oc.env:MANIFEST_DIR}/notsofar_eval_sc_cutset.jsonl.gz
+  dataset_weights:
+    - 10
+    - 10
+    - 3
+    - 3
+    - 1
+  audio_path_prefix: null
+  audio_path_prefix_replacement: null
+
+training:
+  learning_rate: 2e-7
+  warmup_steps: 5000
+  remove_timestamps_from_ctc: true
+  eval_strategy: steps
+  save_strategy: steps
+  eval_steps: 500
+  save_steps: 500
+  dataloader_num_workers: 1
+  use_amplifiers_only_n_steps: 500
+  use_amplifiers_only_n_epochs: 0

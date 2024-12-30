@@ -1,0 +1,17 @@
+# @package _global_
+defaults:
+  - /train/icassp/table1_model_comparisons/base
+
+experiment: ssp_lsmix_decode_dec_only
+data:
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/libri2mix_both_100_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/libri2mix_clean_100_train_sc_cutset_30s.jsonl.gz
+  dev_cutsets: ${oc.env:MANIFEST_DIR}/dev_Libri2Mix_both_cutset_sc.json
+  eval_cutsets: ${oc.env:MANIFEST_DIR}/test_Libri2Mix_both_cutset_sc.json
+model:
+  reinit_from: ${oc.env:PRETRAINED_MODEL_PATH}
+  reinit_encoder_from: null
+training:
+  decode_only: true
+  per_device_eval_batch_size: 32

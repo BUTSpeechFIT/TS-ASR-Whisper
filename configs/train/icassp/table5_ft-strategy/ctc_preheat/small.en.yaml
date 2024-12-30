@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /train/icassp/table5_ft-strategy/ctc_preheat/base
+
+model:
+  whisper_model: openai/whisper-small.en
+  reinit_encoder_from: ${oc.env:PRETRAINED_CTC_MODELS_PATH}/${model.whisper_model}_ctc-pretrain_libri/model.safetensors
+experiment: ctc_preheat-${model.whisper_model}

@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - /train/icassp/table3_ssp-ablations/base
+
+experiment: 12_bias_only_disparagement
+model:
+  target_amp_is_diagonal: true
+  target_amp_bias_only: true
+  apply_target_amp_to_n_layers: 12
+  target_amp_init: disparagement

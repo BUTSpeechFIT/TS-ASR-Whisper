@@ -1,0 +1,3 @@
+# Declare files that will always have LF line endings on checkout. This is especially important for *.sh files, since
+# if CRLF is written into these files, they may cause errors when invoked (e.g. "not found").
+*.sh text eol=lf 

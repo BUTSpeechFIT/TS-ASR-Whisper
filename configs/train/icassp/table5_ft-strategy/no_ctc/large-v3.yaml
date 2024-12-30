@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train/icassp/table5_ft-strategy/no_ctc/base
+
+model:
+  whisper_model: openai/whisper-large-v3
+experiment: no_ctc-${model.whisper_model}
+training:
+  ddp_find_unused_parameters: true

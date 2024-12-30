@@ -1,0 +1,14 @@
+# @package _global_
+defaults:
+  - /train/icassp/table2_diar_cond_styles_dset_size/base
+
+experiment: qk_biasing_nsf_ami_lsmix_v2
+model:
+  use_qk_biasing: true
+  shift_pos_embeds: true
+data:
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami-sdm_train_sc_cutset_30s.jsonl.gz
+  - AUDIO_PATH_PREFIX/libri2mix_both_100_train_sc_cutset_30s.jsonl.gz
+  - AUDIO_PATH_PREFIX/libri2mix_clean_100_train_sc_cutset_30s.jsonl.gz

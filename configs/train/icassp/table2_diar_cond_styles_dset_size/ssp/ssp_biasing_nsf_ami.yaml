@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train/icassp/table2_diar_cond_styles_dset_size/base
+
+experiment: ssp_biasing_nsf_ami
+data:
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami-sdm_train_sc_cutset_30s.jsonl.gz

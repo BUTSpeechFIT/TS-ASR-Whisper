@@ -1,0 +1,12 @@
+# @package _global_
+defaults:
+  - /train/icassp/table4_ssp-information/base
+
+experiment: diag_proj_tgt_v2
+model:
+  target_amp_is_diagonal: true
+  target_amp_bias_only: false
+  target_amp_use_silence: false
+  target_amp_use_target: true
+  target_amp_use_overlap: false
+  target_amp_use_non_target: false

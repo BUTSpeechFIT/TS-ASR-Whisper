@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+  - /train/icassp/table1_model_comparisons/base
+
+experiment: ssp_all_datasets_desh_mixtures_ls2mix_ami_nsf_lsmixtures_ls2mix_decode_l2mix_clean_2
+model:
+  reinit_from: ${oc.env:PRETRAINED_MODEL_PATH}
+  reinit_encoder_from: null
+data:
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/ami-sdm_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/notsofar_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/libri2mix_both_100_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/libri2mix_clean_100_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/train-360_Libri2Mix_clean_cutset_sc.json
+  - ${oc.env:MANIFEST_DIR}/train-360_Libri2Mix_both_cutset_sc.json
+  dev_cutsets: ${oc.env:MANIFEST_DIR}/ami-sdm_dev_sc_cutset.jsonl.gz
+  eval_cutsets: ${oc.env:MANIFEST_DIR}/test_Libri2Mix_clean_cutset_sc.json
+training:
+  decode_only: true

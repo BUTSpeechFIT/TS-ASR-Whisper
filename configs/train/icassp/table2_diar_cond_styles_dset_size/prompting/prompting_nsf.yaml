@@ -1,0 +1,14 @@
+# @package _global_
+defaults:
+  - /train/icassp/table2_diar_cond_styles_dset_size/base
+
+experiment: prompting_nsf
+training:
+  use_t_spk_embed: true
+  use_target_amplifiers: false
+model:
+  embed_extractor_model_path: ${oc.env:EMBED_EXTRACTOR_PATH}
+data:
+  path_to_store_t_spk_embed: ${oc.env:PATH_TO_CACHE_EMBEDDINGS}
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar_train_sc_cutset_30s.jsonl.gz

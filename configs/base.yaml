@@ -1,0 +1,104 @@
+experiment: DEFAULT_EXPERIMENT
+
+model:
+  ctc_weight: 0.3
+  whisper_model: "openai/whisper-small.en"
+  use_qk_biasing: false
+  shift_pos_embeds: false
+  pretrained_encoder: null
+  reinit_encoder_from: null
+  reinit_from: null
+  target_amp_is_diagonal: true
+  target_amp_bias_only: false
+  target_amp_use_silence: true
+  target_amp_use_target: true
+  target_amp_use_overlap: true
+  target_amp_use_non_target: true
+  apply_target_amp_to_n_layers: -1  # Means all layers
+  target_amp_init: "disparagement"
+  prefixes_to_preheat: ['model.encoder.additional_layer', 'model.encoder.additional_self_attention_layer', 'model.encoder.lm_head', 'model.encoder.subsample_conv1', 'model.encoder.subsample_conv2', 'model.encoder.target_amplifiers', 'model.encoder.blank_projection', 'model.encoder.modifiers','model.encoder.target_embeddings_proj']
+data:
+  use_libri: false
+  libri_train_cached_path: ${oc.env:LIBRI_TRAIN_CACHED_PATH}
+  libri_dev_cached_path: ${oc.env:LIBRI_DEV_CACHED_PATH}
+  train_cutsets:
+    - ${oc.env:MANIFEST_DIR}/notsofar_train_sc_cutset_30s.jsonl.gz       # TODO: Use MANIFEST_DIR
+  dev_cutsets: ${oc.env:MANIFEST_DIR}/notsofar_dev_sc_cutset.jsonl.gz  # MANIFEST_DIR is a new env variable
+  eval_cutsets: ${oc.env:MANIFEST_DIR}/notsofar_eval_sc_cutset.jsonl.gz
+  use_timestamps: true
+  dev_decoding_samples: 1000
+  train_with_diar_outputs: null
+  train_text_norm: "whisper_nsf"
+  eval_text_norm: "whisper_nsf"
+  # musan_noises: ${oc.env:MUSAN_PATH}
+  empty_transcripts_ratio: 0.0
+  do_augment: false
+  audio_path_prefix: ${oc.env:AUDIO_PATH_PREFIX}
+  audio_path_prefix_replacement: ${oc.env:AUDIO_PATH_PREFIX_REPLACEMENT}
+  use_random_segmentation: false
+  mask_inputs: false
+  random_sentence_l_crop_p: 0.0
+  random_sentence_r_crop_p: 0.0
+  max_l_crop: 0
+  max_r_crop: 0
+  vad_from_alignments: false
+  cache_features_for_dev: false
+  dataset_weights: null
+
+decoding:
+  decoding_ctc_weight: 0.0
+  condition_on_prev: false
+  length_penalty: 1.0
+
+training:
+  auto_find_batch_size: true
+  bf16: true
+  bf16_full_eval: true
+  dataloader_num_workers: 2
+  dataloader_prefetch_factor: 1
+  dataloader_pin_memory: false
+  overall_batch_size: 64
+  decode_only: false
+  use_custom_optimizer: true
+  use_amplifiers_only_n_epochs: 1
+  remove_timestamps_from_ctc: false
+  target_amp_lr_multiplier: 100.0
+  use_target_amplifiers: true
+  per_device_train_batch_size: 1 #  It's set to overall_batch_size // (num_gpus * gradient_accumulation_steps)
+  per_device_eval_batch_size: 4
+  max_steps: 50000
+  num_train_epochs: 10
+  early_stopping_patience: 5
+  gradient_accumulation_steps: 1
+  learning_rate: 2e-6
+  warmup_steps: 2000
+  weight_decay: 0.0
+  greater_is_better: false
+  ddp_find_unused_parameters: false
+  generation_max_length: 225
+  predict_with_generate: true
+
+  eval_strategy: "epoch"
+  save_strategy: "epoch"
+  eval_steps: 1000 #  If strategy is steps, it will evaluate every eval_steps
+  save_steps: 1000 #  If strategy is steps, it will save every save_steps
+
+  metric_for_best_model: eval_tcp_wer
+  train_metrics_list: ["tcp_wer", "cp_wer"]
+  eval_metrics_list: ["tcp_wer", "cp_wer"]
+
+  do_train: true
+  load_best_model_at_end: true
+  logging_steps: 5
+  eval_delay: 2
+
+  output_dir: ${oc.env:EXPERIMENT_PATH}/${experiment}
+  run_name: ${experiment}
+
+  remove_unused_columns: false
+
+hydra:
+  output_subdir: null
+
+wandb:
+  project: "chime2024_ts_asr_whisper"

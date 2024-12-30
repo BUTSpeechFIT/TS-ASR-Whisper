@@ -1,0 +1,22 @@
+# @package _global_
+
+experiment: "nsf_decode_mt-asr_joint_no_ctc"
+
+model:
+  whisper_model: "openai/whisper-large-v3-turbo"
+  reinit_from: "${oc.env:PRETRAINED_MODEL_PATH}/whisper_large_v3_turbo_v2.9.1/checkpoint-10962/model.safetensors"
+  mt_num_speakers: 8
+  mt_asr: true
+
+data:
+  eval_cutsets: "${oc.env:MANIFEST_DIR}/notsofar_eval_sc_cutset.jsonl.gz"
+
+training:
+  decode_only: true
+  eval_metrics_list: [ "tcp_wer", "cp_wer", "tcorc_wer" ]
+  per_device_eval_batch_size: 3
+  generation_num_beams: 1
+
+decoding:
+  decoding_ctc_weight: 0
+  condition_on_prev: false

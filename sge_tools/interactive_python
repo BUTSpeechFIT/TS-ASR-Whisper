@@ -1,0 +1,39 @@
+#!/bin/bash
+unset PYTHONPATH
+unset PYTHONHOME
+source /mnt/matylda5/ipoloka/miniconda3/bin/activate /mnt/matylda5/ipoloka/miniconda3/envs/notsofar
+
+PORT=9049
+
+# Check if port is already in use
+if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null ; then
+    echo "Port $PORT is already in use. Port forwarding is already running."
+else
+    # Start port forwarding
+    ssh -N -D $PORT pcspeech4 &
+    echo "Port forwarding started on port $PORT."
+fi
+
+# If N_GPUS is set, export devices
+if [ -n "$N_GPUS" ]; then
+  export $(/mnt/matylda4/kesiraju/bin/gpus $N_GPUS) || exit 1
+  echo "Visible devices: ${CUDA_VISIBLE_DEVICES}"
+else
+  export CUDA_VISIBLE_DEVICES=""
+fi
+
+
+export http_proxy=socks5://localhost:$PORT
+export https_proxy=socks5://localhost:$PORT
+export PATH="/mnt/matylda5/ipoloka/utils/SCTK/bin:$PATH"
+export PYTHONPATH="/mnt/matylda5/ipoloka/chime/notsofar/CHIME2024/inference:$PYTHONPATH"
+export HF_HOME="/mnt/scratch/tmp/ipoloka/hf_cache"
+
+source /mnt/matylda5/ipoloka/challenges/NOTSOFAR1-Challenge/configs/local_paths.sh
+
+# if more than one device is passed, use torchrun to run the script
+if [ "$N_GPUS" -gt 1 ]; then
+  torchrun --standalone --nnodes=1 --nproc-per-node=$N_GPUS "$@"
+else
+  python "$@"
+fi

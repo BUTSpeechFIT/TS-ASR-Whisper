@@ -1,0 +1,23 @@
+# @package _global_
+model:
+  whisper_model: openai/whisper-medium
+data:
+  use_libri: true
+  use_timestamps: false
+  libri_train_cached_path: null
+  libri_dev_cached_path: null
+training:
+  eval_delay: 1
+  pretrain_encoder: true
+  learning_rate: 0.0003
+  warmup_steps: 1000
+  weight_decay: 1.0e-06
+  bf16: true
+  bf16_full_eval: false
+  per_device_train_batch_size: 64
+  per_device_eval_batch_size: 128
+  gradient_accumulation_steps: 1
+  dataloader_num_workers: 16
+  dataloader_prefetch_factor: 2
+  metric_for_best_model: eval_wer
+  use_target_amplifiers: false

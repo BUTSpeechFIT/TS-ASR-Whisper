@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train/icassp/table1_final-models/base
+
+data:
+  train_cutsets: ${oc.env:MANIFEST_DIR}/ami-sdm_train_sc_cutset_30s.jsonl.gz
+  dev_cutsets: ${oc.env:MANIFEST_DIR}/ami-sdm_dev_sc_cutset.jsonl.gz
+  eval_cutsets: ${oc.env:MANIFEST_DIR}/ami-sdm_test_sc_cutset.jsonl.gz
+  

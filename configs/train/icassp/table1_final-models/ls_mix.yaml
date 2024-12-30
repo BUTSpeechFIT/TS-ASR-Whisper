@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - /train/icassp/table1_final-models/base
+
+data:
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/libri2mix_both_100_train_sc_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/libri2mix_clean_100_train_sc_cutset_30s.jsonl.gz
+  dev_cutsets: ${oc.env:MANIFEST_DIR}/dev_Libri2Mix_clean_cutset_sc.json
+  eval_cutsets: ${oc.env:MANIFEST_DIR}/test_Libri2Mix_clean_cutset_sc.json
