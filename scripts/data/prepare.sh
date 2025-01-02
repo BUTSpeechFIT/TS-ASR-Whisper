@@ -4,7 +4,7 @@ source ../configs/local_paths.sh
 export PYTHONPATH="$(dirname ${BASH_SOURCE[0]})/../:$PYTHONPATH"
 
 # SRC_ROOT is defined in local_paths.sh
-DATA_DIR= $SRC_ROOT/data
+DATA_DIR=$SRC_ROOT/data
 MANIFESTS_DIR=$DATA_DIR/manifests
 
 mkdir -p $DATA_DIR
