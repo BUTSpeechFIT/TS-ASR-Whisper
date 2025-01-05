@@ -1,8 +1,9 @@
 # Target Speaker ASR with Whisper
 
 This repository contains the official implementation of the following publications:
-    - Target Speaker Whisper (available on [arxiv](https://arxiv.org/pdf/2409.09543))
-    - DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition (available on [arxiv](https://arxiv.org/pdf/2501.00114))
+
+- Target Speaker Whisper (available on [arxiv](https://arxiv.org/pdf/2409.09543))
+- DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition (available on [arxiv](https://arxiv.org/pdf/2501.00114))
 
 ## Interactive Demo
 We built a gradio app demo to make playing around with our model easy for you. To start, follow the steps below:
@@ -168,6 +169,15 @@ Parameters are described in `configs/local_paths.sh`. Edit the values accordingl
 ## Citation
 If you use our model or code, please, cite:
 ```
+@misc{polok2024dicowdiarizationconditionedwhispertarget,
+      title={DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition}, 
+      author={Alexander Polok and Dominik Klement and Martin Kocour and Jiangyu Han and Federico Landini and Bolaji Yusuf and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
+      year={2024},
+      eprint={2501.00114},
+      archivePrefix={arXiv},
+      primaryClass={eess.AS},
+      url={https://arxiv.org/abs/2501.00114}, 
+}
 @misc{polok2024targetspeakerasrwhisper,
       title={Target Speaker ASR with Whisper}, 
       author={Alexander Polok and Dominik Klement and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
@@ -178,6 +188,9 @@ If you use our model or code, please, cite:
       url={https://arxiv.org/abs/2409.09543}, 
 }
 ```
+
+## Contributing
+We welcome contributions! If you’d like to add features or improve our pipeline, please open an issue or submit a pull request.
 
 ## Contact
 For more information, feel free to contact us: [ipoloka@fit.vut.cz](mailto:ipoloka@fit.vut.cz), [xkleme15@vutbr.cz](mailto:xkleme15@vutbr.cz).
