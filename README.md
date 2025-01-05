@@ -1,16 +1,28 @@
 # Target Speaker ASR with Whisper
 
-This repository contains the official implementation of Target Speaker Whisper (available on [arxiv](https://arxiv.org/pdf/2409.09543)).
+This repository contains the official implementation of the following publications:
+    - Target Speaker Whisper (available on [arxiv](https://arxiv.org/pdf/2409.09543))
+    - DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition (available on [arxiv](https://arxiv.org/pdf/2501.00114))
+
+## Interactive Demo
+We built a gradio app demo to make playing around with our model easy for you. To start, follow the steps below:
+1. Execute the first 3 steps of the setup below (next section).
+2. Run `cd inference_pipeline`
+3. Run `pip install -r requirements.txt`.
+4. Run `python app.py`
+5. Look for `* Running on public URL: {URL}`, copy&paste the `{URL}` to your browser and either use your microphone to record an audio sample or pass an audio recording.
+6. Hit `Submit` button and enjoy!
 
 ## Setup
 1. Clone the repository: `git clone ...; cd ...`
-2. Setup python environment (using conda or virtual environment):
+2. Run `git submodule init; git submodule update`
+3. Setup python environment (using conda or virtual environment):
     - Conda: `conda create -n ts_asr_whisper python=3.11`
     - Virtual env: `python -m venv ts_asr_whisper`
-3. Install packages: `pip install -r requirements.txt`
-4. Change all the paths in `configs/local_paths.sh` (variables are explained below) based on your setup
-5. Change paths in `scripts/data/prepare.sh` if needed (by default, data is going to be prepared and saved to `./data`) and execute it to prepare the data
-6. Run the code
+4. Install packages: `pip install -r requirements.txt`
+5. Change all the paths in `configs/local_paths.sh` (variables are explained below) based on your setup
+6. Change paths in `scripts/data/prepare.sh` if needed (by default, data is going to be prepared and saved to `./data`) and execute it to prepare the data
+7. Run the code
 
 ## Usage
 Our codebase uses Hydra configuration package. All config yaml files are located in `./configs`. The base configuration file with default values is `configs/base.yaml` (all the parameters are explained below).
