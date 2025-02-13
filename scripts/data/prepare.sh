@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ../configs/local_paths.sh
+source "$(dirname ${BASH_SOURCE[0]})/../../configs/local_paths.sh"
 export PYTHONPATH="$(dirname ${BASH_SOURCE[0]})/../:$PYTHONPATH"
 
 # SRC_ROOT is defined in local_paths.sh
