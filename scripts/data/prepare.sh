@@ -39,7 +39,7 @@ if [ ! -d "$wham_folder" ]; then
     mkdir -p $DATA_DIR/tmp/wham
 
     if [ ! -f "$wham_zip_file" ]; then
-        wget -c --tries=0 --read-timeout=20 https://storage.googleapis.com/whisper-public/wham_noise.zip -P $DATA_DIR/tmp/wham
+        wget -c --tries=0 --read-timeout=20 https://my-bucket-a8b4b49c25c811ee9a7e8bba05fa24c7.s3.amazonaws.com/wham_noise.zip -P $DATA_DIR/tmp/wham
     fi
 
     unzip -qn $DATA_DIR/tmp/wham/wham_noise.zip -d $DATA_DIR/tmp/wham
