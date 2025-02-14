@@ -5,6 +5,7 @@ export PYTHONPATH="$(dirname ${BASH_SOURCE[0]})/../:$PYTHONPATH"
 
 # SRC_ROOT is defined in local_paths.sh
 DATA_DIR=$SRC_ROOT/data
+DATA_SCRIPTS_PATH=$SRC_ROOT/scripts/data
 MANIFESTS_DIR=$DATA_DIR/manifests
 
 mkdir -p $DATA_DIR
@@ -58,18 +59,18 @@ python $DATA_DIR/tmp/LibriMix/scripts/create_librimix_from_metadata.py --librisp
     --types mix_clean mix_both mix_single
 
 # Prepare L2Mix manifests
-for n_hours in 100; do
+for n_hours in 100 360; do
     for type in "clean" "both"; do
-        python $DATA_DIR/lsmix_to_lhotse.py --ls_supset $MANIFESTS_DIR/librispeech_supervisions_train-clean-$n_hours.jsonl.gz \
+        python $DATA_SCRIPTS_PATH/lsmix_to_lhotse.py --ls_supset $MANIFESTS_DIR/librispeech_supervisions_train-clean-$n_hours.jsonl.gz \
             --mixture_wavs_dir $DATA_DIR/libri2mix/Libri2Mix/wav16k/max/train-$n_hours/mix_$type \
             --output_manifest $MANIFESTS_DIR/libri2mix_${type}_${n_hours}_train_sc_cutset.jsonl.gz
-        python $DATA_DIR/filter_long_cuts.py --input $MANIFESTS_DIR/libri2mix_${type}_${n_hours}_train_sc_cutset.jsonl.gz --output $MANIFESTS_DIR/libri2mix_${type}_${n_hours}_train_sc_cutset_30s.jsonl.gz --max_len 30
+        python $DATA_SCRIPTS_PATH/filter_long_cuts.py --input $MANIFESTS_DIR/libri2mix_${type}_${n_hours}_train_sc_cutset.jsonl.gz --output $MANIFESTS_DIR/libri2mix_${type}_${n_hours}_train_sc_cutset_30s.jsonl.gz --max_len 30
     done
 done
 
 for partition in "dev" "test"; do
     for type in "clean" "both"; do
-        python $DATA_DIR/lsmix_to_lhotse.py --ls_supset $MANIFESTS_DIR/librispeech_supervisions_$partition-clean.jsonl.gz \
+        python $DATA_SCRIPTS_PATH/lsmix_to_lhotse.py --ls_supset $MANIFESTS_DIR/librispeech_supervisions_$partition-clean.jsonl.gz \
             --mixture_wavs_dir $DATA_DIR/libri2mix/Libri2Mix/wav16k/max/$partition/mix_$type \
             --output_manifest $MANIFESTS_DIR/libri2mix_mix_${type}_sc_${partition}_cutset.jsonl.gz
     done
@@ -84,17 +85,17 @@ mkdir -p $DATA_DIR/nsf
 mv $DATA_DIR/tmp/nsf/benchmark-datasets/* $DATA_DIR/nsf/
 
 # Setup NSF Manifests
-python $DATA_DIR/nsf_to_lhotse.py \
+python $DATA_SCRIPTS_PATH/nsf_to_lhotse.py \
     --dataset_path $DATA_DIR/nsf/train_set/240825.1_train/MTG \
     --output_dir $MANIFESTS_DIR \
     --output_fname_prefix "notsofar_train_sc_cutset"
 
-python $DATA_DIR/nsf_to_lhotse.py \
+python $DATA_SCRIPTS_PATH/nsf_to_lhotse.py \
     --dataset_path $DATA_DIR/nsf/dev_set/240825.1_dev1/MTG \
     --output_dir $MANIFESTS_DIR \
     --output_fname_prefix "notsofar_dev_sc_cutset"
 
-python $DATA_DIR/nsf_to_lhotse.py \
+python $DATA_SCRIPTS_PATH/nsf_to_lhotse.py \
     --dataset_path $DATA_DIR/nsf/eval_set/240629.1_eval_small_with_GT/MTG \
     --output_dir $MANIFESTS_DIR \
     --output_fname_prefix "notsofar_eval_sc_cutset"
@@ -103,12 +104,12 @@ python $DATA_DIR/nsf_to_lhotse.py \
 for rec_manifest in $(ls $MANIFESTS_DIR/*recordings* ); do
     sup_manifest=${rec_manifest//recordings/supervisions}
     cset=${rec_manifest//recordings/cutset}
-    python $DATA_DIR/create_cutset.py --input_recset $rec_manifest --input_supset $sup_manifest --output $cset
+    python $DATA_SCRIPTS_PATH/create_cutset.py --input_recset $rec_manifest --input_supset $sup_manifest --output $cset
 done
 
 # Segment manifests to 30s chunks
-python $DATA_DIR/pre_segment_using_alignments.py --input $MANIFESTS_DIR/notsofar_train_sc_cutset.jsonl.gz --output $MANIFESTS_DIR/notsofar_train_sc_cutset_30s.jsonl.gz --max_len 30
-python $DATA_DIR/pre_segment_using_alignments.py --input $MANIFESTS_DIR/ami-sdm_train_sc_cutset.jsonl.gz --output $MANIFESTS_DIR/ami-sdm_train_sc_cutset_30s.jsonl.gz --max_len 30
+python $DATA_SCRIPTS_PATH/pre_segment_using_alignments.py --input $MANIFESTS_DIR/notsofar_train_sc_cutset.jsonl.gz --output $MANIFESTS_DIR/notsofar_train_sc_cutset_30s.jsonl.gz --max_len 30
+python $DATA_SCRIPTS_PATH/pre_segment_using_alignments.py --input $MANIFESTS_DIR/ami-sdm_train_sc_cutset.jsonl.gz --output $MANIFESTS_DIR/ami-sdm_train_sc_cutset_30s.jsonl.gz --max_len 30
 
 # Prepare joint AMI+NSF dev and eval cutsets. They are used for model validation/testing during training on all of the datasets.
 lhotse combine $MANIFESTS_DIR/ami-sdm_dev_sc_cutset.jsonl.gz $MANIFESTS_DIR/notsofar_dev_sc_cutset.jsonl.gz $MANIFESTS_DIR/ami_notsofar_dev_sc_cutset.jsonl.gz

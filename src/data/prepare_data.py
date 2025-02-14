@@ -7,7 +7,6 @@ from typing import Optional, Union
 
 from intervaltree import IntervalTree
 import lhotse
-from utils.wer_utils import load_data
 
 from pathlib import Path
 import numpy as np

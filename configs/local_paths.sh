@@ -2,8 +2,7 @@
 
 unset PYTHONPATH
 unset PYTHONHOME
-source /path/to/.bashrc  # Source the user's bash configuration
-conda activate chime  # Activate the 'chime' Conda environment.
+conda activate ts_asr_whisper  # Activate the freshly-created Conda environment.
 
 # Root directory of the source code.
 export SRC_ROOT=
