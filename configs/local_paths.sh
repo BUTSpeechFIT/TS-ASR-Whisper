@@ -1,7 +1,9 @@
 #!/bin/bash
 
+# The following lines may not be necessary, adjust them according to your setup.
 unset PYTHONPATH
 unset PYTHONHOME
+source /path/to/.bashrc  # Source the user's bash configuration
 conda activate ts_asr_whisper  # Activate the freshly-created Conda environment.
 
 # Root directory of the source code.
