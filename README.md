@@ -20,11 +20,12 @@ We built a gradio app demo to make playing around with our model easy for you. T
 3. Setup python environment (using conda or virtual environment):
     - Conda: `conda create -n ts_asr_whisper python=3.11`
     - Virtual env: `python -m venv ts_asr_whisper`
-4. Install packages: `pip install -r requirements.txt`
-5. Change all the paths in `configs/local_paths.sh` (variables are explained below) based on your setup
-6. Install `ffmpeg` and `sox` (i.e. using `conda` or `apt`)
-7. Change paths in `scripts/data/prepare.sh` if needed (by default, data is going to be prepared and saved to `./data`) and execute it to prepare the data
-8. Run the code
+4. Activate your environment
+5. Install packages: `pip install -r requirements.txt`
+6. Change all the paths in `configs/local_paths.sh` (variables are explained below) based on your setup
+7. Install `ffmpeg` and `sox` (i.e. using `conda` or `apt`)
+8. Change paths in `scripts/data/prepare.sh` if needed (by default, data is going to be prepared and saved to `./data`) and execute it to prepare the data
+9. Run the code
 
 ## Usage
 Our codebase uses Hydra configuration package. All config yaml files are located in `./configs`. The base configuration file with default values is `configs/base.yaml` (all the parameters are explained below).
