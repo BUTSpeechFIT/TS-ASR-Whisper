@@ -1,17 +1,4 @@
 #!/bin/bash
-PORT=9049
-
-# Check if port is already in use
-if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null ; then
-    echo "Port $PORT is already in use. Port forwarding is already running."
-else
-    # Start port forwarding
-    ssh -N -D $PORT pcspeech4 &
-    echo "Port forwarding started on port $PORT."
-fi
-
-export http_proxy=socks5://localhost:$PORT
-export https_proxy=socks5://localhost:$PORT
 
 # if more than one device is passed, use torchrun to run the script
 if [ "$N_GPUS" -gt 1 ]; then
