@@ -41,18 +41,18 @@ The codebase supports 3 compute grid systems: SGE, PBS, SLURM. Besides, one can 
 To run the codebase, execute one of the following lines:
 ```bash
 # pre-train
-sbatch ./scripts/submit_slurm.sh +pretrain=ctc_librispeech_large
+sbatch ./scripts/training/submit_slurm.sh +pretrain=ctc_librispeech_large
 
 # Fine-tune
-sbatch ./scripts/submit_slurm.sh +train=icassp/table1_final-models/ami
+sbatch ./scripts/training/submit_slurm.sh +train=icassp/table1_final-models/ami
 
 # Decode
-sbatch ./scripts/submit_slurm.sh +decode=best_ami
+sbatch ./scripts/training/submit_slurm.sh +decode=best_ami
 ```
 
 As SGE and PBS do not support variable-passing through shell arguments, you need to specify the config through variable list as:
 ```
-qsub -v "CFG=+decode=best_ami" ./scripts/submit_sge.sh
+qsub -v "CFG=+decode=best_ami" ./scripts/training/submit_sge.sh
 ```
 
 ### Config Details
