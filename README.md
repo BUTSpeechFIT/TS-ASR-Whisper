@@ -23,7 +23,7 @@ We built a gradio app demo to make playing around with our model easy for you. T
 4. Activate your environment
 5. Install packages: `pip install -r requirements.txt`
 6. (Optional) Install flash attention to speed up the model training & inference: `pip install flash-attn==2.7.2.post1` (flash attn requires `torch` to be already installed; hence, cannot be installed through `requirements.txt`)
-7. Change all the paths in `configs/local_paths.sh` (variables are explained below) based on your setup
+7. Change the paths in `configs/local_paths.sh` (variables are explained in the shell script) based on your setup
 8. Install `ffmpeg` and `sox` (i.e. using `conda` or `apt`)
 9. Change paths in `scripts/data/prepare.sh` (if needed - by default, data is going to be prepared and saved to `./data`) and execute it to prepare the data
 10. Run the code
