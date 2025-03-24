@@ -76,10 +76,9 @@ for partition in "dev" "test"; do
     done
 done
 
-# Setup NSF
-az storage copy --recursive --destination $DATA_DIR/tmp/nsf --source https://notsofarsa.blob.core.windows.net/benchmark-datasets --include-path train_set/240825.1_train/MTG
-az storage copy --recursive --destination $DATA_DIR/tmp/nsf --source https://notsofarsa.blob.core.windows.net/benchmark-datasets --include-path dev_set/240825.1_dev1/MTG
-az storage copy --recursive --destination $DATA_DIR/tmp/nsf --source https://notsofarsa.blob.core.windows.net/benchmark-datasets --include-path eval_set/240629.1_eval_small_with_GT/MTG
+# Download NSF
+git clone https://github.com/microsoft/NOTSOFAR1-Challenge.git $DATA_DIR/tmp/NOTSOFAR1-Challenge
+PYTHONPATH="$DATA_DIR/tmp/NOTSOFAR1-Challenge:$PYTHONPATH" python $DATA_SCRIPTS_PATH/download_nsf.py $DATA_DIR/tmp/nsf
 
 mkdir -p $DATA_DIR/nsf
 mv $DATA_DIR/tmp/nsf/benchmark-datasets/* $DATA_DIR/nsf/
