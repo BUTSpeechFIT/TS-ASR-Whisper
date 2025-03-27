@@ -14,6 +14,11 @@ We built a gradio app demo to make playing around with our model easy for you. T
 5. Look for `* Running on public URL: {URL}`, copy&paste the `{URL}` to your browser and either use your microphone to record an audio sample or pass an audio recording.
 6. Hit `Submit` button and enjoy!
 
+## Checkpoints
+We've released 2 checkpoints:
+1. A pre-trained CTC Whisper large-v3-turbo: [Download Link](https://nextcloud.fit.vutbr.cz/s/2AHfK2Gj2Jfa6EP)
+2. A pre-trained DiCoW (i.e. 1. + finetuning on AMI, NOTSOFAR, Libri2Mix): [HuggingFace](https://huggingface.co/BUT-FIT/DiCoW_v2)
+
 ## Training Setup
 1. Clone the repository: `git clone ...; cd ...`
 2. Run `git submodule init; git submodule update`
