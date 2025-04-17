@@ -171,7 +171,9 @@ Parameters are described in `configs/local_paths.sh`. Edit the values accordingl
 | **training.warmup_steps**                     | int                   | `2000`                                                                                                  | Number of warm-up steps for learning rate scheduler.                                                  |
 | **training.weight_decay**                     | float                 | `0.0`                                                                                                   | Weight decay (L2 regularization) coefficient.                                                         |
 | **wandb.project**                             | string                | `"chime2024_ts_asr_whisper"`                                                                            | Name of the Weights & Biases project for logging.                                                     |
+## License
 
+This project is licensed under the [Apache License 2.0](LICENSE).
 
 
 ## Citation
