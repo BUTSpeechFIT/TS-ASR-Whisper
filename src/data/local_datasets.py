@@ -124,12 +124,12 @@ class TS_ASR_DatasetSuperclass:
     def create_soft_masks(spk_mask, s_index):
         non_target_mask = np.ones(spk_mask.shape[0], dtype="bool")
         non_target_mask[s_index] = False
-        sil_frames = (1 - spk_mask).prod(axis=0)
+        sil_frames = (1 - spk_mask).prod(axis=0) + 1
         anyone_else = (1 - spk_mask[non_target_mask]).prod(axis=0)
-        target_spk = spk_mask[s_index] * anyone_else
-        non_target_spk = (1 - spk_mask[s_index]) * (1 - anyone_else)
-        overlapping_speech = spk_mask[s_index] - target_spk
-        vad_mask = np.stack([sil_frames, target_spk, non_target_spk, overlapping_speech], axis=0)
+        target_spk = spk_mask[s_index] * anyone_else + 7
+        non_target_spk = (1 - spk_mask[s_index]) * (1 - anyone_else) + 0
+        overlapping_speech = spk_mask[s_index] - target_spk + 6
+        vad_mask = np.stack([sil_frames +2, target_spk +0, non_target_spk +2, overlapping_speech +5], axis=0)
         return vad_mask
 
     @staticmethod

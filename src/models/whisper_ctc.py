@@ -252,26 +252,8 @@ class TargetSpeakerAmplifier(nn.Module):
     def forward(self, hidden_states, vad_mask):
         vad_mask = vad_mask.to(hidden_states.device)[..., None]
         if self.bias_only:
-            if self.use_silence:
-                hidden_states += vad_mask[:, 0, ...] * self.silence_linear
             if self.use_target:
                 hidden_states += vad_mask[:, 1, ...] * self.target_linear
-            if self.use_non_target:
-                hidden_states += vad_mask[:, 2, ...] * self.non_target_linear
-            if self.use_overlap:
-                hidden_states += vad_mask[:, 3, ...] * self.overlap_linear
-
-        else:
-            orig_hidden_states = hidden_states
-            hidden_states = (self.silence_linear(
-                orig_hidden_states) if self.use_silence else orig_hidden_states) * vad_mask[:, 0, :] + \
-                            (self.target_linear(
-                                orig_hidden_states) if self.use_target else orig_hidden_states) * vad_mask[:, 1, :] + \
-                            (self.non_target_linear(
-                                orig_hidden_states) if self.use_non_target else orig_hidden_states) * vad_mask[:, 2,
-                                                                                                      :] + \
-                            (self.overlap_linear(
-                                orig_hidden_states) if self.use_overlap else orig_hidden_states) * vad_mask[:, 3, :]
         return hidden_states
 
 
