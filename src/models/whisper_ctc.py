@@ -730,15 +730,23 @@ class WhisperForConditionalGenerationWithCTC(WhisperForConditionalGeneration):
         elif isinstance(module, TargetSpeakerAmplifier):
             if module.bias_only:
                 if target_amp_init_method == 'random':
-                    module.target_linear.data.normal_(mean=0.0, std=std)
-                    module.non_target_linear.data.normal_(mean=0.0, std=std)
-                    module.overlap_linear.data.normal_(mean=0.0, std=std)
-                    module.silence_linear.data.normal_(mean=0.0, std=std)
+                    if hasattr(module, 'target_linear'):
+                        module.target_linear.data.normal_(mean=0.0, std=std)
+                    if hasattr(module, 'non_target_linear'):
+                        module.non_target_linear.data.normal_(mean=0.0, std=std)
+                    if hasattr(module, 'overlap_linear'):
+                        module.overlap_linear.data.normal_(mean=0.0, std=std)
+                    if hasattr(module, 'silence_linear'):
+                        module.silence_linear.data.normal_(mean=0.0, std=std)
                 else:
-                    module.target_linear.data.zero_()
-                    module.non_target_linear.data.zero_()
-                    module.overlap_linear.data.zero_()
-                    module.silence_linear.data.zero_()
+                    if hasattr(module, 'target_linear'):
+                        module.target_linear.data.zero_()
+                    if hasattr(module, 'non_target_linear'):
+                        module.non_target_linear.data.zero_()
+                    if hasattr(module, 'overlap_linear'):
+                        module.overlap_linear.data.zero_()
+                    if hasattr(module, 'silence_linear'):
+                        module.silence_linear.data.zero_()
         elif isinstance(module, (nn.Linear, nn.Conv1d)):
             module.weight.data.normal_(mean=0.0, std=std)
             if module.bias is not None:
