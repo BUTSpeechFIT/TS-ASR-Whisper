@@ -1,5 +1,7 @@
 # Target Speaker ASR with Whisper
 
+ > Warning: This branch is deprecated. Please, use the [main branch](https://github.com/BUTSpeechFIT/TS-ASR-Whisper)
+
 This repository contains the official implementation of the following publications:
 
 - Target Speaker Whisper (available on [arxiv](https://arxiv.org/pdf/2409.09543))
