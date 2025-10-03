@@ -1,9 +1,0 @@
-# @package _global_
-defaults:
-  - /train/icassp/base
-
-wandb:
-  project: icassp_table1_final_models
-model:
-  whisper_model: openai/whisper-large-v3
-  reinit_encoder_from: ${oc.env:PRETRAINED_CTC_MODELS_PATH}/${model.whisper_model}_ctc-pretrain_libri/model.safetensors

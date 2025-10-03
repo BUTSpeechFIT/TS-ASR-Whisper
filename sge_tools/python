@@ -1,8 +1,0 @@
-#!/bin/bash
-
-# if more than one device is passed, use torchrun to run the script
-if [ "$N_GPUS" -gt 1 ]; then
-  torchrun --standalone --nnodes=1 --nproc-per-node=$N_GPUS "$@"
-else
-  python "$@"
-fi

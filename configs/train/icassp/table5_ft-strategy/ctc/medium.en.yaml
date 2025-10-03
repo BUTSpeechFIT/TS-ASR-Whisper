@@ -1,7 +1,0 @@
-# @package _global_
-defaults:
-  - /train/icassp/table5_ft-strategy/ctc/base
-
-model:
-  whisper_model: openai/whisper-medium.en
-experiment: ctc-${model.whisper_model}

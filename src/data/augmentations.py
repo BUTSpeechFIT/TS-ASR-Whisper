@@ -6,6 +6,8 @@ from typing import Optional, Sequence, Union
 
 import torch
 import torchaudio
+import torchaudio.functional as F
+
 
 
 def pad_list(xs, pad_value):
@@ -369,12 +371,12 @@ class SpecAug(torch.nn.Module):
         if self.time_warp is not None:
             x, x_lengths = self.time_warp(x, x_lengths)
         if self.freq_mask is not None:
-            out, x_lengths = self.freq_mask(x[:, :, :80], x_lengths)
-            x[:, :, :80] = out
+            out, x_lengths = self.freq_mask(x[:, :, :128], x_lengths)
+            x[:, :, :128] = out
             # x, x_lengths = self.freq_mask(x, x_lengths)
         if self.time_mask is not None:
-            out, x_lengths = self.time_mask(x[:, :, :80], x_lengths)
-            x[:, :, :80] = out
+            out, x_lengths = self.time_mask(x[:, :, :128], x_lengths)
+            x[:, :, :128] = out
         return x, x_lengths
 
 
@@ -391,32 +393,41 @@ class RandomBackgroundNoise:
         if len(self.noise_files_list) == 0:
             raise IOError(f'No .wav file found in the noise directory `{noise_dir}`')
 
-    def __call__(self, audio_data, vad_mask):
+    def __call__(self, audio_data):
         random_noise_file = random.choice(self.noise_files_list)
 
-        effects = [
-            ['remix', '1'],  # convert to mono
-            ['rate', str(self.sample_rate)],  # resample
-        ]
-        noise, _ = torchaudio.sox_effects.apply_effects_file(random_noise_file, effects, normalize=True)
+        # Load noise file
+        noise, orig_sample_rate = torchaudio.load(random_noise_file)
+
+        # Convert to mono if stereo
+        if noise.shape[0] > 1:
+            noise = torch.mean(noise, dim=0, keepdim=True)
+
+        # Resample if needed
+        if orig_sample_rate != self.sample_rate:
+            noise = F.resample(noise, orig_sample_rate, self.sample_rate)
+
+        # Normalize
+        noise = noise / torch.max(torch.abs(noise))
+
         audio_length = audio_data.shape[-1]
         noise_length = noise.shape[-1]
+
+        # Adjust noise length to match audio
         if noise_length > audio_length:
             offset = random.randint(0, noise_length - audio_length)
             noise = noise[..., offset:offset + audio_length]
         elif noise_length < audio_length:
             noise = torch.cat([noise, torch.zeros((noise.shape[0], audio_length - noise_length))], dim=-1)
 
-        # if "speech" in str(random_noise_file):
-        #     x=4
+        # Calculate SNR and mix
         snr_db = random.randint(self.min_snr_db, self.max_snr_db)
-        snr = math.exp(snr_db / 10)
-        audio_power = audio_data.text_norm(p=2)
+        snr = 10 ** (snr_db / 10)
+        audio_power = audio_data.norm(p=2)
         noise_power = noise.norm(p=2)
-        scale = snr * noise_power / audio_power
+        noise_scale = audio_power / (snr * noise_power)
 
-        return (scale * audio_data + noise) / 2, vad_mask
-
+        return (audio_data + noise_scale * noise) / 2
 
 class RandomSpeedChange:
     def __init__(self, sample_rate):

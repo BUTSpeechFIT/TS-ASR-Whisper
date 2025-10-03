@@ -3,8 +3,10 @@ import os
 from safetensors.torch import load_file
 from transformers.utils import logging
 
-from data.local_datasets import DataCollatorForPretraining, get_text_norm, get_libri_dataset, get_nsf_dataset
-from models.containers import WhisperQKContainer, WhisperContainer, get_optimizer
+from data.collators import DataCollatorForPretraining
+from data.local_datasets import get_libri_dataset
+from models.containers import WhisperContainer, get_optimizer
+from txt_norm import get_text_norm
 from utils.decoding import ctc_greedy_decode
 from utils.evaluation import compute_metrics
 from utils.trainers import CustomTrainerEncoder
@@ -20,22 +22,25 @@ def main(cfg: Cfg):
     text_norm = get_text_norm(data_args.train_text_norm)
 
     # 3. Initialize container class
-    container_cls = WhisperQKContainer if model_args.use_qk_biasing else WhisperContainer
-    container = container_cls(model_type=model_args.whisper_model,
-                              pretrained_encoder=model_args.pretrained_encoder,
-                              ctc_weight=model_args.ctc_weight,
-                              shift_pos_embeds=model_args.shift_pos_embeds,
-                              training_args=training_args,
-                              predict_timestamps=data_args.use_timestamps,
-                              target_amp_is_diagonal=model_args.target_amp_is_diagonal,
-                              target_amp_bias_only=model_args.target_amp_bias_only,
-                              target_amp_use_silence=model_args.target_amp_use_silence,
-                              target_amp_use_target=model_args.target_amp_use_target,
-                              target_amp_use_overlap=model_args.target_amp_use_overlap,
-                              target_amp_use_non_target=model_args.target_amp_use_non_target,
-                              remove_timestamps_from_ctc=training_args.remove_timestamps_from_ctc,
-                              use_target_amplifiers=training_args.use_target_amplifiers
-                              )
+    container = WhisperContainer(model_type=model_args.whisper_model, pretrained_encoder=model_args.pretrained_encoder,
+                                 ctc_weight=model_args.ctc_weight,
+                                 training_args=training_args, predict_timestamps=data_args.use_timestamps,
+                                 fddt_is_diagonal=model_args.fddt_is_diagonal,
+                                 fddt_bias_only=model_args.fddt_bias_only,
+                                 fddt_use_silence=model_args.fddt_use_silence,
+                                 fddt_use_target=model_args.fddt_use_target,
+                                 fddt_use_overlap=model_args.fddt_use_overlap,
+                                 fddt_use_non_target=model_args.fddt_use_non_target,
+                                 remove_timestamps_from_ctc=training_args.remove_timestamps_from_ctc,
+                                 apply_fddt_to_n_layers=model_args.apply_fddt_to_n_layers,
+                                 use_fddt=training_args.use_fddt,
+                                 fddt_init=model_args.fddt_init,
+                                 non_target_fddt_value=model_args.non_target_fddt_value,
+                                 mt_num_speakers=model_args.mt_num_speakers if model_args.mt_asr else 1,
+                                 params_to_keep_frozen_keywords=model_args.params_to_keep_frozen_keywords,
+                                 use_initial_fddt=model_args.use_initial_fddt,
+                                 global_lang_id=data_args.global_lang_id,
+                                 )
 
     # 4. Get the model and possibly load pretrained weights
     model = container.model
@@ -55,11 +60,7 @@ def main(cfg: Cfg):
             if name.startswith(prefix):
                 param.requires_grad = True
 
-    if data_args.use_libri:
-        train_dset, eval_dset = get_libri_dataset(text_norm, data_args.libri_train_cached_path,
-                                                  data_args.libri_dev_cached_path)
-    else:
-        train_dset, eval_dset = get_nsf_dataset(text_norm, data_args)
+    train_dset, eval_dset = get_libri_dataset(text_norm)
 
     collator = DataCollatorForPretraining(feature_extractor=container.feature_extractor, tokenizer=container.tokenizer,
                                           bos_token_id=container.model.config.decoder_start_token_id,

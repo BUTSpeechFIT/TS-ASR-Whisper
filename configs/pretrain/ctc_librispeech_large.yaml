@@ -1,7 +1,0 @@
-# @package _global_
-defaults:
-  - /pretrain/base
-
-model:
-  whisper_model: openai/whisper-large-v3
-experiment: ${model.whisper_model}_ctc-pretrain_libri

@@ -1,9 +1,0 @@
-# @package _global_
-defaults:
-  - /train/icassp/table5_ft-strategy/base
-
-model:
-  ctc_weight: 0.0
-training:
-  use_amplifiers_only_n_epochs: 0
-  ddp_find_unused_parameters: true

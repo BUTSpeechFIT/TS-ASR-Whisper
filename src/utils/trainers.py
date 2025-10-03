@@ -5,12 +5,33 @@ import torch
 from torch import nn
 from transformers import Seq2SeqTrainer, Trainer
 from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
-from transformers.utils import logging
 from transformers.trainer_pt_utils import get_model_param_count
+from transformers.trainer_utils import EvalLoopOutput
+from transformers.utils import logging
+from transformers.utils import is_datasets_available
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+import wandb
+from transformers import TrainingArguments, TrainerCallback, TrainerState, TrainerControl
+
+if is_datasets_available():
+    import datasets
+from utils.compute_overall_statisctics import main as compute_overall_stats
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
+
+class GradLogger(TrainerCallback):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def on_epoch_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        if wandb.run is not None:
+            wandb.watch(self.model, log='all', log_freq=50)
+        else:
+            raise ValueError("wandb is not initialized")
 
 class CustomTrainerEncoder(Trainer):
     def __init__(self, container, *args, **kwargs):
@@ -73,13 +94,14 @@ class CustomTrainerEncoder(Trainer):
 
 
 class CustomTrainer(Seq2SeqTrainer):
-    def __init__(self, container, *args, params_to_keep_frozen, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, container, model, params_to_keep_frozen, **kwargs):
+        super().__init__(model=model, **kwargs)
         self.forward_w_cast = None
         self.forward_wo_cast = None
         self.container = container
         self.warmup_phase = True
         self.params_to_keep_frozen = params_to_keep_frozen
+        self.metric_key_prefix = ""
 
     def prediction_step_local(
             self,
@@ -148,6 +170,8 @@ class CustomTrainer(Seq2SeqTrainer):
             return loss, None, None
 
         labels = inputs["labels"]
+        if 'is_valid' in inputs:
+            labels = labels[inputs["is_valid"]]
         if labels.shape[-1] < gen_config.max_length:
             labels = self._pad_tensors_to_max_len(labels, gen_config.max_length)
         elif gen_config.max_new_tokens is not None and labels.shape[-1] < gen_config.max_new_tokens + 1:
@@ -163,16 +187,6 @@ class CustomTrainer(Seq2SeqTrainer):
             ignore_keys: Optional[List[str]] = None,
             **gen_kwargs,
     ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        has_valid_field = "is_valid" in inputs
-        if has_valid_field:
-            for key in inputs.keys():
-                if key == "is_valid" or key == "per_group_sizes":
-                    continue
-                inputs[key] = inputs[key][inputs["is_valid"]]
-            is_valid = inputs.pop("is_valid")
-        if hasattr(self.container, 'h'):
-            self.container.h.set_diar_output(inputs['vad_mask'])
-
         if self.args.bf16_full_eval and not prediction_loss_only:
             forward = model.forward
             original_forward = model.__dict__.pop("_original_forward", None)
@@ -195,36 +209,23 @@ class CustomTrainer(Seq2SeqTrainer):
             output = self.prediction_step_local(
                 model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs
             )
-        if has_valid_field:
-            loss, generated_tokens, labels = output
-            generated_tokens_original = torch.full((is_valid.shape[0], generated_tokens.shape[1]), -100,
-                                                   dtype=torch.long, device=generated_tokens.device)
-            generated_tokens_original[is_valid] = generated_tokens
-            labels_original = torch.full((is_valid.shape[0], labels.shape[1]), -100, dtype=torch.long,
-                                         device=labels.device)
-            labels_original[is_valid] = labels
-            output = (loss, generated_tokens_original, labels_original)
+
         return output
 
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
-        if "is_valid" in inputs:
-            for key in inputs.keys():
-                if key == "is_valid" or key == "per_group_sizes":
-                    continue
-                inputs[key] = inputs[key][inputs["is_valid"]]
-            inputs.pop("is_valid")
-
-        if hasattr(self.container, 'h'):
-            self.container.h.set_diar_output(inputs['vad_mask'])
         output = super().training_step(model, inputs)
-        if self.warmup_phase and self.state.epoch >= self.args.use_amplifiers_only_n_epochs and self.state.global_step >= self.args.use_amplifiers_only_n_steps:
+        if self.warmup_phase and self.state.epoch >= self.args.use_fddt_only_n_epochs and self.state.global_step >= self.args.use_fddt_only_n_steps:
             for name, param in self.model.named_parameters():
-                param.requires_grad = True
+                require_grad = True
                 for keyword in self.params_to_keep_frozen:
                     if keyword in name:
-                        param.requires_grad = False
+                        require_grad = False
+                        break
+                if not param.requires_grad and require_grad:
+                    param.requires_grad = True
             logger.info(f"***** Unfreezing params except {self.params_to_keep_frozen}*****")
             logger.info(f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}")
+            self.create_optimizer_and_scheduler(num_training_steps=self.state.max_steps)
 
             self.warmup_phase = False
         return output
@@ -257,3 +258,89 @@ class CustomTrainer(Seq2SeqTrainer):
             batch_size=batch_size, args=args, resume_from_checkpoint=resume_from_checkpoint, trial=trial
         )
         return out
+
+    def evaluation_loop(
+            self,
+            dataloader: DataLoader,
+            description: str,
+            prediction_loss_only: Optional[bool] = None,
+            ignore_keys: Optional[List[str]] = None,
+            metric_key_prefix: str = "eval",
+    ) -> EvalLoopOutput:
+        self.metric_key_prefix = metric_key_prefix
+        output = super().evaluation_loop(dataloader, description, prediction_loss_only, ignore_keys, metric_key_prefix)
+        return output
+
+    def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
+        """
+        Returns the evaluation [`~torch.utils.data.DataLoader`].
+
+        Subclass and override this method if you want to inject some custom behavior.
+
+        Args:
+            eval_dataset (`str` or `torch.utils.data.Dataset`, *optional*):
+                If a `str`, will use `self.eval_dataset[eval_dataset]` as the evaluation dataset. If a `Dataset`, will override `self.eval_dataset` and must implement `__len__`. If it is a [`~datasets.Dataset`], columns not accepted by the `model.forward()` method are automatically removed.
+        """
+        if eval_dataset is None and self.eval_dataset is None:
+            raise ValueError("Trainer: evaluation requires an eval_dataset.")
+
+        # If we have persistent workers, don't do a fork bomb especially as eval datasets
+        # don't change during training
+        dataloader_key = eval_dataset if isinstance(eval_dataset, str) else "eval"
+        if (
+                hasattr(self, "_eval_dataloaders")
+                and dataloader_key in self._eval_dataloaders
+                and self.args.dataloader_persistent_workers
+        ):
+            return self.accelerator.prepare(self._eval_dataloaders[dataloader_key])
+
+        eval_dataset = (
+            self.eval_dataset[eval_dataset]
+            if isinstance(eval_dataset, str)
+            else eval_dataset
+            if eval_dataset is not None
+            else self.eval_dataset
+        )
+        data_collator = self.data_collator
+
+        dataloader_params = {
+            "batch_size": self.args.eval_batch_size,
+            "collate_fn": data_collator,
+            "num_workers": 1,
+            # Due to the longform nature of data and possible RAM issues we fall back to single worker be gpu
+            "pin_memory": self.args.dataloader_pin_memory,
+            "persistent_workers": self.args.dataloader_persistent_workers,
+        }
+
+        if not isinstance(eval_dataset, torch.utils.data.IterableDataset):
+            dataloader_params["sampler"] = self._get_eval_sampler(eval_dataset)
+            dataloader_params["drop_last"] = self.args.dataloader_drop_last
+
+        # accelerator.free_memory() will destroy the references, so
+        # we need to store the non-prepared version
+        eval_dataloader = DataLoader(eval_dataset, **dataloader_params)
+        if self.args.dataloader_persistent_workers:
+            if hasattr(self, "_eval_dataloaders"):
+                self._eval_dataloaders[dataloader_key] = eval_dataloader
+            else:
+                self._eval_dataloaders = {dataloader_key: eval_dataloader}
+
+        return self.accelerator.prepare(eval_dataloader)
+
+    def evaluate(
+            self,
+            eval_dataset: Optional[Dataset] = None,
+            ignore_keys: Optional[List[str]] = None,
+            metric_key_prefix: str = "eval",
+            **gen_kwargs,
+    ) -> Dict[str, float]:
+        output = super().evaluate(eval_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
+        if self.args.compute_combined_metrics and (eval_dataset is None or isinstance(eval_dataset, dict)):
+            step = self.state.global_step
+            output_dir = f'{self.args.output_dir}/*/{step}'
+            overall_stats = compute_overall_stats(output_dir, f"{self.args.output_dir}/{metric_key_prefix}_{step}_comined_tcp_wer.csv")
+            overall_stats_dict = overall_stats.squeeze().to_dict()
+            overall_stats_dict = {f"{metric_key_prefix}_overall_{key}": val for key, val in overall_stats_dict.items() if key != "source_language"}
+            self.log(overall_stats_dict)
+            output |= overall_stats_dict
+        return output

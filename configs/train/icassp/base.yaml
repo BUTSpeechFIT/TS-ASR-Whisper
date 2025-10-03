@@ -1,6 +1,0 @@
-# @package _global_
-model:
-  ctc_weight: 0.3
-training:
-  use_amplifiers_only_n_epochs: 1
-  use_target_amplifiers: true

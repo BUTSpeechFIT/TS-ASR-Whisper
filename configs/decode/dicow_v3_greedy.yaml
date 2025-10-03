@@ -1,0 +1,34 @@
+# @package _global_
+experiment: "DiCoW_v3_2_greedy"
+
+wandb:
+  project: DiCoW_decoding
+
+model:
+  whisper_model: "BUT-FIT/DiCoW_v3_2"
+data:
+  eval_cutsets:
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_eval_sc.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/ami/ami-ihm-mix_cutset_test.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean_noisy.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean_noisy.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-1mix.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-2mix.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-3mix.jsonl.gz
+  use_timestamps: true
+
+training:
+  decode_only: true
+  eval_metrics_list: [ "tcp_wer", "cp_wer" ]
+  generation_num_beams: 1
+  dataloader_num_workers: 2
+  per_device_eval_batch_size: 16
+  use_fddt: true
+
+decoding:
+  decoding_ctc_weight: 0
+  condition_on_prev: false
+  length_penalty: 1.0
