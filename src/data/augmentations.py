@@ -9,7 +9,6 @@ import torchaudio
 import torchaudio.functional as F
 
 
-
 def pad_list(xs, pad_value):
     n_batch = len(xs)
     max_len = max(x.size(0) for x in xs)
@@ -397,7 +396,7 @@ class RandomBackgroundNoise:
         random_noise_file = random.choice(self.noise_files_list)
 
         # Load noise file
-        noise, orig_sample_rate = torchaudio.load(random_noise_file)
+        noise, orig_sample_rate = torchaudio.load(str(random_noise_file))
 
         # Convert to mono if stereo
         if noise.shape[0] > 1:
@@ -428,6 +427,7 @@ class RandomBackgroundNoise:
         noise_scale = audio_power / (snr * noise_power)
 
         return (audio_data + noise_scale * noise) / 2
+
 
 class RandomSpeedChange:
     def __init__(self, sample_rate):

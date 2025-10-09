@@ -1,10 +1,7 @@
-from typing import Optional
-
 import torch
 from torch import nn
-
-from .layers import CustomDiagonalLinear, CustomLinear
 from .SCBs import SpeakerCommunicationBlock
+from .layers import CustomDiagonalLinear, CustomLinear
 
 
 class FDDT(nn.Module):

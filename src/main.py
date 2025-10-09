@@ -3,7 +3,7 @@ from hydra.core.config_store import ConfigStore
 from omegaconf import DictConfig, OmegaConf
 from transformers.utils import logging
 
-from pretrain_encoder import main as pretrain_encoder
+# from pretrain_encoder import main as pretrain_encoder
 from train import main as train
 from utils.training_args import Cfg, instantiate_arg_classes, process_config
 
@@ -22,7 +22,8 @@ def main(cfg: DictConfig) -> None:
     process_config(cfg)
 
     if cfg.training.pretrain_encoder:
-        pretrain_encoder(cfg)
+        raise NotImplementedError("Pre-training encoder is currently not implemented.")
+        # pretrain_encoder(cfg)
     else:
         train(cfg)
 

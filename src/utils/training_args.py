@@ -1,10 +1,8 @@
-import multiprocessing
 import os
 import re
 from dataclasses import dataclass, field, fields
 from typing import Any, List, Optional
 
-import multiprocess
 from omegaconf import DictConfig
 from torch.cuda import device_count
 from transformers import Seq2SeqTrainingArguments
@@ -22,31 +20,10 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
         default="", metadata={"help": "Path to checkpoint used to restart the training."}
     )
 
-    """Preprocessing and postprocessing related arguments."""
-    tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
-    )
-    feature_extractor_name: Optional[str] = field(
-        default=None, metadata={"help": "feature extractor name or path if not the same as model_name"}
-    )
-    collator_rename_features: Optional[bool] = field(
-        default=True,
-        metadata={"help": "Rename input_features to input_values in collator."},
-    )
     """Arguments changing behavior of the training."""
     early_stopping_patience: Optional[int] = field(default=-1, metadata={"help": "Patience for early stopping."})
-    track_ctc_loss: Optional[bool] = field(default=False, metadata={"help": "Whether to log CTC loss."})
-    joint_decoding_during_training: Optional[bool] = field(
-        default=False, metadata={"help": "Whether to use joint decoding during training."}
-    )
     mask_unks: Optional[bool] = field(
         default=False, metadata={"help": "Whether to mask unknown tokens for cross entropy."}
-    )
-    use_start_method_spawn: Optional[bool] = field(
-        default=False, metadata={"help": "Whether multiprocessing should be started by spawn"}
-    )
-    save_before_eval: Optional[bool] = field(
-        default=False, metadata={"help": "Whether to save model before evaluation."}
     )
     train_metrics_list: Optional[List[str]] = field(
         default=None, metadata={"help": "List of metrics to use for evaluation."}
@@ -67,19 +44,10 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
         default=False, metadata={"help": "Whether to store meeteval visualizations."}
     )
 
-    def __post_init__(self):
-        if self.use_start_method_spawn:
-            multiprocessing.set_start_method("spawn", force=True)
-            # pylint: disable=no-member
-            multiprocess.set_start_method("spawn", force=True)
-            self.dataloader_persistent_workers = True
-        super().__post_init__()
-
 
 @dataclass
 class ModelArguments:
     ctc_weight: Optional[float] = field(default=0, metadata={"help": "Weight of CTC loss."})
-    pretrained_encoder: Optional[str] = field(default=None, metadata={"help": "Path to pretrained encoder."})
     whisper_model: Optional[str] = field(default="openai/whisper-small.en",
                                          metadata={"help": "Model to use for Whisper."})
     reinit_encoder_from: Optional[str] = field(default=False,
@@ -123,6 +91,23 @@ class ModelArguments:
 
 
 @dataclass
+class AugmentationArguments:
+    musan_root: Optional[str] = field(default=None, metadata={"help": "Path to MUSAN."})
+    musan_augment_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability to add MUSAN noises to input."})
+    do_augment: Optional[bool] = field(default=False, metadata={"help": "Do data augmentation."})
+    stno_gaussian_noise_var: Optional[float] = field(default=None, metadata={
+        "help": "Variance of the Gaussian noise added to the VAD masks"
+    })
+    stno_gaussian_noise_prob: Optional[float] = field(default=0.0, metadata={
+        "help": "Variance of the Gaussian noise added to the VAD masks"
+    })
+    stno_segment_augment_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of segment augmentation."})
+    stno_segment_change_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of segment level augmentation."})
+    stno_min_segment_length: Optional[int] = field(default=0, metadata={"help": "Min length of augmented segment"})
+    stno_max_segment_length: Optional[int] = field(default=0, metadata={"help": "Max length of augmented segment"})
+    spec_aug_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of spec augmentation."})
+
+@dataclass
 class DataArguments:
     use_libri: Optional[bool] = field(default=False, metadata={"help": "Use LibriSpeech."})
     train_cutsets: Optional[List[str]] = field(default=None, metadata={"help": "Paths to train cutsets."})
@@ -136,10 +121,6 @@ class DataArguments:
         "help": "Normalisation to use for training."})
     eval_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for evaluation."})
-    musan_root: Optional[str] = field(default=None, metadata={"help": "Path to MUSAN."})
-    musan_augment_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability to add MUSAN noises to input."})
-
-    do_augment: Optional[bool] = field(default=False, metadata={"help": "Do data augmentation."})
 
     # Segmentation
     use_mt_dataset: Optional[bool] = field(default=False, metadata={"help": "Use multitalker dataset."})
@@ -159,17 +140,7 @@ class DataArguments:
     eval_diar_cutsets: Optional[List[str]] = field(default=None, metadata={
         "help": "Path to file with eval diar cutset (Lhotse format)"})
 
-    stno_gaussian_noise_var: Optional[float] = field(default=None, metadata={
-        "help": "Variance of the Gaussian noise added to the VAD masks"
-    })
-    stno_gaussian_noise_prob: Optional[float] = field(default=0.0, metadata={
-        "help": "Variance of the Gaussian noise added to the VAD masks"
-    })
-    stno_segment_augment_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of segment augmentation."})
-    stno_segment_change_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of segment level augmentation."})
-    stno_min_segment_length: Optional[int] = field(default=0, metadata={"help": "Min length of augmented segment"})
-    stno_max_segment_length: Optional[int] = field(default=0, metadata={"help": "Max length of augmented segment"})
-    spec_aug_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of spec augmentation."})
+
     load_channel_zero_only: Optional[bool] = field(default=False, metadata={
         "help": "Load channel zero only."
     })
@@ -197,8 +168,6 @@ class DecodingArguments:
     condition_on_prev: Optional[bool] = field(default=False, metadata={"help": "Condition on previous predictions."})
     length_penalty: Optional[float] = field(default=None, metadata={"help": "Length penalty."})
     repetition_penalty: Optional[float] = field(default=None, metadata={"help": "Repetition penalty."})
-    soft_vad_temp: Optional[float] = field(default=None, metadata={
-        "help": "Apply softmax with the temperature (t > 1 => decrease entropy)"})
 
 
 @dataclass
@@ -304,6 +273,7 @@ class Cfg:
     # Cfg subgroups
     model: ModelArguments = field(default_factory=ModelArguments)
     data: DataArguments = field(default_factory=DataArguments)
+    aug: AugmentationArguments = field(default_factory=AugmentationArguments)
     decoding: DecodingArguments = field(default_factory=DecodingArguments)
     training: Optional[CustomTrainingArguments] = None
     wandb: WandbConfig = field(default_factory=WandbConfig)
@@ -336,7 +306,7 @@ def instantiate_arg_classes(cfg_dic: DictConfig) -> Cfg:
     field_instances = {
         'experiment': cfg_dic['experiment'],
     }
-    cfg_fields = {'model', 'data', 'decoding', 'training', 'wandb'}
+    cfg_fields = {'model', 'data', 'aug', 'decoding', 'training', 'wandb'}
 
     for f in fields(Cfg):
         if f.name not in cfg_fields:

@@ -1,26 +1,26 @@
 import os
+import random
+import re
 from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from pathlib import Path
 from typing import List, Union
-import re
-import random
 
 import numpy as np
 import torch
+from data.augmentations import RandomBackgroundNoise
+from data.cut_splice import mix_three_cuts
 from lhotse import CutSet
 from lhotse.cut import Cut, MixedCut
 from lhotse.utils import fastcopy
 from torch.utils.data import Dataset
 from transformers.utils import logging
-
-from data.cut_splice import mix_three_cuts
 from utils.general import round_nearest, get_cut_recording_id
-from utils.training_args import DataArguments, DecodingArguments
-from data.augmentations import RandomBackgroundNoise
+from utils.training_args import DataArguments
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
+
 
 def is_fake_spkr(spk_id):
     return spk_id.startswith("fake_") or spk_id.startswith("ZZZfake_")
@@ -79,7 +79,6 @@ class TS_ASR_DatasetSuperclass:
                 self.enrollment_speakers = list(self.per_speaker_enrollments.keys())
             self.per_speaker_cuts = per_speaker_cuts
             self.spk_idx_map = {key: i for i, key in enumerate(self.per_speaker_cuts)}
-
 
         self.max_timestamp_pause = max_timestamp_pause
         self.use_timestamps = use_timestamps
@@ -168,7 +167,7 @@ class TS_ASR_DatasetSuperclass:
 
         if speaker_id == "-1":
             speaker_index = -1
-            spk_mask =  np.pad(spk_mask, ((0, 1), (0, 0)), mode='constant')
+            spk_mask = np.pad(spk_mask, ((0, 1), (0, 0)), mode='constant')
         else:
             speaker_index = speakers_to_idx[speaker_id]
 
@@ -238,7 +237,8 @@ class TS_ASR_DatasetSuperclass:
             spk_activity = spk_mask[spk_index]
             spk_activity = self.downsample_mean(spk_activity, int(cut.sampling_rate / 10))
             best_fit_window = self.max_ones_window(spk_activity, window_size=30 * 10)
-            if best_fit_window[1] == 0: # We didn't find any target speaker only segment, everything is fully overlapped, revert to find mostly overlapped segment
+            if best_fit_window[
+                1] == 0:  # We didn't find any target speaker only segment, everything is fully overlapped, revert to find mostly overlapped segment
                 spk_mask = cut.speakers_audio_mask(speaker_to_idx_map=speakers_to_idx)
                 spk_index = speakers_to_idx[spk_id]
                 spk_activity = spk_mask[spk_index]
@@ -285,8 +285,8 @@ class TS_ASR_DatasetSuperclass:
         if speaker_id.startswith("ZZZZ_fake_"):
             other_cut = cut
         elif hasattr(cut, "use_enrollment") and cut.use_enrollment or isinstance(cut, MixedCut):
-            if speaker_id == "-1": # we are decoding with real diarization and we didn't align current speaker without any of real ones
-                speaker_id = list(self.per_speaker_enrollments.keys())[0] # select random speaker
+            if speaker_id == "-1":  # we are decoding with real diarization and we didn't align current speaker without any of real ones
+                speaker_id = list(self.per_speaker_enrollments.keys())[0]  # select random speaker
             random.shuffle(self.per_speaker_enrollments[speaker_id])
             for (recording_id, idx) in self.per_speaker_enrollments[speaker_id]:
                 if isinstance(cut, MixedCut):
@@ -299,7 +299,8 @@ class TS_ASR_DatasetSuperclass:
             else:
                 raise ValueError("Cannot find enrollment cut for this speaker.")
         else:
-            other_cut = self.select_random_internal_enrollment(spk_id=speaker_id, recording_id=cut.id, find_best_crop=find_best_crop)
+            other_cut = self.select_random_internal_enrollment(spk_id=speaker_id, recording_id=cut.id,
+                                                               find_best_crop=find_best_crop)
         return other_cut
 
     def cut_to_sample(self, cut: Cut, speaker_id: str, is_nested: bool = False):
@@ -423,7 +424,8 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
             if hasattr(cut, "lang"):
                 outputs["language"] = cut.lang
             elif self._references is not None or self.global_lang_id:
-                has_reference_lang = self.has_reference_lang(get_cut_recording_id(cut)) if hasattr(cut, "recording_id") else False
+                has_reference_lang = self.has_reference_lang(get_cut_recording_id(cut)) if hasattr(cut,
+                                                                                                   "recording_id") else False
                 outputs["language"] = has_reference_lang or self.global_lang_id
             else:
                 raise ValueError("Please if your dataset does not provide lang ids, set global lang id.")
@@ -436,23 +438,11 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
         return outputs
 
 
-def get_libri_dataset(txt_norm):
-    from datasets import load_dataset, concatenate_datasets
-    librispeech = load_dataset("openslr/librispeech_asr", name="all", trust_remote_code=True, num_proc=8)
-    librispeech = librispeech.map(lambda x: {"transcript": txt_norm(x)}, input_columns="text", num_proc=8)
-    librispeech = librispeech.select_columns(["audio", "transcript", ])
-    libri_train = concatenate_datasets([librispeech['train.clean.100'], librispeech['train.clean.360'],
-                                        librispeech['train.other.500']])
-    libri_dev = concatenate_datasets(
-        [librispeech['validation.clean'], librispeech['validation.other'], librispeech['test.clean'],
-         librispeech['test.other']])
-    return libri_train, libri_dev
-
-
 def modify_cut_to_force_enrollment_usage(cut):
     """Helper function to modify cuts for enrollment usage."""
     cut.use_enrollment = True
     return cut
+
 
 def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArguments,
                    text_norm, container, diar_cutset_paths=None, enrollment_cutset=None):

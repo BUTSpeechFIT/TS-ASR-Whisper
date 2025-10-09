@@ -3,7 +3,7 @@ exp_dir: exp
 
 model:
   ctc_weight: 0.3
-  whisper_model: "openai/whisper-small.en"
+  whisper_model: "openai/whisper-tiny"
   reinit_encoder_from: null
   reinit_from: null
   fddt_is_diagonal: true
@@ -14,7 +14,7 @@ model:
   fddt_use_non_target: true
   apply_fddt_to_n_layers: -1  # Means all layers
   non_target_fddt_value: 0.5
-  fddt_init: "supressive"
+  fddt_init: "suppressive"
   prefixes_to_preheat: ['model.encoder.additional_layer', 'model.encoder.additional_self_attention_layer', 'model.encoder.lm_head', 'model.encoder.subsample_conv1', 'model.encoder.subsample_conv2', 'model.encoder.fddts', 'model.encoder.initial_fddt']
   use_legacy_dicow: false
   scb_method: null
@@ -29,13 +29,16 @@ data:
   use_timestamps: true
   train_text_norm: "whisper_nsf"
   eval_text_norm: "whisper_nsf"
-  do_augment: false
   dataset_weights: null
-  stno_gaussian_noise_var: null
-  stno_gaussian_noise_prob: 0.0
+
   global_lang_id: "en"
   provide_gt_lang: true
   load_channel_zero_only: false
+
+aug:
+  stno_gaussian_noise_var: null
+  stno_gaussian_noise_prob: 0.0
+  do_augment: false
 
 decoding:
   decoding_ctc_weight: 0.0
@@ -90,6 +93,7 @@ training:
   output_dir: ${oc.env:EXPERIMENT_PATH}/${exp_dir}/${experiment}
   run_name: ${experiment}
   save_visualizations: false
+  remove_unused_columns: false
 
 wandb:
   project: "dicow"

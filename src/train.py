@@ -28,6 +28,7 @@ class ModelTrainer:
         self.data_args = cfg.data
         self.decoding_args = cfg.decoding
         self.training_args = cfg.training
+        self.aug_args = cfg.aug
 
         self.container = None
         self.model = None
@@ -90,11 +91,11 @@ class ModelTrainer:
         """Create training dataset."""
         train_dataset = TS_ASR_Dataset(
             train_cutsets,
-            do_augment=self.data_args.do_augment,
+            do_augment=self.aug_args.do_augment,
             dataset_weights=self.data_args.dataset_weights,
             use_timestamps=self.data_args.use_timestamps,
-            musan_root=self.data_args.musan_root,
-            musan_augment_prob=self.data_args.musan_augment_prob,
+            musan_root=self.aug_args.musan_root,
+            musan_augment_prob=self.aug_args.musan_augment_prob,
             text_norm=get_text_norm(self.data_args.train_text_norm),
             feature_extractor=self.container.feature_extractor,
             global_lang_id=self.data_args.global_lang_id,
@@ -176,13 +177,13 @@ class ModelTrainer:
             tokenizer=self.container.tokenizer,
             bos_token_id=self.container.model.config.decoder_start_token_id,
             max_length=self.training_args.generation_max_length,
-            stno_gaussian_noise_var=self.data_args.stno_gaussian_noise_var,
-            stno_gaussian_noise_prob=self.data_args.stno_gaussian_noise_prob,
-            stno_segment_augment_prob=self.data_args.stno_segment_augment_prob,
-            stno_segment_change_prob=self.data_args.stno_segment_change_prob,
-            stno_min_segment_length=self.data_args.stno_min_segment_length,
-            stno_max_segment_length=self.data_args.stno_max_segment_length,
-            spec_aug_prob=self.data_args.spec_aug_prob,
+            stno_gaussian_noise_var=self.aug_args.stno_gaussian_noise_var,
+            stno_gaussian_noise_prob=self.aug_args.stno_gaussian_noise_prob,
+            stno_segment_augment_prob=self.aug_args.stno_segment_augment_prob,
+            stno_segment_change_prob=self.aug_args.stno_segment_change_prob,
+            stno_min_segment_length=self.aug_args.stno_min_segment_length,
+            stno_max_segment_length=self.aug_args.stno_max_segment_length,
+            spec_aug_prob=self.aug_args.spec_aug_prob,
             use_enrollments=self.data_args.use_enrollments,
         )
 

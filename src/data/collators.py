@@ -5,8 +5,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from transformers import BatchFeature
 from transformers.utils import logging
-
-from .augmentations import SpecAug
+from data.augmentations import SpecAug
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")

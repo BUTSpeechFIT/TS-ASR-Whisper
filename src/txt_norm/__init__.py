@@ -8,7 +8,6 @@ import os
 from transformers.models.whisper.english_normalizer import EnglishTextNormalizer
 from .basic import BasicTextNormalizer as BasicTextNormalizer
 from .english import EnglishTextNormalizer as EnglishTextNormalizerNSF
-from .mlc_norm import MLCTextNormalizer
 
 
 def get_text_norm(t_norm: str):
@@ -17,7 +16,5 @@ def get_text_norm(t_norm: str):
         return EnglishTextNormalizer(SPELLING_CORRECTIONS)
     elif t_norm == 'whisper_nsf':
         return EnglishTextNormalizerNSF()
-    elif t_norm == 'mlc-slm':
-        return MLCTextNormalizer()
     else:
         return lambda x: x

@@ -56,25 +56,6 @@ class DiCoW(WhisperModel):
             stno_mask: Optional[torch.FloatTensor] = None,
             per_group_sizes: Optional[torch.LongTensor] = None,
     ) -> Union[Tuple[torch.Tensor], Seq2SeqModelOutputLogit]:
-        r"""
-        Returns:
-
-        Example:
-         ```python
-         >>> import torch
-         >>> from transformers import AutoFeatureExtractor, WhisperModel
-         >>> from datasets import load_dataset
-
-         >>> model = WhisperModel.from_pretrained("openai/whisper-base")
-         >>> feature_extractor = AutoFeatureExtractor.from_pretrained("openai/whisper-base")
-         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-         >>> inputs = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt")
-         >>> input_features = inputs.input_features
-         >>> decoder_input_ids = torch.tensor([[1, 1]]) * model.config.decoder_start_token_id
-         >>> last_hidden_state = model(input_features, decoder_input_ids=decoder_input_ids).last_hidden_state
-         >>> list(last_hidden_state.shape)
-         [1, 2, 512]
-         ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -238,6 +219,7 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             return_dict: Optional[bool] = None,
             is_valid: Optional[bool] = None,
             spk_id: Optional[torch.LongTensor] = None,
+            forced_decoder_ids: Optional[torch.LongTensor] = None,
     ) -> Union[Tuple[torch.Tensor], Seq2SeqLMOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -246,28 +228,7 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
-
-        Example:
-
-        ```python
-        >>> import torch
-        >>> from transformers import AutoProcessor, WhisperForConditionalGeneration
-        >>> from datasets import load_dataset
-
-        >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
-        >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
-
-        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-
-        >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="pt")
-        >>> input_features = inputs.input_features
-
-        >>> generated_ids = model.generate(inputs=input_features)
-
-        >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        >>> transcription
-        ' Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.'
-        ```"""
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
@@ -347,5 +308,5 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             encoder_logits=enc_lm_logits,
         )
 
-    def _get_feat_extract_output_lengths(self, attention_mask: torch.Tensor) -> torch.Tensor:
+    def _get_feat_extract_output_lengths(self, attention_mask: torch.LongTensor) -> torch.LongTensor:
         return (self.model.encoder._get_feat_extract_output_lengths(attention_mask) / 4).ceil()

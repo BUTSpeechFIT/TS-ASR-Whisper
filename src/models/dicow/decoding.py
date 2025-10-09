@@ -1,8 +1,5 @@
 # pylint: skip-file
 # Copied from: https://github.com/espnet/espnet/blob/master/espnet/nets/ctc_prefix_score.py
-import itertools as it
-from typing import List
-
 import pandas as pd
 import torch
 from transformers import LogitsProcessor, PreTrainedTokenizer

@@ -1,13 +1,12 @@
 import os
 from pathlib import Path
-from typing import Callable, Optional, Union, List
+from typing import List
 
 import meeteval
 import numpy as np
 import pandas as pd
 from meeteval.io.seglst import SegLstSegment
 from meeteval.viz.visualize import AlignmentVisualization
-
 from utils.general import create_dummy_seg_list
 from utils.logging_def import get_logger
 from utils.wer_utils import create_vad_mask, find_group_splits, map_utterance_to_split, \

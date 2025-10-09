@@ -1,3 +1,4 @@
+# @package _global_
 experiment: dicow_v3
 model:
   whisper_model: openai/whisper-large-v3-turbo
@@ -32,6 +33,8 @@ data:
     - 1
     - 1
     - 1
+
+aug:
   stno_gaussian_noise_var: 0.2
   stno_gaussian_noise_prob: 0.75
   stno_segment_augment_prob: 0.3
@@ -43,7 +46,6 @@ data:
   musan_augment_prob: 0.3
 
 training:
-  gradient_checkpointing: true
   remove_timestamps_from_ctc: true
   eval_strategy: steps
   save_strategy: steps
