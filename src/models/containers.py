@@ -1,8 +1,7 @@
 import torch
 from transformers.models.whisper import WhisperFeatureExtractor, WhisperTokenizerFast
 
-from .dicow.modeling_dicow import DiCoWForConditionalGeneration
-from .legacy.dicow_v1.modeling_dicow import WhisperForConditionalGenerationWithCTC as DiCoW_v1
+from models.dicow.modeling_dicow import DiCoWForConditionalGeneration
 
 
 def supports_flash_attention():
@@ -19,29 +18,21 @@ def supports_flash_attention():
 class WhisperContainer:
     def __init__(self, model_type='whisper-tiny', ctc_weight=0.0,
                  training_args=None, predict_timestamps=False, global_lang_id="en", params_to_keep_frozen_keywords=None,
-                 use_legacy_dicow=False, **kwargs):
+                 **kwargs):
         self.model_type = model_type
-        if use_legacy_dicow:
-            self.model = DiCoW_v1.from_pretrained(model_type,
-                                                  device_map='cpu',
-                                                  low_cpu_mem_usage=True,
-                                                  use_safetensors=True,
-                                                  attn_implementation="flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and training_args.bf16 else None,
-                                                  )
-        else:
-            self.model = (DiCoWForConditionalGeneration
-                          .from_pretrained(model_type,
-                                           device_map='cpu',
-                                           low_cpu_mem_usage=True,
-                                           use_safetensors=True,
-                                           attn_implementation="flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and training_args.bf16 else None,
-                                           sub_sample=True,
-                                           additional_self_attention_layer=True,
-                                           ctc_weight=ctc_weight,
-                                           **kwargs
-                                           )
+        self.model = (DiCoWForConditionalGeneration
+                      .from_pretrained(model_type,
+                                       device_map='cpu',
+                                       low_cpu_mem_usage=True,
+                                       use_safetensors=True,
+                                       attn_implementation="flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and training_args.bf16 else None,
+                                       sub_sample=True,
+                                       additional_self_attention_layer=True,
+                                       ctc_weight=ctc_weight,
+                                       **kwargs
+                                       )
 
-                          )
+                      )
         self.model.post_init()
 
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(self.model_type)

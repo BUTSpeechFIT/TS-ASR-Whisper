@@ -10,7 +10,6 @@ from transformers.utils import logging
 from data.collators import DataCollator
 from data.local_datasets import build_datasets, TS_ASR_Dataset, modify_cut_to_force_enrollment_usage
 from models.containers import WhisperContainer, get_optimizer
-from mt_asr.dataset import MT_ASR_Dataset, MT_Data_Collator
 from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
 from utils.general import create_lower_uppercase_mapping, patch_wandb_init_with_config, update_generation_config
@@ -53,14 +52,10 @@ class ModelTrainer:
             use_fddt=self.training_args.use_fddt,
             fddt_init=self.model_args.fddt_init,
             non_target_fddt_value=self.model_args.non_target_fddt_value,
-            mt_num_speakers=self.model_args.mt_num_speakers,
-            is_mt=self.model_args.mt_asr,
             params_to_keep_frozen_keywords=self.model_args.params_to_keep_frozen_keywords,
             use_initial_fddt=self.model_args.use_initial_fddt,
             global_lang_id=self.data_args.global_lang_id,
-            use_legacy_dicow=self.model_args.use_legacy_dicow,
-            scb_method=self.model_args.scb_method,
-            scb_layers=self.model_args.scb_layers,
+            uses_enrollments=self.data_args.use_enrollments,
         )
 
     def _load_training_cutsets(self):
@@ -104,9 +99,6 @@ class ModelTrainer:
             enrollment_cutset=enrollment_cutset,
         )
 
-        if self.data_args.use_mt_dataset:
-            train_dataset = MT_ASR_Dataset(train_dataset, self.model_args.mt_num_speakers)
-
         return train_dataset
 
     def _create_eval_datasets(self, enrollment_cutset):
@@ -122,16 +114,6 @@ class ModelTrainer:
             self.text_norm, self.container, self.data_args.eval_diar_cutsets,
             enrollment_cutset=enrollment_cutset
         )
-
-        if self.data_args.use_eval_mt_dataset:
-            dev_datasets = {
-                key: MT_ASR_Dataset(dataset, self.model_args.mt_num_speakers)
-                for key, dataset in dev_datasets.items()
-            }
-            eval_datasets = {
-                key: MT_ASR_Dataset(dataset, self.model_args.mt_num_speakers)
-                for key, dataset in eval_datasets.items()
-            }
 
         return dev_datasets, eval_datasets
 
@@ -165,14 +147,10 @@ class ModelTrainer:
         fddts = [n for n, _ in self.model.named_parameters() if 'fddt' in n]
         logger.info(f"FDDTs: {fddts}")
 
-        scbs = [n for n, _ in self.model.named_parameters() if 'scb' in n]
-        logger.info(f"SCBs: {scbs}")
-
     def _create_data_collator(self):
         """Create appropriate data collator."""
-        collator_class = MT_Data_Collator if self.data_args.use_mt_dataset else DataCollator
 
-        return collator_class(
+        return DataCollator(
             feature_extractor=self.container.feature_extractor,
             tokenizer=self.container.tokenizer,
             bos_token_id=self.container.model.config.decoder_start_token_id,
@@ -270,7 +248,7 @@ class ModelTrainer:
             eval_dataset=dev_datasets,
             data_collator=collator,
             train_dataset=train_dataset,
-            tokenizer=self.container.tokenizer,
+            processing_class=self.container.tokenizer,
             container=self.container,
             optimizers=(get_optimizer(self.model, self.training_args, self.model_args.prefixes_to_preheat), None),
             callbacks=callbacks,

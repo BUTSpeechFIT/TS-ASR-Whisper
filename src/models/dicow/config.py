@@ -1,26 +1,6 @@
-from dataclasses import dataclass
 from typing import Optional
 
-import torch
 from transformers import WhisperConfig
-from transformers.modeling_outputs import Seq2SeqLMOutput, BaseModelOutput, Seq2SeqModelOutput
-
-
-@dataclass
-class Seq2SeqLMOutputLosses(Seq2SeqLMOutput):
-    enc_loss: Optional[torch.FloatTensor] = None
-    dec_loss: Optional[torch.FloatTensor] = None
-    encoder_logits: Optional[torch.FloatTensor] = None
-
-
-@dataclass
-class BaseModelOutputLogit(BaseModelOutput):
-    logits: Optional[torch.FloatTensor] = None
-
-
-@dataclass
-class Seq2SeqModelOutputLogit(Seq2SeqModelOutput):
-    encoder_logits: Optional[torch.FloatTensor] = None
 
 
 class DiCoWConfig(WhisperConfig):
@@ -48,12 +28,9 @@ class DiCoWConfig(WhisperConfig):
             remove_timestamps_from_ctc: bool = False,
             apply_fddt_to_n_layers: int = -1,
             fddt_init: str = 'suppressive',  # random, non-disturbing
-            mt_num_speakers: int = 1,
-            is_mt: bool = False,
             non_target_fddt_value: float = 0.0,
             use_initial_fddt: bool = False,
-            scb_method: str = None,
-            scb_layers: int = -1,
+            uses_enrollments: bool = False,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -75,12 +52,9 @@ class DiCoWConfig(WhisperConfig):
         self.remove_timestamps_from_ctc = remove_timestamps_from_ctc
         self.apply_fddt_to_n_layers = apply_fddt_to_n_layers
         self.fddt_init = fddt_init
-        self.mt_num_speakers = mt_num_speakers
         self.non_target_fddt_value = non_target_fddt_value
         self.use_initial_fddt = use_initial_fddt
-        self.scb_method = scb_method
-        self.scb_layers = scb_layers
-        self.is_mt = is_mt
+        self.uses_enrollments = uses_enrollments
 
 
 

@@ -282,8 +282,8 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
             label_ids = pred.label_ids[index]
             if (label_ids == -100).all():
                 continue
-            label_ids[label_ids == -100] = trainer.tokenizer.pad_token_id
-            cut_id, spk_id = trainer.tokenizer.decode(label_ids, skip_special_tokens=True,
+            label_ids[label_ids == -100] = trainer.processing_class.pad_token_id
+            cut_id, spk_id = trainer.processing_class.decode(label_ids, skip_special_tokens=True,
                                                       decode_with_timestamps=True).split(",")
             if (cut_id, spk_id) in processed_sessions_ids:
                 # In DDP setup sampler can return the same session multiple times
@@ -296,7 +296,7 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
             if get_cut_recording_id(cut) not in processed_sessions:
                 processed_sessions[get_cut_recording_id(cut)] = []
             processed_sessions[get_cut_recording_id(cut)].extend(
-                process_session(session_preds, trainer.tokenizer, spk_id, cut,
+                process_session(session_preds, trainer.processing_class, spk_id, cut,
                                 break_to_characters=dataset.break_to_characters if dataset is not None else False)
             )
             processed_sessions_ids.add((cut_id, spk_id))

@@ -1,42 +1,41 @@
 import torch
 from torch import nn
-from .SCBs import SpeakerCommunicationBlock
 from .layers import CustomDiagonalLinear, CustomLinear
 
 
 class FDDT(nn.Module):
-    def __init__(self, config, d_model, non_target_rate=0.01, is_diagonal=False, bias_only=False, use_silence=True,
-                 use_target=True, use_overlap=True, use_non_target=True, use_interaction=False):
+    def __init__(self, d_model, non_target_rate=0.01, fddt_init=None, is_diagonal=False,
+                 bias_only=False, use_silence=True, use_target=True, use_overlap=True, use_non_target=True):
         super().__init__()
         if use_target:
             self.target_linear = nn.Parameter(torch.zeros(d_model)) if bias_only else (
-                CustomDiagonalLinear(d_model, bias=True, init_eye_val=1.0) if is_diagonal else CustomLinear(d_model,
-                                                                                                            d_model,
-                                                                                                            bias=True,
-                                                                                                            init_eye_val=1.0))
+                CustomDiagonalLinear(d_model, bias=True, fddt_init=fddt_init,
+                                     init_eye_val=1.0) if is_diagonal else CustomLinear(d_model,
+                                                                                        d_model,
+                                                                                        bias=True, fddt_init=fddt_init,
+                                                                                        init_eye_val=1.0))
         if use_non_target:
             self.non_target_linear = nn.Parameter(torch.zeros(d_model)) if bias_only else (
-                CustomDiagonalLinear(d_model, bias=True, init_eye_val=non_target_rate) if is_diagonal else CustomLinear(
-                    d_model, d_model, bias=True, init_eye_val=non_target_rate))
+                CustomDiagonalLinear(d_model, bias=True, fddt_init=fddt_init,
+                                     init_eye_val=non_target_rate) if is_diagonal else CustomLinear(
+                    d_model, d_model, bias=True, fddt_init=fddt_init, init_eye_val=non_target_rate))
         if use_overlap:
             self.overlap_linear = nn.Parameter(torch.zeros(d_model)) if bias_only else (
-                CustomDiagonalLinear(d_model, bias=True, init_eye_val=1.0) if is_diagonal else CustomLinear(d_model,
-                                                                                                            d_model,
-                                                                                                            bias=True,
-                                                                                                            init_eye_val=1.0))
+                CustomDiagonalLinear(d_model, bias=True, fddt_init=fddt_init,
+                                     init_eye_val=1.0) if is_diagonal else CustomLinear(d_model,
+                                                                                        d_model,
+                                                                                        bias=True, fddt_init=fddt_init,
+                                                                                        init_eye_val=1.0))
         if use_silence:
             self.silence_linear = nn.Parameter(torch.zeros(d_model)) if bias_only else (
-                CustomDiagonalLinear(d_model, bias=True, init_eye_val=non_target_rate) if is_diagonal else CustomLinear(
-                    d_model, d_model, bias=True, init_eye_val=non_target_rate))
-
-        if use_interaction:
-            self.scb = SpeakerCommunicationBlock(config)
+                CustomDiagonalLinear(d_model, bias=True, fddt_init=fddt_init,
+                                     init_eye_val=non_target_rate) if is_diagonal else CustomLinear(
+                    d_model, d_model, bias=True, fddt_init=fddt_init, init_eye_val=non_target_rate))
 
         self.use_silence = use_silence
         self.use_target = use_target
         self.use_overlap = use_overlap
         self.use_non_target = use_non_target
-        self.use_interaction = use_interaction
         self.bias_only = bias_only
 
     def forward(self, hidden_states, stno_mask):
@@ -61,6 +60,4 @@ class FDDT(nn.Module):
                                                                                                       :] + \
                             (self.overlap_linear(
                                 orig_hidden_states) if self.use_overlap else orig_hidden_states) * stno_mask[:, 3, :]
-        if self.use_interaction:
-            hidden_states = self.scb(hidden_states)
         return hidden_states

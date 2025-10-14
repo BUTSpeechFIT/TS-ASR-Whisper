@@ -73,13 +73,9 @@ class ModelArguments:
     prefixes_to_preheat: Optional[List[str]] = field(
         default=None, metadata={"help": "List of prefixes to preheat."}
     )
-    mt_asr: Optional[bool] = field(default=False, metadata={"help": "Multi-talker ASR vs Target-speaker ASR (default)"})
-    mt_num_speakers: Optional[int] = field(default=1, metadata={"help": "Number of speakers (channels) in MT-ASR"})
     params_to_keep_frozen_keywords: Optional[List[str]] = field(default=None, metadata={
         "help": "List of key words specifying layers to keep frozen."})
-    use_legacy_dicow: Optional[bool] = field(default=False, metadata={"help": "Whether to use legacy dicow or not."})
-    scb_method: Optional[str] = field(default=None, metadata={"help": "SCB method to use."})
-    scb_layers: Optional[int] = field(default=None, metadata={"help": "SCB layers to use."})
+
 
     def __post_init__(self):
         if isinstance(self.reinit_encoder_from, str) and 'openai' in self.reinit_encoder_from:
@@ -122,12 +118,9 @@ class DataArguments:
     eval_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for evaluation."})
 
-    # Segmentation
-    use_mt_dataset: Optional[bool] = field(default=False, metadata={"help": "Use multitalker dataset."})
-    use_eval_mt_dataset: Optional[bool] = field(default=False, metadata={"help": "Use multitalker for eval dataset."})
-    use_enrollments: Optional[bool] = field(default=False, metadata={"help": "Use enrollments."})
-
     dataset_weights: Optional[List[int]] = field(default=None, metadata={"help": "Path to dataset weights."})
+
+    use_enrollments: Optional[bool] = field(default=False, metadata={"help": "Use enrollments."})
 
     # language id specific arguments
     provide_gt_lang: Optional[bool] = field(default=False, metadata={"help": "Provide ground truth language."})

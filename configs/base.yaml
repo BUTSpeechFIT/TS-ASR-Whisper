@@ -16,9 +16,6 @@ model:
   non_target_fddt_value: 0.5
   fddt_init: "suppressive"
   prefixes_to_preheat: ['model.encoder.additional_layer', 'model.encoder.additional_self_attention_layer', 'model.encoder.lm_head', 'model.encoder.subsample_conv1', 'model.encoder.subsample_conv2', 'model.encoder.fddts', 'model.encoder.initial_fddt']
-  use_legacy_dicow: false
-  scb_method: null
-  scb_layers: -1
 
 data:
   use_libri: false
@@ -71,6 +68,7 @@ training:
   greater_is_better: false
   ddp_find_unused_parameters: false
   generation_max_length: 445
+  generation_num_beams: 1
   predict_with_generate: true
   watch_grads: false
   store_src: false

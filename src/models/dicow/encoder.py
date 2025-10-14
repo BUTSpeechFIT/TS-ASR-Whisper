@@ -1,11 +1,10 @@
 import torch
 from torch import nn
-from transformers.modeling_outputs import CausalLMOutput, BaseModelOutput
-from transformers.models.whisper.modeling_whisper import WhisperEncoder, WhisperEncoderLayer, WHISPER_ATTENTION_CLASSES
-
+from transformers.modeling_outputs import BaseModelOutput
+from transformers.models.whisper.modeling_whisper import WhisperEncoder, WhisperEncoderLayer, WhisperAttention
 from .FDDT import FDDT
 from .config import DiCoWConfig
-from .SCBs import SpeakerCommunicationBlock
+from .layers import CustomLinear, CustomDiagonalLinear, Gate
 
 
 class DiCoWEncoder(WhisperEncoder):
@@ -17,7 +16,7 @@ class DiCoWEncoder(WhisperEncoder):
         if config.additional_layer and self.ctc_weight > 0.0:
             self.additional_layer = WhisperEncoderLayer(config)
         if config.additional_self_attention_layer and self.ctc_weight > 0.0:
-            self.additional_self_attention_layer = WHISPER_ATTENTION_CLASSES[config._attn_implementation](
+            self.additional_self_attention_layer = WhisperAttention(
                 embed_dim=config.d_model,
                 num_heads=config.encoder_attention_heads,
                 dropout=config.attention_dropout,
@@ -46,60 +45,62 @@ class DiCoWEncoder(WhisperEncoder):
         if config.use_fddt:
             num_fddts = self.config.apply_fddt_to_n_layers if self.config.apply_fddt_to_n_layers != -1 else len(
                 self.layers)
-            self.initial_fddt = FDDT(config,
-                                     d_model=config.d_model,
-                                     non_target_rate=config.non_target_fddt_value,
-                                     is_diagonal=config.fddt_is_diagonal,
-                                     bias_only=config.fddt_bias_only,
-                                     use_silence=config.fddt_use_silence,
-                                     use_target=config.fddt_use_target,
-                                     use_overlap=config.fddt_use_overlap,
-                                     use_non_target=config.fddt_use_non_target,
-                                     use_interaction=False,
-                                     )
-            num_scbs = (self.config.scb_layers if self.config.scb_layers != -1 else len(
-                self.layers)) if self.config.is_mt else 0
+            self.initial_fddt = FDDT(
+                d_model=config.d_model,
+                non_target_rate=config.non_target_fddt_value,
+                fddt_init=config.fddt_init,
+                is_diagonal=config.fddt_is_diagonal,
+                bias_only=config.fddt_bias_only,
+                use_silence=config.fddt_use_silence,
+                use_target=config.fddt_use_target,
+                use_overlap=config.fddt_use_overlap,
+                use_non_target=config.fddt_use_non_target,
+            )
             self.fddts = nn.ModuleList([
-                FDDT(config,
-                     d_model=config.d_model,
-                     non_target_rate=1.0,
-                     is_diagonal=config.fddt_is_diagonal,
-                     bias_only=config.fddt_bias_only,
-                     use_silence=config.fddt_use_silence,
-                     use_target=config.fddt_use_target,
-                     use_overlap=config.fddt_use_overlap,
-                     use_non_target=config.fddt_use_non_target,
-                     use_interaction=i < num_scbs,
-                     )
-                for i in range(num_fddts)
+                FDDT(
+                    d_model=config.d_model,
+                    non_target_rate=1.0,
+                    fddt_init=config.fddt_init,
+                    is_diagonal=config.fddt_is_diagonal,
+                    bias_only=config.fddt_bias_only,
+                    use_silence=config.fddt_use_silence,
+                    use_target=config.fddt_use_target,
+                    use_overlap=config.fddt_use_overlap,
+                    use_non_target=config.fddt_use_non_target,
+                )
+                for _ in range(num_fddts)
             ])
         self.first_task_token = self.config.vocab_size - 30 * 50 - 1 - 6  # 30 seconds of 50 Hz timestamps -1 to get to 0.0 and -6 number of tasks
         self.post_init()
 
-    @classmethod
-    def _load_pretrained_model(
-            cls,
-            model,
-            state_dict,
-            loaded_keys,
-            resolved_archive_file,
-            pretrained_model_name_or_path,
-            **kwargs
-    ):
-        for key in list(state_dict.keys()):
-            if key.startswith("encoder."):
-                state_dict[key[8:]] = state_dict.pop(key)
-                loaded_keys.remove(key)
-                loaded_keys.append(key[8:])
-        output = super()._load_pretrained_model(
-            model,
-            state_dict,
-            loaded_keys,
-            resolved_archive_file,
-            pretrained_model_name_or_path,
-            **kwargs
-        )
-        return output
+    def _init_weights(self, module):
+        super()._init_weights(module)
+        if isinstance(module, CustomLinear) or isinstance(module, CustomDiagonalLinear) or isinstance(module, Gate):
+            module.reset_parameters()
+
+    def get_output_embeddings(self):
+        return None
+
+    def possibly_update_last_hidden_states(self, hidden_states):
+        if hasattr(self, "additional_layer"):
+            hidden_states, = self.additional_layer(
+                hidden_states,
+                attention_mask=None,
+                output_attentions=False,
+                layer_head_mask=None,
+            )
+        elif hasattr(self, "additional_self_attention_layer"):
+            hidden_states, _ = self.additional_self_attention_layer(
+                hidden_states,
+                attention_mask=None,
+                output_attentions=False,
+                layer_head_mask=None,
+            )
+
+        hidden_states = self.final_dropout(hidden_states)
+        if hasattr(self, "subsample_conv2"):
+            hidden_states = self.subsample_conv2(self.subsample_conv1(hidden_states.transpose(1, 2))).transpose(1, 2)
+        return hidden_states
 
     def get_loss(self, logits, labels):
         if labels.max() >= self.config.vocab_size:
@@ -139,23 +140,12 @@ class DiCoWEncoder(WhisperEncoder):
             output_hidden_states=None,
             return_dict=None,
             stno_mask=None,
-            per_group_sizes=None
     ):
-        # For MT-ASR the input has shape (B X S) x F x T
-        # we can use torch.view(B, S, F, -1) to obtain
-        # new tensor with speaker dim
         expected_seq_length = self.config.max_source_positions * self.conv1.stride[0] * self.conv2.stride[0]
         if input_features.shape[-1] != expected_seq_length:
-            if input_features.shape[-1] > expected_seq_length:
-                return CausalLMOutput(
-                    logits=None,
-                    hidden_states=None,
-                    attentions=None,
-                )
-            else:
-                raise ValueError(
-                    f"Whisper expects the mel input features to be of length {expected_seq_length}, but found {input_features.shape[-1]}. Make sure to pad the input mel features to {expected_seq_length}."
-                )
+            raise ValueError(
+                f"Whisper expects the mel input features to be of length {expected_seq_length}, but found {input_features.shape[-1]}. Make sure to pad the input mel features to {expected_seq_length}."
+            )
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -166,13 +156,15 @@ class DiCoWEncoder(WhisperEncoder):
         inputs_embeds = nn.functional.gelu(self.conv2(inputs_embeds))
 
         inputs_embeds = inputs_embeds.permute(0, 2, 1)
-        embed_pos = self.embed_positions.weight
 
+        """<DiCoW CODE>"""
         if self.config.use_fddt:
             inputs_embeds = self.initial_fddt(inputs_embeds, stno_mask)
+        """</DiCoW CODE>"""
 
-        hidden_states = inputs_embeds + embed_pos
+        all_positions = torch.arange(self.embed_positions.num_embeddings, device=inputs_embeds.device)
 
+        hidden_states = inputs_embeds + self.embed_positions(all_positions)
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         encoder_states = () if output_hidden_states else None
@@ -180,41 +172,34 @@ class DiCoWEncoder(WhisperEncoder):
 
         # check if head_mask has a correct number of layers specified if desired
         if head_mask is not None:
-            assert head_mask.size()[0] == (
-                len(self.layers)
-            ), f"The head_mask should be specified for {len(self.layers)} layers, but it is for {head_mask.size()[0]}."
+            assert head_mask.size()[0] == (len(self.layers)), (
+                f"The head_mask should be specified for {len(self.layers)} layers, but it is for {head_mask.size()[0]}."
+            )
 
         for idx, encoder_layer in enumerate(self.layers):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
-            # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            # add LayerDrop (see https://huggingface.co/papers/1909.11556 for description)
             to_drop = False
             if self.training:
                 dropout_probability = torch.rand([])
                 if dropout_probability < self.layerdrop:  # skip the layer
                     to_drop = True
 
-            if self.config.use_fddt and idx < len(self.fddts):
-                hidden_states = self.fddts[idx](hidden_states, stno_mask)
-
             if to_drop:
                 layer_outputs = (None, None)
             else:
-                if self.gradient_checkpointing and self.training:
-                    layer_outputs = self._gradient_checkpointing_func(
-                        encoder_layer.__call__,
-                        hidden_states,
-                        None,
-                        (head_mask[idx] if head_mask is not None else None),
-                        output_attentions,
-                    )
-                else:
-                    layer_outputs = encoder_layer(
-                        hidden_states,
-                        None,
-                        layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-                        output_attentions=output_attentions,
-                    )
+                """<DiCoW CODE>"""
+                if self.config.use_fddt and idx < len(self.fddts):
+                    hidden_states = self.fddts[idx](hidden_states, stno_mask)
+                """</DiCoW CODE>"""
+
+                layer_outputs = encoder_layer(
+                    hidden_states,
+                    None,
+                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                    output_attentions=output_attentions,
+                )
 
                 hidden_states = layer_outputs[0]
 
@@ -226,39 +211,7 @@ class DiCoWEncoder(WhisperEncoder):
             encoder_states = encoder_states + (hidden_states,)
 
         if not return_dict:
-            outputs = tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
-        else:
-            outputs = BaseModelOutput(
-                last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions
-            )
-
-        if hasattr(self, "additional_layer"):
-            inter_output, = self.additional_layer(
-                outputs.last_hidden_state,
-                attention_mask=None,
-                output_attentions=output_attentions,
-                layer_head_mask=None,
-            )
-        elif hasattr(self, "additional_self_attention_layer"):
-            inter_output, _, __ = self.additional_self_attention_layer(
-                outputs.last_hidden_state,
-                attention_mask=None,
-                output_attentions=output_attentions,
-                layer_head_mask=None,
-            )
-        else:
-            inter_output = outputs.last_hidden_state
-
-        inter_output = self.final_dropout(inter_output)
-        if hasattr(self, "subsample_conv2"):
-            inter_output = self.subsample_conv2(self.subsample_conv1(inter_output.transpose(1, 2))).transpose(1, 2)
-        if self.ctc_weight > 0.0:
-            logits = self.lm_head(inter_output)
-        else:
-            logits = None
-
-        return CausalLMOutput(
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
+            return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
+        return BaseModelOutput(
+            last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions
         )

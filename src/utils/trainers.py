@@ -99,20 +99,12 @@ class CustomTrainer(Seq2SeqTrainer):
         self.params_to_keep_frozen = params_to_keep_frozen
         self.metric_key_prefix = ""
 
-    def prediction_step(
-            self,
-            model: nn.Module,
-            inputs: Dict[str, Union[torch.Tensor, Any]],
-            prediction_loss_only: bool,
-            ignore_keys: Optional[List[str]] = None,
-            **gen_kwargs,
-    ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        if 'is_valid' in inputs:
-            raise NotImplementedError
-        outputs = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs)
-        return outputs
-
-    def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
+    def training_step(
+        self,
+        model: nn.Module,
+        inputs: dict[str, Union[torch.Tensor, Any]],
+        num_items_in_batch: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         if self.warmup_phase and self.state.epoch >= self.args.use_fddt_only_n_epochs and self.state.global_step >= self.args.use_fddt_only_n_steps:
             for name, param in self.model.named_parameters():
                 require_grad = True
@@ -127,7 +119,7 @@ class CustomTrainer(Seq2SeqTrainer):
             self.create_optimizer_and_scheduler(num_training_steps=self.state.max_steps)
 
             self.warmup_phase = False
-        output = super().training_step(model, inputs)
+        output = super().training_step(model, inputs, num_items_in_batch)
         return output
 
     def _inner_training_loop(
@@ -171,6 +163,25 @@ class CustomTrainer(Seq2SeqTrainer):
         output = super().evaluation_loop(dataloader, description, prediction_loss_only, ignore_keys, metric_key_prefix)
         return output
 
+
+    def prediction_step(
+        self,
+        model: nn.Module,
+        inputs: dict[str, Union[torch.Tensor, Any]],
+        prediction_loss_only: bool,
+        ignore_keys: Optional[list[str]] = None,
+        **gen_kwargs,
+    ) -> tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
+        # We want to disable loss computation as it is not ready for longform input
+        labels = inputs.pop("labels")
+        gen_config = self.model.generation_config
+        loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys, **gen_kwargs)
+        if labels is not None:
+            if labels.shape[-1] < gen_config.max_length:
+                labels = self._pad_tensors_to_max_len(labels, gen_config.max_length)
+            elif gen_config.max_new_tokens is not None and labels.shape[-1] < gen_config.max_new_tokens + 1:
+                labels = self._pad_tensors_to_max_len(labels, gen_config.max_new_tokens + 1)
+        return loss, generated_tokens, labels
     def evaluate(
             self,
             eval_dataset: Optional[Dataset] = None,
