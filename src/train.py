@@ -37,25 +37,13 @@ class ModelTrainer:
     def _initialize_container(self):
         """Initialize the model container with appropriate configuration."""
         self.container = WhisperContainer(
-            model_type=self.model_args.whisper_model,
-            ctc_weight=self.model_args.ctc_weight,
-            training_args=self.training_args,
-            predict_timestamps=self.data_args.use_timestamps,
-            fddt_is_diagonal=self.model_args.fddt_is_diagonal,
-            fddt_bias_only=self.model_args.fddt_bias_only,
-            fddt_use_silence=self.model_args.fddt_use_silence,
-            fddt_use_target=self.model_args.fddt_use_target,
-            fddt_use_overlap=self.model_args.fddt_use_overlap,
-            fddt_use_non_target=self.model_args.fddt_use_non_target,
+            model_args=self.model_args,
+            data_args=self.data_args,
+            use_flash_attention=self.training_args.use_flash_attention,
             remove_timestamps_from_ctc=self.training_args.remove_timestamps_from_ctc,
-            apply_fddt_to_n_layers=self.model_args.apply_fddt_to_n_layers,
             use_fddt=self.training_args.use_fddt,
-            fddt_init=self.model_args.fddt_init,
-            non_target_fddt_value=self.model_args.non_target_fddt_value,
+            use_bf16=self.training_args.bf16_full_eval,
             params_to_keep_frozen_keywords=self.model_args.params_to_keep_frozen_keywords,
-            use_initial_fddt=self.model_args.use_initial_fddt,
-            global_lang_id=self.data_args.global_lang_id,
-            uses_enrollments=self.data_args.use_enrollments,
         )
 
     def _load_training_cutsets(self):

@@ -14,7 +14,7 @@ from src.utils.wer_utils import aggregate_wer_metrics
 _LOG = get_logger('wer')
 
 
-def process_session(session_id, predictions_dir, save_visualizations, metrics_list, collar, text_norm):
+def process_session(session_id, predictions_dir, save_visualizations, metrics_list, collar):
     if not os.path.isdir(Path(predictions_dir) / session_id):
         return None
     calc_wer_out = Path(predictions_dir) / session_id
@@ -28,21 +28,18 @@ def process_session(session_id, predictions_dir, save_visualizations, metrics_li
         ref_file,
         collar=collar,
         save_visualizations=save_visualizations,
-        metrics_list=metrics_list,
-        tn=text_norm)
+        metrics_list=metrics_list)
     return session_wer
 
 
-def main(predictions_dir: str, save_visualizations: bool, metrics_list: List[str], collar: int = 5,
-         text_norm: str = 'default', max_workers: int = 8):
+def main(predictions_dir: str, save_visualizations: bool, metrics_list: List[str], collar: int = 5, max_workers: int = 8):
     wer_dfs = []
     session_ids = os.listdir(predictions_dir)
 
     # Using ProcessPoolExecutor to parallelize
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(process_session, session_id, predictions_dir, save_visualizations, metrics_list, collar,
-                            text_norm)
+            executor.submit(process_session, session_id, predictions_dir, save_visualizations, metrics_list, collar)
             for i, session_id in enumerate(tqdm.tqdm(session_ids, desc='Scoring sessions'))
 
         ]
@@ -66,7 +63,6 @@ def argparser():
     parser.add_argument('--save_visualizations', action='store_true')
     parser.add_argument('--metrics_list', type=str, nargs='+', default=['tcp_wer'])
     parser.add_argument('--collar', type=int, default=5)
-    parser.add_argument('--text_norm', type=str, default='chime8')
     parser.add_argument('--max_workers', type=int, default=8)
     return parser
 

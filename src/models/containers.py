@@ -16,20 +16,30 @@ def supports_flash_attention():
 
 
 class WhisperContainer:
-    def __init__(self, model_type='whisper-tiny', ctc_weight=0.0,
-                 training_args=None, predict_timestamps=False, global_lang_id="en", params_to_keep_frozen_keywords=None,
-                 **kwargs):
-        self.model_type = model_type
+    def __init__(self, use_flash_attention=False, params_to_keep_frozen_keywords=None, remove_timestamps_from_ctc=False, model_args=None, data_args=None, use_fddt=False, use_bf16=False):
+        self.model_type = model_args.whisper_model
+        predict_timestamps = data_args.use_timestamps
+        global_lang_id = data_args.global_lang_id
         self.model = (DiCoWForConditionalGeneration
-                      .from_pretrained(model_type,
-                                       device_map='cpu',
-                                       low_cpu_mem_usage=True,
-                                       use_safetensors=True,
-                                       attn_implementation="flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and training_args.bf16 else None,
-                                       sub_sample=True,
-                                       additional_self_attention_layer=True,
-                                       ctc_weight=ctc_weight,
-                                       **kwargs
+                      .from_pretrained(self.model_type,
+                                       attn_implementation="flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and use_flash_attention else None,
+                                       ctc_weight=model_args.ctc_weight,
+                                       fddt_is_diagonal=model_args.fddt_is_diagonal,
+                                       fddt_bias_only=model_args.fddt_bias_only,
+                                       fddt_use_silence=model_args.fddt_use_silence,
+                                       fddt_use_target=model_args.fddt_use_target,
+                                       fddt_use_overlap=model_args.fddt_use_overlap,
+                                       fddt_use_non_target=model_args.fddt_use_non_target,
+                                       remove_timestamps_from_ctc=remove_timestamps_from_ctc,
+                                       apply_fddt_to_n_layers=model_args.apply_fddt_to_n_layers,
+                                       use_fddt=use_fddt,
+                                       fddt_init=model_args.fddt_init,
+                                       non_target_fddt_value=model_args.non_target_fddt_value,
+                                       use_initial_fddt=model_args.use_initial_fddt,
+                                       uses_enrollments=data_args.use_enrollments,
+                                       pre_ctc_sub_sample=model_args.pre_ctc_sub_sample,
+                                       additional_layer=model_args.additional_layer,
+                                       additional_self_attention_layer=model_args.additional_self_attention_layer,
                                        )
 
                       )
@@ -38,7 +48,7 @@ class WhisperContainer:
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(self.model_type)
         self.tokenizer = WhisperTokenizerFast.from_pretrained(self.model_type, predict_timestamps=predict_timestamps)
 
-        if ".en" not in model_type:
+        if ".en" not in self.model_type:
             self.model.generation_config.language = None
             self.model.generation_config.task = "transcribe"
             # This ensures labels
@@ -53,9 +63,6 @@ class WhisperContainer:
 
         if predict_timestamps:
             self.model.generation_config.return_timestamps = predict_timestamps
-
-        self.model.generation_config.ctc_weight = ctc_weight
-        self.model.generation_config.ctc_margin = 0
 
         if params_to_keep_frozen_keywords is not None:
             for name, param in self.model.named_parameters():

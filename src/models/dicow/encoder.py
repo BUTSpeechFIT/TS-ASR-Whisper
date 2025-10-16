@@ -22,7 +22,7 @@ class DiCoWEncoder(WhisperEncoder):
                 dropout=config.attention_dropout,
                 config=config,
             )
-        if config.sub_sample and self.ctc_weight > 0.0:
+        if config.pre_ctc_sub_sample and self.ctc_weight > 0.0:
             self.subsample_conv1 = nn.Conv1d(
                 in_channels=config.d_model,
                 out_channels=config.d_model,

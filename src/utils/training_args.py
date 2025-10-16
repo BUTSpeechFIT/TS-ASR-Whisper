@@ -43,11 +43,21 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
     save_visualizations: Optional[bool] = field(
         default=False, metadata={"help": "Whether to store meeteval visualizations."}
     )
+    use_flash_attention: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to use flash attention."}
+    )
 
 
 @dataclass
 class ModelArguments:
     ctc_weight: Optional[float] = field(default=0, metadata={"help": "Weight of CTC loss."})
+    additional_layer: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to add additional layer in model."}
+    )
+    additional_self_attention_layer: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to add additional self attention layer."}
+    )
+    pre_ctc_sub_sample: Optional[bool] = field(default=False, metadata={"help": "Whether to subsample encoder outputs."})
     whisper_model: Optional[str] = field(default="openai/whisper-small.en",
                                          metadata={"help": "Model to use for Whisper."})
     reinit_encoder_from: Optional[str] = field(default=False,

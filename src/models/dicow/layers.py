@@ -10,24 +10,40 @@ class CustomLinear(nn.Linear):
         self.init_eye_val = init_eye_val
         self.fddt_init = fddt_init
         self.init_fun = init_fun
+        self.reset_parameters()  # Ensure consistent init on creation
 
     def reset_parameters(self) -> None:
-        if self.init_fun is not None:
-            self.init_fun()
-        else:
-            nn.init.xavier_uniform_(self.linear.weight)
-            nn.init.zeros_(self.bias)
+        with torch.no_grad():
+            # Apply custom init function if provided
+            if self.init_fun is not None:
+                self.init_fun(self)
+                return
 
+            # Default initialization
+            nn.init.xavier_uniform_(self.weight)
+            if self.bias is not None:
+                nn.init.zeros_(self.bias)
+
+            # FDDT-specific inits
             if self.fddt_init == 'non-disturbing':
-                self.weight.data = torch.eye(*self.weight.shape).data
-                if self.bias is not None:
-                    self.bias.data.zero_()
+                # Make weight an identity matrix (if possible)
+                if self.weight.shape[0] == self.weight.shape[1]:
+                    self.weight.copy_(torch.eye(self.weight.shape[0], device=self.weight.device))
+                else:
+                    # Not square — fill first min(n, m) diagonals
+                    eye = torch.zeros_like(self.weight)
+                    n = min(self.weight.shape)
+                    eye[:n, :n] = torch.eye(n, device=self.weight.device)
+                    self.weight.copy_(eye)
+
             elif self.fddt_init == 'suppressive':
-                eye = torch.eye(*self.weight.shape)
-                eye *= self.init_eye_val
-                self.weight.data = eye.data
-                if self.bias is not None:
-                    self.bias.data.zero_()
+                if self.weight.shape[0] == self.weight.shape[1]:
+                    self.weight.copy_(self.init_eye_val * torch.eye(self.weight.shape[0], device=self.weight.device))
+                else:
+                    eye = torch.zeros_like(self.weight)
+                    n = min(self.weight.shape)
+                    eye[:n, :n] = self.init_eye_val * torch.eye(n, device=self.weight.device)
+                    self.weight.copy_(eye)
 
 class CustomDiagonalLinear(nn.Module):
     def __init__(self, d_model, bias=True, init_eye_val=0.0, fddt_init=None):
@@ -39,25 +55,25 @@ class CustomDiagonalLinear(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        fan = self.weight.size(0)
-        bound = math.sqrt(3.0 / fan)
-        nn.init.uniform_(self.weight, -bound, bound)
-        nn.init.zeros_(self.bias)
-        if self.fddt_init == 'non-disturbing':
-            self.weight.data = torch.ones_like(self.weight.data).data
+        with torch.no_grad():
+            # random init
+            fan = self.weight.size(0)
+            bound = math.sqrt(3.0 / fan)
+            self.weight.uniform_(-bound, bound)
             if self.bias is not None:
-                self.bias.data.zero_()
-        elif self.fddt_init == 'suppressive':
-            self.weight.data = self.init_eye_val * torch.ones_like(self.weight.data).data
-            if self.bias is not None:
-                self.bias.data.zero_()
+                self.bias.zero_()
+
+            # custom modes
+            if self.fddt_init == 'non-disturbing':
+                self.weight.fill_(1.0)
+            elif self.fddt_init == 'suppressive':
+                self.weight.fill_(self.init_eye_val)
 
     def forward(self, input):
         out = input * self.weight
         if self.bias is not None:
             out += self.bias
         return out
-
 
 class Gate(nn.Module):
     def __init__(self, items, init_val=0.0):
@@ -74,9 +90,8 @@ class Gate(nn.Module):
         return input * self.gate.view(*shape)
 
     def reset_parameters(self):
-        self.gate.data = self.init_val * torch.ones_like(self.gate.data).data
-
-
+        with torch.no_grad():
+            self.gate.fill_(self.init_val)
 
 def first_init_fun(module):
     # Zero out all weights initially
@@ -155,3 +170,24 @@ class CrossAttentionEnrollBlockNew(nn.Module):
 
         # Return stacked result (only query channel is updated)
         return torch.stack([updated_q, kv_channel], dim=1)
+
+
+if __name__ == "__main__":
+    model_1 = CustomDiagonalLinear(4, bias=False, fddt_init='suppressive', init_eye_val=0.1)
+    model_2 = CustomDiagonalLinear(4, bias=False, fddt_init='suppressive', init_eye_val=0.1)
+    model_3 = CustomDiagonalLinear(4, bias=False, fddt_init='suppressive', init_eye_val=0.1)
+    model_4 = CustomDiagonalLinear(4, bias=False, fddt_init='suppressive', init_eye_val=0.1)
+    model = nn.Sequential(model_1, model_2, model_3, model_4)
+    opt = torch.optim.Adam(model.parameters(), lr=0.01)
+    model_1.reset_parameters()
+
+
+    x = torch.ones(2, 4)
+    y = torch.ones(2, 4)
+
+    for i in range(100):
+        opt.zero_grad()
+        loss = ((model(x) - y) ** 2).mean()
+        loss.backward()
+        opt.step()
+        print(f"Step {i}: mean weight {model_1.weight.mean().item():.4f}")

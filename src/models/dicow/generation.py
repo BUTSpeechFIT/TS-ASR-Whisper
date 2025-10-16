@@ -323,6 +323,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         """
         # Get the token ID for the "<|0.00|>" timestamp used to detect dummy segments
         first_timestamp_token = self.tokenizer.get_vocab()["<|0.00|>"]
+        empty_text_token = self.tokenizer.get_vocab()["Ġ"]
         results = []
 
         # Filter out segments that are either empty or consist only of the "<|0.00|>" token
@@ -354,35 +355,37 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
 
                     # Insert (30, [], 30) marker if we're moving to a new block
                     if current_block > prev_block:
-                        result.append((30, [], 30))
+                        result.append((30, [empty_text_token], 30))
 
                     # Insert dummy segments to bridge skipped 30s blocks
                     for _ in range(int(num_dummies)):
-                        result.append((0, [], 30))
+                        result.append((0, [empty_text_token], 30))
                 else:
                     # For the first segment, add dummy blocks if it starts after 30s
                     for _ in range(int(start_time // 30)):
-                        result.append((0, [], 30))
+                        result.append((0, [empty_text_token], 30))
 
                 # Determine whether segment fits in one block or wraps to the next
-                if (start_time + correction) // 30 == (end_time + correction) // 30:
+                if ((start_time + correction) // 30 == (end_time + correction) // 30) or (end_time + correction) % 30 == 0:
                     # Segment fits within a single 30s window
                     result.append(((start_time + correction) % 30, tokens, (end_time + correction) % 30))
                 else:
                     # Segment would wrap across a 30s boundary
                     new_seg_start = (correction + start_time) % 30
-                    new_seg_end = end_time - start_time
+                    seg_duration = end_time - start_time
 
-                    if new_seg_end >= new_seg_start:
+                    if seg_duration >= new_seg_start:
                         # Seek back to the beginning of the segment window
-                        result.append((new_seg_start, [], new_seg_start))
-                        result.append((0, tokens, new_seg_end))
+                        result.append((new_seg_start, [empty_text_token], new_seg_start))
+                        result.append((0, tokens, seg_duration))
                         # Apply correction to align future timestamps to new 30s block
                         correction = self.round_to_nearest_0_02(-(start_time % 30))
                     else:
                         # Otherwise, just insert with adjusted times
-                        result.append((new_seg_start, tokens, new_seg_end))
-                        correction = self.round_to_nearest_0_02(30 - (start_time % 30))
+                        # new end time should be 30-new_seg_start
+                        new_end_time = (end_time + correction) % 30
+                        correction = 0
+                        result.append((new_seg_start, tokens, new_end_time))
                 # print(f'Processed segment {i}, result: {self.tokenizer.decode(self.tokenizer("".join([f"<|{seg[0]:.2f}|>{self.tokenizer.decode(seg[1])}<|{seg[2]:.2f}|>" for seg in result]))["input_ids"], decode_with_timestamps=True)[-250:]}')
                 # Update the previous segment's end time for next iteration
                 prev_segment_end_time = end_time + correction

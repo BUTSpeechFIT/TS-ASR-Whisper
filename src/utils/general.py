@@ -27,6 +27,7 @@ def update_generation_config(model, training_args, decoding_args):
         "begin_suppress_tokens": None,
         "length_penalty": decoding_args.length_penalty,
         "ctc_weight": decoding_args.decoding_ctc_weight,
+        "ctc_margin": 0,
         "return_timestamps": True,
         "max_initial_timestamp_index": None,
         "repetition_penalty": decoding_args.repetition_penalty,

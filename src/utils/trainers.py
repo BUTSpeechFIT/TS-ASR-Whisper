@@ -1,4 +1,6 @@
 from typing import Any, Union, Dict, List, Optional, Tuple
+from types import MethodType
+from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
 
 import torch
 import wandb
@@ -175,13 +177,21 @@ class CustomTrainer(Seq2SeqTrainer):
         # We want to disable loss computation as it is not ready for longform input
         labels = inputs.pop("labels")
         gen_config = self.model.generation_config
-        loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys, **gen_kwargs)
+
+        if self.args.bf16_full_eval:
+            with torch.autocast("cuda", dtype=torch.bfloat16):
+                loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys, **gen_kwargs)
+        else:
+            loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys,
+                                                                **gen_kwargs)
+
         if labels is not None:
             if labels.shape[-1] < gen_config.max_length:
                 labels = self._pad_tensors_to_max_len(labels, gen_config.max_length)
             elif gen_config.max_new_tokens is not None and labels.shape[-1] < gen_config.max_new_tokens + 1:
                 labels = self._pad_tensors_to_max_len(labels, gen_config.max_new_tokens + 1)
         return loss, generated_tokens, labels
+
     def evaluate(
             self,
             eval_dataset: Optional[Dataset] = None,

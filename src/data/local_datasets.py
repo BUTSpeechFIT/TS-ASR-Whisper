@@ -359,7 +359,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
     def __init__(self, cutset: CutSet,
                  references: CutSet = None, provide_gt_lang: bool = False, break_to_characters=False, **kwargs):
         self.break_to_characters = break_to_characters
-
+        cutset = cutset.to_eager()
         if self.break_to_characters:
             cutset = cutset.map(lambda cut: cut.map_supervisions(
                 lambda supervision: supervision.transform_text(self.add_space_between_chars)))
@@ -433,8 +433,6 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
         if self.use_enrollments and not is_nested:
             other_cut = self.get_other_cut(cut, speaker_id, find_best_crop=True)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
-            if self.provide_gt_lang:
-                outputs["enrollment"]["language"] = outputs["language"]
         return outputs
 
 
