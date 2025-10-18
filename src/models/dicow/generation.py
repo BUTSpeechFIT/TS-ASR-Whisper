@@ -1075,11 +1075,10 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                 else:
                     model_kwargs["past_key_values"].reorder_cache(beam_idx)
 
-            cur_len = cur_len + 1
             if hasattr(self, "ctc_rescorer"):
-                if beam_idx is None:
-                    beam_idx = self._flatten_beam_dim(running_beam_indices[..., cur_len - decoder_prompt_len])
-                self.ctc_rescorer.update_state(sequences.flatten(0,1)[:, cur_len], beam_idx)
+                self.ctc_rescorer.update_state(running_sequences.flatten(0,1)[:, cur_len], beam_idx)
+
+            cur_len = cur_len + 1
             is_early_stop_heuristic_unsatisfied = self._check_early_stop_heuristic(
                 is_early_stop_heuristic_unsatisfied=is_early_stop_heuristic_unsatisfied,
                 running_beam_scores=running_beam_scores,
