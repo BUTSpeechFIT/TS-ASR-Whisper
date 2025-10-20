@@ -1,17 +1,15 @@
 from typing import Any, Union, Dict, List, Optional, Tuple
-from types import MethodType
-from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
 
 import torch
 import wandb
 from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-from transformers import Seq2SeqTrainer
-from transformers import TrainingArguments, TrainerCallback, TrainerState, TrainerControl
+from transformers import Seq2SeqTrainer, Trainer, TrainingArguments, TrainerCallback, TrainerState, TrainerControl
 from transformers.trainer_pt_utils import get_model_param_count
 from transformers.trainer_utils import EvalLoopOutput
 from transformers.utils import logging
+
 from utils.compute_overall_statisctics import main as compute_overall_stats
 
 logging.set_verbosity_debug()
@@ -30,65 +28,79 @@ class GradLogger(TrainerCallback):
             raise ValueError("wandb is not initialized")
 
 
-# from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
-# class CustomTrainerEncoder(Trainer):
-#     def __init__(self, container, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.forward_w_cast = None
-#         self.forward_wo_cast = None
-#         self.container = container
-#
-#     def prediction_step(
-#             self,
-#             model: nn.Module,
-#             inputs: Dict[str, Union[torch.Tensor, Any]],
-#             prediction_loss_only: bool,
-#             ignore_keys: Optional[List[str]] = None,
-#             **gen_kwargs,
-#     ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
-#
-#         if hasattr(self.container, 'h'):
-#             self.container.h.set_diar_output(inputs['vad_mask'])
-#
-#         labels = inputs.pop("labels")
-#
-#         # else:
-#         output = super().prediction_step(
-#             model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs
-#         )
-#         loss = self.model.get_loss(output[1], labels)
-#
-#         output = (loss, output[1], labels)
-#         return output
-#
-#     def compute_loss(self, model, inputs, return_outputs=False):
-#         """
-#         How the loss is computed by Trainer. By default, all models return the loss in the first element.
-#
-#         Subclass and override for custom behavior.
-#         """
-#         labels = inputs.pop("labels")
-#
-#         outputs = model(**inputs)
-#         # Save past state if it exists
-#         # TODO: this needs to be fixed and made cleaner later.
-#         if self.args.past_index >= 0:
-#             self._past = outputs[self.args.past_index]
-#
-#         for token in self.tokenizer.prefix_tokens:
-#             if (labels[:, 0] == token).all():
-#                 labels = labels[:, 1:]
-#         labels[labels == self.tokenizer.eos_token_id] = -100
-#
-#         loss = self.model.get_loss(outputs.logits, labels)
-#
-#         return (loss, outputs) if return_outputs else loss
-#
-#     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
-#         if hasattr(self.container, 'h'):
-#             self.container.h.set_diar_output(inputs['vad_mask'])
-#         out = super().training_step(model, inputs)
-#         return out
+class CustomTrainerEncoder(Trainer):
+    def __init__(self, container, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.forward_w_cast = None
+        self.forward_wo_cast = None
+        self.container = container
+        self.chunk_length = None
+        if hasattr(self.model, "get_max_len"):
+            self.chunk_length = self.model.get_max_len()
+
+    def prediction_step(
+            self,
+            model: nn.Module,
+            inputs: Dict[str, Union[torch.Tensor, Any]],
+            prediction_loss_only: bool,
+            ignore_keys: Optional[List[str]] = None,
+            **gen_kwargs,
+    ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
+
+        labels = inputs.pop("labels")
+        # If input sequence is longer then model maximum length
+        length = inputs[model.main_input_name].size(-1)
+
+        if self.chunk_length is not None and length > self.chunk_length:
+            feats = inputs[model.main_input_name].split(self.chunk_length, dim=-1)
+            att_masks = inputs['attention_mask'].split(self.chunk_length, dim=-1)
+            inputs_ = zip(feats, att_masks)
+            logits = []
+            for inputs_local, mask in inputs_:
+                logits.append(super().prediction_step(
+                    model, {model.main_input_name: inputs_local, "attention_mask": mask, 'return_logits': True}, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs
+                )[1][0])
+            logits = torch.concat(logits, dim=1)
+
+        else:
+            inputs['return_logits'] = True
+            output = super().prediction_step(
+                model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs
+            )
+            logits = output[1][0]
+        loss = self.model.get_loss(logits, labels)
+
+        output = (loss, logits, labels)
+        return output
+
+    def compute_loss(
+        self,
+        model: nn.Module,
+        inputs: dict[str, Union[torch.Tensor, Any]],
+        return_outputs: bool = False,
+        num_items_in_batch: Optional[torch.Tensor] = None,
+    ):
+        """
+        How the loss is computed by Trainer. By default, all models return the loss in the first element.
+
+        Subclass and override for custom behavior.
+        """
+        labels = inputs.pop("labels")
+
+        outputs = model(**inputs, return_logits=True)
+        # Save past state if it exists
+        # TODO: this needs to be fixed and made cleaner later.
+        if self.args.past_index >= 0:
+            self._past = outputs[self.args.past_index]
+
+        for token in self.processing_class.prefix_tokens:
+            if (labels[:, 0] == token).all():
+                labels = labels[:, 1:]
+        labels[labels == self.processing_class.eos_token_id] = -100
+
+        loss = self.model.get_loss(outputs.logits, labels)
+
+        return (loss, outputs) if return_outputs else loss
 
 
 class CustomTrainer(Seq2SeqTrainer):

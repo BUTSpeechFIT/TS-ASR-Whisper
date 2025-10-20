@@ -220,13 +220,15 @@ class DataCollator:
 class DataCollatorForPretraining(DataCollator):
     use_timestamps: bool = False
 
-    def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        batch = self.feature_extractor([sample["audio"]["array"] for sample in inputs], return_tensors="pt",
-                                       sampling_rate=16_000, return_attention_mask=True)
-        # Tokenize the labels
-        labels = self.tokenizer(
-            [sample["transcript"] for i, sample in enumerate(inputs)],
-            padding="longest", max_length=self.max_length, return_tensors="pt")
+    def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]]) -> BatchFeature:
+        labels = self.tokenizer([sample["transcript"] for sample in inputs],
+                                padding="longest", max_length=self.max_length, return_tensors="pt")
+        feats = pad_sequence([
+            sample['input_features'].squeeze().T for sample in inputs]).permute(1, 2, 0)
+        masks = pad_sequence([
+            sample['attention_mask'].T for sample in inputs]).squeeze().T
+
+        batch = BatchFeature({'input_features': feats, 'attention_mask': masks})
 
         batch["labels"] = labels["input_ids"].masked_fill(labels.attention_mask.ne(1), -100)
         if (batch["labels"][:, 0] == self.bos_token_id).all().cpu().item():

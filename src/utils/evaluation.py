@@ -1,7 +1,5 @@
 import os
-import pickle
 import re
-import subprocess
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Callable
@@ -71,27 +69,9 @@ def compute_metrics(output_dir: os.path, text_norm: Callable, tokenizer: PreTrai
     if wandb.run is not None:
         write_wandb_pred(pred_str, label_str, rows_to_log=wandb_pred_to_save)
 
-    # Save predictions to the run directory as pickle
-    with open(f"{output_dir}/predictions.pkl", "wb") as f:
-        pickle.dump(pred, f)
-
     path = f"{output_dir}/predictions.csv"
     df = pd.DataFrame({"label": label_str, "prediction": pred_str})
     df.to_csv(path, index=False)
-
-    sclite_files = [path.replace(".csv", f"_{type}.trn") for type in ["hyp", "ref"]]
-    for strings, file_to_save in zip([pred_str, label_str], sclite_files):
-        with open(file_to_save, "w") as file_handler:
-            for index, string in enumerate(strings):
-                file_handler.write(f"{string} (utterance_{index})\n")
-
-    sclite_cmd = f"sclite -F -D -i wsj -r {sclite_files[1]} trn -h {sclite_files[0]} trn -o snt sum dtl"
-    process = subprocess.Popen(sclite_cmd.split())  # nosec
-    try:
-        process.wait(60)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        logger.warning("Sclite evaluation timed out.")
 
     # ensure that for jiwer all labels are non empty by replacing empty labels with hyphen
     label_str = [label if label else "-" for label in label_str]

@@ -357,7 +357,7 @@ class TS_ASR_Dataset(TS_ASR_DatasetSuperclass, Dataset):
 
 class LhotseLongFormDataset(TS_ASR_Dataset):
     def __init__(self, cutset: CutSet,
-                 references: CutSet = None, provide_gt_lang: bool = False, break_to_characters=False, **kwargs):
+                 references: CutSet = None, provide_gt_lang: bool = False, break_to_characters=False, use_ids_as_transcripts=True, **kwargs):
         self.break_to_characters = break_to_characters
         cutset = cutset.to_eager()
         if self.break_to_characters:
@@ -379,6 +379,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                 logger.warn("'cutset' and 'references' aren't the same sets")
 
         self.provide_gt_lang = provide_gt_lang
+        self.use_ids_as_transcripts = use_ids_as_transcripts
 
     @staticmethod
     def add_space_between_chars(text):
@@ -420,6 +421,20 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
 
         outputs = {"input_features": features, "stno_mask": torch.tensor(stno_mask), "attention_mask": att_mask,
                    "transcript": f'{cut.id},{speaker_id}', "is_long_form": True}
+
+        if not self.use_ids_as_transcripts:
+            target_spk_cut = cut.filter_supervisions(lambda x: x.speaker == speaker_id)
+            last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut,
+                                                                                          "per_spk_flags") else False
+            merged_supervisions = self.merge_supervisions(target_spk_cut)
+            transcription = ("" if self.use_timestamps else " ").join(
+                [self.get_segment_text_with_timestamps(segment, self.use_timestamps, self.text_norm,
+                                                       (idx == len(
+                                                           merged_supervisions) - 1) and last_segment_unfinished)
+                 for idx, segment in
+                 enumerate(merged_supervisions)])
+            outputs["transcript"] = transcription
+
         if self.provide_gt_lang and not is_nested:
             if hasattr(cut, "lang"):
                 outputs["language"] = cut.lang
@@ -443,7 +458,7 @@ def modify_cut_to_force_enrollment_usage(cut):
 
 
 def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArguments,
-                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None):
+                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True,):
     logger.info('Using LhotseLongFormDataset')
     if cutset_paths is None or len(cutset_paths) == 0:
         raise ValueError("'cutset_paths' is None or empty. Please provide valid 'cutset_paths' for the dataset")
@@ -489,5 +504,6 @@ def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArgument
                                                                                     break_to_characters="break_to_chars" in path,
                                                                                     use_enrollments=data_args.use_enrollments,
                                                                                     enrollment_cutset=enrollment_cutset,
+                                                                                    use_ids_as_transcripts=use_ids_as_transcripts
                                                                                     ) for cutset, ref, path in
             zip(cutsets, refs, cutset_paths)}

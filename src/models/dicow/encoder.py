@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from transformers.modeling_outputs import BaseModelOutput
+from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput
 from transformers.models.whisper.modeling_whisper import WhisperEncoder, WhisperEncoderLayer, WhisperAttention
 from .FDDT import FDDT
 from .config import DiCoWConfig
@@ -131,6 +131,9 @@ class DiCoWEncoder(WhisperEncoder):
             )
         return ctc_loss
 
+    def get_max_len(self):
+        return self.config.max_source_positions * self.conv1.stride[0] * self.conv2.stride[0]
+
     def forward(
             self,
             input_features,
@@ -140,6 +143,7 @@ class DiCoWEncoder(WhisperEncoder):
             output_hidden_states=None,
             return_dict=None,
             stno_mask=None,
+            return_logits=False,
     ):
         expected_seq_length = self.config.max_source_positions * self.conv1.stride[0] * self.conv2.stride[0]
         if input_features.shape[-1] != expected_seq_length:
@@ -209,6 +213,15 @@ class DiCoWEncoder(WhisperEncoder):
         hidden_states = self.layer_norm(hidden_states)
         if output_hidden_states:
             encoder_states = encoder_states + (hidden_states,)
+
+        if return_logits:
+            hidden_states = hidden_states
+            hidden_states = self.possibly_update_last_hidden_states(hidden_states)
+            logits = self.lm_head(hidden_states)
+
+            return CausalLMOutput(
+                loss=None, logits=logits, hidden_states=hidden_states,
+            )
 
         if not return_dict:
             return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
