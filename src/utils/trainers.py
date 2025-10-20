@@ -109,12 +109,14 @@ class CustomTrainer(Seq2SeqTrainer):
     ) -> torch.Tensor:
         if self.warmup_phase and self.state.epoch >= self.args.use_fddt_only_n_epochs and self.state.global_step >= self.args.use_fddt_only_n_steps:
             for name, param in self.model.named_parameters():
-                require_grad = True
+                if "lora_" in name:
+                    param.requires_grad = True
+                    continue
                 for keyword in self.params_to_keep_frozen:
                     if keyword in name:
-                        require_grad = False
+                        param.requires_grad = False
                         break
-                if not param.requires_grad and require_grad:
+                else:
                     param.requires_grad = True
             logger.info(f"***** Unfreezing params except {self.params_to_keep_frozen}*****")
             logger.info(f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}")

@@ -49,6 +49,7 @@ training:
   bf16: true
   bf16_full_eval: true
   use_flash_attention: true
+  use_lora: false
   dataloader_num_workers: 2
   dataloader_prefetch_factor: 1
   dataloader_pin_memory: false

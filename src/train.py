@@ -42,7 +42,7 @@ class ModelTrainer:
             use_flash_attention=self.training_args.use_flash_attention,
             remove_timestamps_from_ctc=self.training_args.remove_timestamps_from_ctc,
             use_fddt=self.training_args.use_fddt,
-            use_bf16=self.training_args.bf16_full_eval,
+            use_lora=self.training_args.use_lora,
             params_to_keep_frozen_keywords=self.model_args.params_to_keep_frozen_keywords,
         )
 

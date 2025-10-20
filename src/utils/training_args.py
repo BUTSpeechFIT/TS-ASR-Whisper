@@ -46,6 +46,9 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
     use_flash_attention: Optional[bool] = field(
         default=False, metadata={"help": "Whether to use flash attention."}
     )
+    use_lora: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to use lora in decoder."}
+    )
 
 
 @dataclass

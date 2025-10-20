@@ -1,4 +1,5 @@
 import torch
+from peft import LoraConfig, get_peft_model
 from transformers.models.whisper import WhisperFeatureExtractor, WhisperTokenizerFast
 
 from models.dicow.modeling_dicow import DiCoWForConditionalGeneration
@@ -16,7 +17,8 @@ def supports_flash_attention():
 
 
 class WhisperContainer:
-    def __init__(self, use_flash_attention=False, params_to_keep_frozen_keywords=None, remove_timestamps_from_ctc=False, model_args=None, data_args=None, use_fddt=False, use_bf16=False):
+    def __init__(self, use_flash_attention=False, params_to_keep_frozen_keywords=None, remove_timestamps_from_ctc=False,
+                 model_args=None, data_args=None, use_fddt=False, use_lora=False):
         self.model_type = model_args.whisper_model
         predict_timestamps = data_args.use_timestamps
         global_lang_id = data_args.global_lang_id
@@ -64,11 +66,28 @@ class WhisperContainer:
         if predict_timestamps:
             self.model.generation_config.return_timestamps = predict_timestamps
 
+        if use_lora:
+            lora_config = LoraConfig(
+                r=16,  # LoRA rank (tune as needed)
+                lora_alpha=32,  # LoRA alpha (scaling)
+                target_modules=r".*decoder.*(q_proj|k_proj|v_proj|out_proj|fc1|fc2).*",
+                lora_dropout=0.0,
+                bias="none",
+            )
+
+            self.model = get_peft_model(self.model, lora_config)
+
         if params_to_keep_frozen_keywords is not None:
             for name, param in self.model.named_parameters():
+                if "lora_" in name:
+                    param.requires_grad = True
+                    continue
                 for keyword in params_to_keep_frozen_keywords:
                     if keyword in name:
                         param.requires_grad = False
+                        break
+                else:
+                    param.requires_grad = True
 
     def freeze_except(self, prefixes_to_preheat):
         for name, param in self.model.named_parameters():
