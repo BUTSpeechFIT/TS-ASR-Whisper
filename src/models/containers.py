@@ -38,10 +38,11 @@ class WhisperContainer:
                                        fddt_init=model_args.fddt_init,
                                        non_target_fddt_value=model_args.non_target_fddt_value,
                                        use_initial_fddt=model_args.use_initial_fddt,
-                                       uses_enrollments=data_args.use_enrollments,
+                                       use_enrollments=data_args.use_enrollments,
                                        pre_ctc_sub_sample=model_args.pre_ctc_sub_sample,
                                        additional_layer=model_args.additional_layer,
                                        additional_self_attention_layer=model_args.additional_self_attention_layer,
+                                       scb_layers=model_args.scb_layers,
                                        )
 
                       )

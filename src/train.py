@@ -8,7 +8,7 @@ from transformers import EarlyStoppingCallback
 from transformers.utils import logging
 
 from data.collators import DataCollator
-from data.local_datasets import build_datasets, TS_ASR_Dataset, modify_cut_to_force_enrollment_usage
+from data.local_datasets import build_datasets, TS_ASR_Dataset, load_cutsets
 from models.containers import WhisperContainer, get_optimizer
 from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
@@ -48,18 +48,7 @@ class ModelTrainer:
 
     def _load_training_cutsets(self):
         """Load and prepare training cutsets."""
-        train_cutsets = [lhotse.load_manifest(cutset) for cutset in self.data_args.train_cutsets]
-
-        if self.data_args.use_enrollments:
-            # Librispeech-based datasets use enrollments, as they don't have enough audio to self-enroll
-            for idx, cutset in enumerate(self.data_args.train_cutsets):
-                if "libri" in cutset:
-                    train_cutsets[idx].use_enrollment = True
-                    if not "custom" in cutset:
-                        train_cutsets[idx] = train_cutsets[idx].map(modify_cut_to_force_enrollment_usage)
-                else:
-                    train_cutsets[idx].use_enrollment = False
-
+        train_cutsets = load_cutsets(self.data_args.train_cutsets, self.data_args.use_enrollments)
         return train_cutsets
 
     def _create_enrollment_cutset(self):
@@ -202,7 +191,6 @@ class ModelTrainer:
 
         metrics = self.trainer.evaluate(eval_dataset=eval_datasets, metric_key_prefix=condition_key)
         logger.info(f"Metrics {metrics}")
-        self.model.generation_config.ctc_weight = 0.0
 
     def train(self):
         """Main training pipeline."""

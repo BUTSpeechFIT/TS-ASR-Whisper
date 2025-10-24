@@ -141,7 +141,7 @@ class DataCollator:
     def is_all_true_or_all_false(lst):
         return all(lst) or not any(lst)
 
-    def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]]) -> BatchFeature:
+    def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]], nested=False) -> BatchFeature:
         longform = [sample['is_long_form'] for sample in inputs]
         if len(set(longform)) != 1:
             raise ValueError(f"Some inputs are longform and some are not")
@@ -213,6 +213,13 @@ class DataCollator:
                 stno_mask = spec_aug_output[:, batch['input_features'].shape[1]:, :]
                 batch['input_features'] = spec_aug_output[:, :batch['input_features'].shape[1], :]
                 batch["stno_mask"] = torch.stack(stno_mask.split(self.conv_subsample_factor, dim=-1)).mean(dim=-1).permute(1, 2, 0)
+
+        if self.use_enrollments and not nested:
+            enrollments = [sample["enrollment"] for sample in inputs]
+            enrollments_processed = self(enrollments, nested=True)
+            enrollments_processed.pop("labels")
+            enrollments_processed.pop("upp_labels")
+            batch["enrollments"] = enrollments_processed
         return batch
 
 

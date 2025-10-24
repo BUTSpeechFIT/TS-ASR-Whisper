@@ -45,6 +45,7 @@ class DiCoW(WhisperModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
             cache_position: Optional[torch.LongTensor] = None,
+            enrollments = None
     ) -> Union[tuple[torch.Tensor], Seq2SeqModelOutput]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -63,6 +64,7 @@ class DiCoW(WhisperModel):
                 head_mask=head_mask,
                 return_dict=return_dict,
                 stno_mask=stno_mask,
+                enrollments=enrollments
             )
         # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
         # elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
@@ -143,6 +145,7 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             return_dict: Optional[bool] = None,
             cache_position: Optional[torch.LongTensor] = None,
             forced_decoder_ids: Optional[torch.LongTensor] = None,
+            enrollments= None,
     ) -> Union[tuple[torch.Tensor], Seq2SeqLMOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -178,6 +181,7 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             return_dict=return_dict,
             cache_position=cache_position,
             stno_mask=stno_mask,
+            enrollments=enrollments,
         )
 
         dec_lm_logits = self.proj_out(outputs.last_hidden_state)

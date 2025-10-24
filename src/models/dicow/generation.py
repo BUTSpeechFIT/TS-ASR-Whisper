@@ -104,6 +104,10 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         kwargs["stno_mask"] = torch.cat(stno_masks, dim=0)
         self.stno_mask_seek = kwargs["stno_mask"]
 
+        if self.config.use_enrollments and "enrollments" in kwargs:
+            for key in kwargs["enrollments"]:
+                kwargs["enrollments"][key] = kwargs["enrollments"][key][batch_idx_map]
+
         if "labels" in kwargs:
             kwargs['labels'] = kwargs["labels"][batch_idx_map]
             kwargs['upp_labels'] = kwargs["upp_labels"][batch_idx_map]
@@ -373,19 +377,18 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                     # Segment would wrap across a 30s boundary
                     new_seg_start = (correction + start_time) % 30
                     seg_duration = end_time - start_time
-
-                    if seg_duration >= new_seg_start:
-                        # Seek back to the beginning of the segment window
-                        result.append((new_seg_start, [empty_text_token], new_seg_start))
-                        result.append((0, tokens, seg_duration))
-                        # Apply correction to align future timestamps to new 30s block
-                        correction = self.round_to_nearest_0_02(-(start_time % 30))
+                    new_end_time = (end_time + correction) % 30
+                    # if segment duration is exactly 30s we have to use a correction trick, elsewise tokenizer will automatically adjust
+                    if seg_duration == 30.0:
+                        if float(new_seg_start) % 30.0 == 0.0:
+                            new_end_time = Decimal(30.0)
+                            correction = Decimal(0.0)
+                        else:
+                            correction = Decimal(-0.02)
+                            new_end_time += Decimal(correction)
                     else:
-                        # Otherwise, just insert with adjusted times
-                        # new end time should be 30-new_seg_start
-                        new_end_time = (end_time + correction) % 30
-                        correction = 0
-                        result.append((new_seg_start, tokens, new_end_time))
+                        correction = Decimal(0.0)
+                    result.append((new_seg_start, tokens, new_end_time))
                 # print(f'Processed segment {i}, result: {self.tokenizer.decode(self.tokenizer("".join([f"<|{seg[0]:.2f}|>{self.tokenizer.decode(seg[1])}<|{seg[2]:.2f}|>" for seg in result]))["input_ids"], decode_with_timestamps=True)[-250:]}')
                 # Update the previous segment's end time for next iteration
                 prev_segment_end_time = end_time + correction
@@ -540,8 +543,6 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                 f"Provided generation mode {gen_mode} is not supported"
                 f" for WhisperForConditionalGeneration with joint CTC decoding")
 
-        if self.config.uses_enrollments:
-            raise NotImplementedError
         if "stno_mask" in kwargs:
             self.stno_mask = kwargs["stno_mask"]
 
@@ -575,9 +576,9 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         attention_mask,
         kwargs,
     ):
-        kwargs = copy.copy(kwargs)
+        kwargs_local = copy.deepcopy(kwargs)
         max_frames = attention_mask.sum(-1).cpu().to(torch.long)
-        kwargs = self.prepare_kwargs_for_generate(max_frames, cur_bsz, batch_idx_map, seek, kwargs)
+        kwargs_local = self.prepare_kwargs_for_generate(max_frames, cur_bsz, batch_idx_map, seek, kwargs_local)
         seek_sequences, seek_outputs, should_skip, do_condition_on_prev_tokens, model_output_type = super().generate_with_fallback(
             segment_input,
             decoder_input_ids,
@@ -595,7 +596,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
             is_shortform,
             batch_size,
             attention_mask,
-            kwargs,
+            kwargs_local,
         )
         self.stno_mask_seek = None
 

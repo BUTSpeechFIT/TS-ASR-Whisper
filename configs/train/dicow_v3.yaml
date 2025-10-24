@@ -14,6 +14,7 @@ data:
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_custom_cutset_train-3mix.jsonl.gz
   dev_cutsets:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_dev_sc.jsonl.gz
   eval_cutsets:
@@ -28,8 +29,9 @@ data:
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-2mix.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-3mix.jsonl.gz
   dataset_weights:
-    - 4
-    - 4
+    - 6
+    - 6
+    - 1
     - 1
     - 1
     - 1

@@ -4,7 +4,7 @@ from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput
 from transformers.models.whisper.modeling_whisper import WhisperEncoder, WhisperEncoderLayer, WhisperAttention
 from .FDDT import FDDT
 from .config import DiCoWConfig
-from .layers import CustomLinear, CustomDiagonalLinear, Gate
+from .layers import CustomLinear, CustomDiagonalLinear, InterpolationGate, SpeakerCommunicationBlock
 
 
 class DiCoWEncoder(WhisperEncoder):
@@ -70,12 +70,14 @@ class DiCoWEncoder(WhisperEncoder):
                 )
                 for _ in range(num_fddts)
             ])
+            if config.use_enrollments and config.scb_layers is not None:
+                self.ca_enrolls = nn.ModuleList([SpeakerCommunicationBlock(config) for _ in range(config.scb_layers)])
         self.first_task_token = self.config.vocab_size - 30 * 50 - 1 - 6  # 30 seconds of 50 Hz timestamps -1 to get to 0.0 and -6 number of tasks
         self.post_init()
 
     def _init_weights(self, module):
         super()._init_weights(module)
-        if isinstance(module, CustomLinear) or isinstance(module, CustomDiagonalLinear) or isinstance(module, Gate):
+        if isinstance(module, CustomLinear) or isinstance(module, CustomDiagonalLinear) or isinstance(module, InterpolationGate):
             module.reset_parameters()
 
     def get_output_embeddings(self):
@@ -144,7 +146,12 @@ class DiCoWEncoder(WhisperEncoder):
             return_dict=None,
             stno_mask=None,
             return_logits=False,
+            enrollments=None
     ):
+        if enrollments is not None:
+            input_features = torch.stack((input_features, enrollments['input_features']), dim=1).flatten(0,1)
+            stno_mask = torch.stack((stno_mask, enrollments['stno_mask']),dim=1).flatten(0,1)
+
         expected_seq_length = self.config.max_source_positions * self.conv1.stride[0] * self.conv2.stride[0]
         if input_features.shape[-1] != expected_seq_length:
             raise ValueError(
@@ -196,6 +203,9 @@ class DiCoWEncoder(WhisperEncoder):
                 """<DiCoW CODE>"""
                 if self.config.use_fddt and idx < len(self.fddts):
                     hidden_states = self.fddts[idx](hidden_states, stno_mask)
+
+                if self.config.use_enrollments and idx < self.config.scb_layers:
+                    hidden_states = self.ca_enrolls[idx](hidden_states)
                 """</DiCoW CODE>"""
 
                 layer_outputs = encoder_layer(
@@ -211,8 +221,12 @@ class DiCoWEncoder(WhisperEncoder):
                 all_attentions = all_attentions + (layer_outputs[1],)
 
         hidden_states = self.layer_norm(hidden_states)
+
         if output_hidden_states:
             encoder_states = encoder_states + (hidden_states,)
+
+        if enrollments is not None:
+            hidden_states = hidden_states[::2]
 
         if return_logits:
             hidden_states = hidden_states

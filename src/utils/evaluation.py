@@ -186,11 +186,6 @@ def shift_timestamps(cut: lhotse.MonoCut):
     offset = cut.start
     return cut.map_supervisions(shift_timestamps_supervision)
 
-
-def filter_fake_supervisions(supervision):
-    return not supervision.speaker.startswith("ZZZZ_fake_")
-
-
 def save_session_outputs(processed_sessions: dict, current_dir, text_norm, references_cs: CutSet):
     for session_id, outputs in processed_sessions.items():
         attributed_segments_df = pd.DataFrame(outputs)
@@ -209,8 +204,6 @@ def save_session_outputs(processed_sessions: dict, current_dir, text_norm, refer
             gt_cut = gt_cutset[0]
 
         remove_custom_attributes(gt_cut)
-        gt_cut = gt_cut.filter_supervisions(filter_fake_supervisions)
-
         filepath = Path(current_dir) / 'wer' / session_id
         # Potentially correct shifted cutsets
         gt_cutset = shift_timestamps(gt_cut)

@@ -6,24 +6,23 @@ from functools import reduce
 from pathlib import Path
 from typing import List, Union
 
+import lhotse
 import numpy as np
 import torch
-from data.augmentations import RandomBackgroundNoise
-from data.cut_splice import mix_three_cuts
 from lhotse import CutSet
 from lhotse.cut import Cut, MixedCut
 from lhotse.utils import fastcopy
 from torch.utils.data import Dataset
 from transformers.utils import logging
+
+from data.augmentations import RandomBackgroundNoise
+from data.cut_splice import mix_three_cuts
 from utils.general import round_nearest, get_cut_recording_id
 from utils.training_args import DataArguments
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
-
-def is_fake_spkr(spk_id):
-    return spk_id.startswith("fake_") or spk_id.startswith("ZZZfake_")
 
 
 def add_timestamps(transcript, sample_len, sampling_rate=16_000, precision=0.02):
@@ -61,6 +60,15 @@ class TS_ASR_DatasetSuperclass:
 
         assert len(self.cutsets) == len(self.dataset_weights), "cutsets and dataset_weights must have the same length"
 
+        if use_enrollments:
+            parent_csets = [cutset.parent_cutset for cutset in self.cutsets if
+                            hasattr(cutset, "parent_cutset")]
+            if len(parent_csets) > 0:
+                self.parent_csets = reduce(lambda a, b: a + b, parent_csets)
+                self.parent_recording_to_id = {get_cut_recording_id(cut): idx for idx, cut in enumerate(self.parent_csets)}
+            else:
+                self.parent_csets = None
+
         self.cset = reduce(lambda a, b: a + b, self.cutsets)
 
         self.use_enrollments = use_enrollments
@@ -70,7 +78,7 @@ class TS_ASR_DatasetSuperclass:
             if enrollment_cutset:
                 self.enrollment_cutset = enrollment_cutset
                 for idx, cut in enumerate(enrollment_cutset):
-                    speakers = set([supervision.speaker for supervision in cut.supervisions])
+                    speakers = self.get_cut_spks(cut)
                     for speaker in speakers:
                         if speaker not in self.per_speaker_enrollments:
                             self.per_speaker_enrollments[speaker] = [[get_cut_recording_id(cut), idx]]
@@ -119,9 +127,9 @@ class TS_ASR_DatasetSuperclass:
             text = start + text + end
         return text
 
-    def merge_supervisions(self, target_spk_cut):
+    def merge_supervisions(self, target_spk_supervision):
         new_merged_list = []
-        for supervision in sorted(target_spk_cut.supervisions, key=lambda x: x.start):
+        for supervision in sorted(target_spk_supervision, key=lambda x: x.start):
             if len(new_merged_list) == 0:
                 supervision.end_ = supervision.end
                 supervision.text_ = supervision.text
@@ -148,12 +156,7 @@ class TS_ASR_DatasetSuperclass:
 
     def get_stno_mask(self, cut: Cut, speaker_id: str):
         speakers = list(sorted(CutSet.from_cuts([cut]).speakers))
-        speakers_to_idx = {spk: idx for idx, spk in enumerate(filter(lambda sid: not is_fake_spkr(sid), speakers))}
-        for spk in speakers:
-            if is_fake_spkr(spk):
-                # this will make sure that fake speaker has larger ID than real speakers
-                speakers_to_idx[spk] = len(speakers_to_idx)
-
+        speakers_to_idx = {spk: idx for idx, spk in enumerate(speakers)}
         spk_mask = cut.speakers_audio_mask(speaker_to_idx_map=speakers_to_idx)
 
         # Pad to match features
@@ -206,17 +209,36 @@ class TS_ASR_DatasetSuperclass:
         return batch['input_features'], batch['attention_mask']
 
     @staticmethod
-    def max_ones_window(arr, window_size=30):
+    def sample_enrollment_window(arr, window_size=30, greedy_sample=False, skew_param=5.0):
         arr = np.array(arr, dtype=float)
+        n = len(arr)
 
-        # Convolve with a window of ones (works as a rolling sum)
-        window_sums = np.convolve(arr, np.ones(window_size, dtype=float), mode='valid')
+        # Compute rolling sums (activity over each window)
+        weights = np.convolve(arr, np.ones(window_size, dtype=float), mode='valid')
 
-        # Find the index of the maximum sum
-        max_start = np.argmax(window_sums)
-        max_sum = window_sums[max_start]
+        if greedy_sample:
+            max_start = np.argmax(weights)
+            max_sum = weights[max_start]
+            return max_start, max_sum
 
-        return max_start, max_sum, arr[max_start:max_start + window_size]
+        max_start = n - window_size + 1
+        weights = weights[:max_start]
+
+        # Skew towards more active segments
+        weights_scaled = np.power(weights, skew_param)
+
+        # Normalize to get probabilities
+        if np.all(weights == 0):
+            raise ValueError("No speaker activity found.")
+        else:
+            probs = weights_scaled / weights_scaled.sum()
+
+        # Sample start index, ensuring it's within valid range [0, n - window_size]
+        sampled_start = np.random.choice(np.arange(0, max_start), p=probs)
+        sampled_sum = weights[sampled_start]
+
+        # Return start index, total activity
+        return sampled_start, sampled_sum
 
     @staticmethod
     def downsample_mean(arr, factor=1600):
@@ -225,50 +247,51 @@ class TS_ASR_DatasetSuperclass:
         arr = arr[:n * factor]  # trim to multiple of factor
         return arr.reshape(n, factor).mean(axis=1)
 
-    def select_random_internal_enrollment(self, spk_id: str, recording_id: str, find_best_crop: bool = False):
-        cut = self.cset.subset(cut_ids=[recording_id])[0]
-        if find_best_crop:
-            speakers = set([supervision.speaker for supervision in cut.supervisions])
-            speakers_to_idx = {spk: idx for idx, spk in
-                               enumerate(filter(lambda sid: not is_fake_spkr(sid), speakers))}
+    def get_potentionally_parent_recording(self, cut):
+        if self.parent_csets is not None:
+            if get_cut_recording_id(cut) in self.parent_recording_to_id:
+                return self.parent_csets[self.parent_recording_to_id[get_cut_recording_id(cut)]]
+        return cut
+
+    def select_random_internal_enrollment(self, spk_id: str, cut, greedy_sample=False):
+        speakers = self.get_cut_spks(cut)
+        speakers_to_idx = {spk: idx for idx, spk in enumerate(speakers)}
+        spk_mask = cut.speakers_audio_mask(speaker_to_idx_map=speakers_to_idx)
+        spk_mask[:, (spk_mask.sum(axis=0) > 1)] = 0  # Mask overlaps
+        spk_index = speakers_to_idx[spk_id]
+        spk_activity = spk_mask[spk_index]
+        spk_activity = self.downsample_mean(spk_activity, int(cut.sampling_rate / 10))
+        best_fit_window_start, best_fit_window_act = self.sample_enrollment_window(spk_activity, window_size=30 * 10,
+                                                                                   greedy_sample=greedy_sample)
+        if best_fit_window_act == 0:  # We didn't find any target speaker only segment, everything is fully overlapped, revert to find mostly overlapped segment
             spk_mask = cut.speakers_audio_mask(speaker_to_idx_map=speakers_to_idx)
-            spk_mask[:, (spk_mask.sum(axis=0) > 1)] = 0  # Mask overlaps
             spk_index = speakers_to_idx[spk_id]
             spk_activity = spk_mask[spk_index]
             spk_activity = self.downsample_mean(spk_activity, int(cut.sampling_rate / 10))
-            best_fit_window = self.max_ones_window(spk_activity, window_size=30 * 10)
-            if best_fit_window[
-                1] == 0:  # We didn't find any target speaker only segment, everything is fully overlapped, revert to find mostly overlapped segment
-                spk_mask = cut.speakers_audio_mask(speaker_to_idx_map=speakers_to_idx)
-                spk_index = speakers_to_idx[spk_id]
-                spk_activity = spk_mask[spk_index]
-                spk_activity = self.downsample_mean(spk_activity, int(cut.sampling_rate / 10))
-                best_fit_window = self.max_ones_window(spk_activity, window_size=30 * 10)
-            new_cut = fastcopy(cut)
-            new_cut.start = best_fit_window[0] / 10
-            new_cut.duration = 30
-            supervisions_pruned = []
-            for supervision in cut.supervisions:
-                if supervision.end < new_cut.start:
-                    continue
-                elif supervision.start > new_cut.end:
-                    continue
-                else:
-                    new_sup = fastcopy(supervision)
-                    new_sup.start -= new_cut.start  # Supervision that start before or finish after our selected chunk, are by default corrected when creating STNO masks
-                    supervisions_pruned.append(new_sup)
-            new_cut.supervisions = supervisions_pruned
-            return new_cut
-        if cut.duration > 30.0:
-            raise ValueError("Returned the whole longform cut.")
-        return cut
+            best_fit_window_start, _ = self.sample_enrollment_window(spk_activity, window_size=30 * 10,
+                                                                     greedy_sample=greedy_sample)
+        new_cut = fastcopy(cut)
+        new_cut.start = best_fit_window_start / 10
+        new_cut.duration = 30
+        supervisions_pruned = []
+        for supervision in cut.supervisions:
+            if supervision.end < new_cut.start:
+                continue
+            elif supervision.start > new_cut.end:
+                continue
+            else:
+                new_sup = fastcopy(supervision)
+                new_sup.start -= new_cut.start  # Supervision that start before or finish after our selected chunk, are by default corrected when creating STNO masks
+                supervisions_pruned.append(new_sup)
+        new_cut.supervisions = supervisions_pruned
+        return new_cut
 
     def generate_enrollment_mixture(self, idx, speaker_id):
-        other_cut = self.enrollment_cutset[idx]
+        same_spk_cut = self.enrollment_cutset[idx]
         other_speakers = random.sample(self.enrollment_speakers, 3)
         other_cuts = [self.enrollment_cutset[self.per_speaker_enrollments[other_speaker][0][1]] for
                       other_speaker in other_speakers if other_speaker != speaker_id]
-        other_cut = mix_three_cuts(cut1=other_cut,
+        other_cut = mix_three_cuts(cut1=same_spk_cut,
                                    cut2=other_cuts[0],
                                    cut3=other_cuts[1],
                                    sampling_rate=16000,
@@ -281,10 +304,8 @@ class TS_ASR_DatasetSuperclass:
                                    )
         return other_cut
 
-    def get_other_cut(self, cut, speaker_id, find_best_crop=False):
-        if speaker_id.startswith("ZZZZ_fake_"):
-            other_cut = cut
-        elif hasattr(cut, "use_enrollment") and cut.use_enrollment or isinstance(cut, MixedCut):
+    def get_conditioning_cut(self, cut: Union[Cut, MixedCut], speaker_id, greedy_sample):
+        if hasattr(cut, "use_external_enrollment") and cut.use_external_enrollment:
             if speaker_id == "-1":  # we are decoding with real diarization and we didn't align current speaker without any of real ones
                 speaker_id = list(self.per_speaker_enrollments.keys())[0]  # select random speaker
             random.shuffle(self.per_speaker_enrollments[speaker_id])
@@ -299,8 +320,8 @@ class TS_ASR_DatasetSuperclass:
             else:
                 raise ValueError("Cannot find enrollment cut for this speaker.")
         else:
-            other_cut = self.select_random_internal_enrollment(spk_id=speaker_id, recording_id=cut.id,
-                                                               find_best_crop=find_best_crop)
+            parent_cut = self.get_potentionally_parent_recording(cut)
+            other_cut = self.select_random_internal_enrollment(spk_id=speaker_id, cut=parent_cut, greedy_sample=greedy_sample)
         return other_cut
 
     def cut_to_sample(self, cut: Cut, speaker_id: str, is_nested: bool = False):
@@ -308,8 +329,8 @@ class TS_ASR_DatasetSuperclass:
         features, att_mask = self.get_features(cut)
 
         last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut, "per_spk_flags") else False
-        target_spk_cut = cut.filter_supervisions(lambda x: x.speaker == speaker_id)
-        merged_supervisions = self.merge_supervisions(target_spk_cut)
+        target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
+        merged_supervisions = self.merge_supervisions(target_spk_supervisions)
         transcription = ("" if self.use_timestamps else " ").join(
             [self.get_segment_text_with_timestamps(segment, self.use_timestamps, self.text_norm,
                                                    (idx == len(merged_supervisions) - 1) and last_segment_unfinished)
@@ -320,7 +341,7 @@ class TS_ASR_DatasetSuperclass:
                    "transcript": transcription, "is_long_form": False}
 
         if self.use_enrollments and not is_nested:
-            other_cut = self.get_other_cut(cut, speaker_id)
+            other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=False)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
 
         if hasattr(cut, "lang"):
@@ -357,7 +378,8 @@ class TS_ASR_Dataset(TS_ASR_DatasetSuperclass, Dataset):
 
 class LhotseLongFormDataset(TS_ASR_Dataset):
     def __init__(self, cutset: CutSet,
-                 references: CutSet = None, provide_gt_lang: bool = False, break_to_characters=False, use_ids_as_transcripts=True, **kwargs):
+                 references: CutSet = None, provide_gt_lang: bool = False, break_to_characters=False,
+                 use_ids_as_transcripts=True, **kwargs):
         self.break_to_characters = break_to_characters
         cutset = cutset.to_eager()
         if self.break_to_characters:
@@ -409,7 +431,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
         return self.cset
 
     def has_reference_lang(self, rec_id):
-        cut = self.references.filter(lambda x: x.recording_id == rec_id)[0]
+        cut = self.references.filter(lambda x: get_cut_recording_id(x) == rec_id)[0]
         if hasattr(cut, "lang"):
             return cut.lang
         else:
@@ -423,10 +445,10 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                    "transcript": f'{cut.id},{speaker_id}', "is_long_form": True}
 
         if not self.use_ids_as_transcripts:
-            target_spk_cut = cut.filter_supervisions(lambda x: x.speaker == speaker_id)
+            target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
             last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut,
                                                                                           "per_spk_flags") else False
-            merged_supervisions = self.merge_supervisions(target_spk_cut)
+            merged_supervisions = self.merge_supervisions(target_spk_supervisions)
             transcription = ("" if self.use_timestamps else " ").join(
                 [self.get_segment_text_with_timestamps(segment, self.use_timestamps, self.text_norm,
                                                        (idx == len(
@@ -446,27 +468,44 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                 raise ValueError("Please if your dataset does not provide lang ids, set global lang id.")
 
         if self.use_enrollments and not is_nested:
-            other_cut = self.get_other_cut(cut, speaker_id, find_best_crop=True)
+            other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=True)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
         return outputs
 
 
-def modify_cut_to_force_enrollment_usage(cut):
-    """Helper function to modify cuts for enrollment usage."""
-    cut.use_enrollment = True
-    return cut
+def load_cutsets(cutset_list, use_enrollments):
+    def assign_external_usage(cut):
+        cut.use_external_enrollment = True
+        return cut
+
+    cutsets = []
+    for cut_path in cutset_list:
+        should_use_external = False
+        if use_enrollments and "external_enrollment" in cut_path:
+            cut_path = cut_path.replace("_external_enrollment", "")
+            should_use_external = True
+        cutset = lhotse.load_manifest(cut_path)
+
+        if use_enrollments:
+            if should_use_external:
+                cutset = cutset.map(assign_external_usage)
+            elif "30s" in cut_path:
+                cut_path = cut_path.replace("_30s", "")
+                parent_cutset = lhotse.load_manifest(cut_path)
+                cutset.parent_cutset = parent_cutset
+
+        cutsets.append(cutset)
+
+    return cutsets
 
 
 def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArguments,
-                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True,):
+                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True, ):
     logger.info('Using LhotseLongFormDataset')
     if cutset_paths is None or len(cutset_paths) == 0:
         raise ValueError("'cutset_paths' is None or empty. Please provide valid 'cutset_paths' for the dataset")
-    if not all(Path(p).exists() for p in cutset_paths):
-        wrong_paths = os.linesep.join([f"{'✗' if not Path(p).exists() else '✓'} {p}" for p in cutset_paths])
-        raise ValueError(f"Some cutset paths do not exist:{os.linesep}{wrong_paths}")
 
-    cutsets = [CutSet.from_file(path) for path in cutset_paths]
+    cutsets = load_cutsets(cutset_paths, data_args.use_enrollments)
 
     if data_args.merge_eval_cutsets:
         cutsets = [reduce(lambda a, b: a + b, cutsets)]
@@ -490,10 +529,6 @@ def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArgument
         for idx, cutset_path in enumerate(cutset_paths):
             if "libri" in cutset_path:
                 cutsets[idx].use_enrollment = True
-                if not "custom" in cutset_path:
-                    cutsets[idx] = cutsets[idx].map(modify_cut_to_force_enrollment_usage)
-            else:
-                cutsets[idx].use_enrollment = False
     return {os.path.basename(path).removesuffix(".jsonl.gz"): LhotseLongFormDataset(cutset=cutset, references=ref,
                                                                                     use_timestamps=data_args.use_timestamps,
                                                                                     text_norm=text_norm,

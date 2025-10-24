@@ -88,6 +88,9 @@ class ModelArguments:
     )
     params_to_keep_frozen_keywords: Optional[List[str]] = field(default=None, metadata={
         "help": "List of key words specifying layers to keep frozen."})
+    scb_layers: Optional[int] = field(default=None, metadata={
+        "help": "Number of SCB layers."
+    })
 
 
     def __post_init__(self):
