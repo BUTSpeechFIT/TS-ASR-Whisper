@@ -332,7 +332,8 @@ class TS_ASR_DatasetSuperclass:
         sampled_idx = np.random.choice(len(filtered_cuts), p=weights / sum(weights))
         return filtered_cuts[sampled_idx]
 
-    def generate_enrollment_mixture(self, original_cut, speaker_id, greedy_sample, max_enrollment_len=30.0):
+    def generate_enrollment_mixture(self, original_cut, speaker_id, greedy_sample, max_enrollment_len=30.0,
+                                    randomly_shift_target_offset_p=1.0):
         if isinstance(original_cut, MixedCut):
             for track in original_cut.tracks:
                 if speaker_id in self.get_cut_spks(track.cut):
@@ -352,6 +353,12 @@ class TS_ASR_DatasetSuperclass:
 
         overlap_factor = np.random.uniform(0.3, 1.0)
         target_offset, other_offsets = self.sample_offsets(same_spk_cut.duration, other_lens, overlap_factor)
+
+        if not greedy_sample and np.random.rand() < randomly_shift_target_offset_p:
+            # Compute total mixture span so far
+            total_span = max(max(other_offsets) + max(other_lens), same_spk_cut.duration)
+            # Randomly shift the same-speaker cut somewhere within that span
+            target_offset = np.random.uniform(0, max(0, total_span - same_spk_cut.duration))
 
         target_spk_cut_end = same_spk_cut.start + target_offset + same_spk_cut.duration
 
