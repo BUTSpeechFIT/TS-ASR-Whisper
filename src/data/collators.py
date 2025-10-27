@@ -187,7 +187,7 @@ class DataCollator:
                 x) in self.tokenizer.upper_cased_tokens else x)
 
         # Apply STNO augmentations (only during training, not for long-form generation)
-        if not ("is_long_form" in inputs[0] and inputs[0]['is_long_form']):
+        if not ("is_long_form" in inputs[0] and inputs[0]['is_long_form']) and not nested:
             # Apply segment-based soft augmentation
             if (self.stno_segment_augment_prob is not None and
                     self.stno_segment_augment_prob > 0 and
