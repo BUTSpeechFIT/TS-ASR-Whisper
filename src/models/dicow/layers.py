@@ -173,7 +173,7 @@ class CrossAttentionEnrollBlock(nn.Module):
 class SpeakerCommunicationBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.num_speakers = getattr(config, "mt_num_speakers", 2)
+        self.streams = 2
         self.config = config
 
         self.cae = CrossAttentionEnrollBlock(config)
@@ -181,7 +181,7 @@ class SpeakerCommunicationBlock(nn.Module):
     def forward(self, x):
         # x: (B, T, F)
         B, T, F = x.shape
-        S = self.num_speakers
+        S = self.streams
 
         # Reshape to (B//S, S, T, F)
         x_reshaped = x.view(B//S, S, T, F)

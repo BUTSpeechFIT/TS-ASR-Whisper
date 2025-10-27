@@ -18,7 +18,7 @@ from transformers.utils import logging
 
 from data.local_datasets import LhotseLongFormDataset
 from data.postprocess import truncate_at_repeating_ngram
-from utils.general import cutset_to_seglst, df_to_seglst, get_cut_recording_id, remove_custom_attributes
+from utils.general import supervisions_to_seglst, df_to_seglst, get_cut_recording_id, remove_custom_attributes
 from utils.logging_def import get_logger
 from utils.wer import calc_wer
 from utils.wer_utils import aggregate_wer_metrics, normalize_segment
@@ -184,7 +184,9 @@ def shift_timestamps(cut: lhotse.MonoCut):
         return supervision
 
     offset = cut.start
-    return cut.map_supervisions(shift_timestamps_supervision)
+    if offset > 0:
+        return map(shift_timestamps_supervision, cut.supervisions)
+    return cut.supervisions
 
 def save_session_outputs(processed_sessions: dict, current_dir, text_norm, references_cs: CutSet):
     for session_id, outputs in processed_sessions.items():
@@ -206,8 +208,8 @@ def save_session_outputs(processed_sessions: dict, current_dir, text_norm, refer
         remove_custom_attributes(gt_cut)
         filepath = Path(current_dir) / 'wer' / session_id
         # Potentially correct shifted cutsets
-        gt_cutset = shift_timestamps(gt_cut)
-        ref_seglst = cutset_to_seglst(CutSet.from_cuts([gt_cutset]))
+        supervisions = shift_timestamps(gt_cut)
+        ref_seglst = supervisions_to_seglst(supervisions, session_id)
         ref_seglst = ref_seglst.map(partial(normalize_segment, tn=text_norm))
         ref_seglst.dump(filepath / 'ref.json')
 

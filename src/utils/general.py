@@ -5,8 +5,7 @@ from decimal import Decimal
 import meeteval
 import wandb
 import yaml
-from lhotse import CutSet
-from lhotse.cut import MixedCut
+from lhotse import CutSet, SupervisionSegment, MonoCut
 from meeteval.io.seglst import SegLstSegment
 from utils.training_args import Cfg
 import os
@@ -44,7 +43,7 @@ def remove_custom_attributes(cut):
         delattr(cut, "use_enrollment")
 
 def get_cut_recording_id(cut):
-    return cut.id if isinstance(cut, MixedCut) else cut.recording_id
+    return cut.recording_id if isinstance(cut, MonoCut) else cut.id
 
 def round_nearest(x, a):
     return round(x / a) * a
@@ -70,19 +69,22 @@ def create_lower_uppercase_mapping(tokenizer):
 
 def cutset_to_seglst(cutset: CutSet):
     return meeteval.io.SegLST(
+        *[supervisions_to_seglst(cut.supervisions, get_cut_recording_id(cut)).segments for cut in cutset]
+    )
+
+def supervisions_to_seglst(supervisions: list[SupervisionSegment], session_id: str):
+    return meeteval.io.SegLST(
         [
             SegLstSegment(
-                session_id=get_cut_recording_id(cut),
+                session_id=session_id,
                 start_time=decimal.Decimal(sup.start),
                 end_time=decimal.Decimal(sup.end),
                 words=sup.text,
                 speaker=sup.speaker,
             )
-            for cut in cutset
-            for sup in cut.supervisions
+            for sup in supervisions
         ]
     )
-
 
 def df_to_seglst(df):
     return meeteval.io.SegLST([

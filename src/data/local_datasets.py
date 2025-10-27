@@ -10,19 +10,17 @@ import lhotse
 import numpy as np
 import torch
 from lhotse import CutSet
-from lhotse.cut import Cut, MixedCut
+from lhotse.cut import Cut, MixedCut, MixTrack, MonoCut
 from lhotse.utils import fastcopy
 from torch.utils.data import Dataset
 from transformers.utils import logging
 
 from data.augmentations import RandomBackgroundNoise
-from data.cut_splice import mix_three_cuts
 from utils.general import round_nearest, get_cut_recording_id
 from utils.training_args import DataArguments
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
-
 
 
 def add_timestamps(transcript, sample_len, sampling_rate=16_000, precision=0.02):
@@ -65,7 +63,8 @@ class TS_ASR_DatasetSuperclass:
                             hasattr(cutset, "parent_cutset")]
             if len(parent_csets) > 0:
                 self.parent_csets = reduce(lambda a, b: a + b, parent_csets)
-                self.parent_recording_to_id = {get_cut_recording_id(cut): idx for idx, cut in enumerate(self.parent_csets)}
+                self.parent_recording_to_id = {get_cut_recording_id(cut): idx for idx, cut in
+                                               enumerate(self.parent_csets)}
             else:
                 self.parent_csets = None
 
@@ -73,21 +72,18 @@ class TS_ASR_DatasetSuperclass:
 
         self.use_enrollments = use_enrollments
         if self.use_enrollments:
-            per_speaker_cuts = {}
             self.per_speaker_enrollments = {}
             if enrollment_cutset:
-                self.enrollment_cutset = enrollment_cutset
-                for idx, cut in enumerate(enrollment_cutset):
+                for cut in enrollment_cutset:
                     speakers = self.get_cut_spks(cut)
                     for speaker in speakers:
                         if speaker not in self.per_speaker_enrollments:
-                            self.per_speaker_enrollments[speaker] = [[get_cut_recording_id(cut), idx]]
+                            self.per_speaker_enrollments[speaker] = [cut]
                         else:
-                            self.per_speaker_enrollments[speaker].append([get_cut_recording_id(cut), idx])
+                            self.per_speaker_enrollments[speaker].append(cut)
                 self.enrollment_speakers = list(self.per_speaker_enrollments.keys())
-            self.per_speaker_cuts = per_speaker_cuts
-            self.spk_idx_map = {key: i for i, key in enumerate(self.per_speaker_cuts)}
-
+                for speaker in self.enrollment_speakers:
+                    self.per_speaker_enrollments[speaker] = CutSet.from_cuts(self.per_speaker_enrollments[speaker])
         self.max_timestamp_pause = max_timestamp_pause
         self.use_timestamps = use_timestamps
         self.text_norm = text_norm
@@ -286,42 +282,110 @@ class TS_ASR_DatasetSuperclass:
         new_cut.supervisions = supervisions_pruned
         return new_cut
 
-    def generate_enrollment_mixture(self, idx, speaker_id):
-        same_spk_cut = self.enrollment_cutset[idx]
+    @staticmethod
+    def mix_two_recordings(len_1, len_2, allowed_pause):
+        rec2_offset = np.random.uniform(low=-len_1 - len_2 - allowed_pause, high=allowed_pause)
+        # we start with rec1 followed by rec2 -> positive value means rec2 is offset by inserting pause after rec1
+        # if -len1 is sampled rec1 is fully overlapped with rec2
+        # if -len_1-len_2-allowed_pause is sampled first goes rec2 followed by pause and rec1
+        if -rec2_offset <= len_1:
+            return 0, len_1 + rec2_offset
+        else:
+            return -(len_1 + rec2_offset), 0
+
+    @staticmethod
+    def sample_offsets(target_duration, durations, overlap_factor, allowed_pause=2.0):
+        # first we pair-wise mix other recordings
+        N = len(durations)
+        duration_to_mix = target_duration * overlap_factor
+
+        shuffle_indexes = np.random.permutation(N)
+
+        prev_rec_dur = durations[shuffle_indexes[0]]
+        offsets = np.zeros(N)
+        for i in range(1, N):
+            other_rec_dur = durations[shuffle_indexes[i]]
+            offset_1, offset_2 = TS_ASR_DatasetSuperclass.mix_two_recordings(prev_rec_dur, other_rec_dur, allowed_pause)
+            offsets[:] += offset_1
+            offsets[shuffle_indexes[i]] = offset_2
+            prev_rec_dur = max(offset_1 + prev_rec_dur, offset_2 + other_rec_dur)
+
+        if prev_rec_dur < duration_to_mix:
+            # sample offset of others
+            offset = np.random.uniform(low=0, high=target_duration - prev_rec_dur)
+            return 0, offsets + offset
+
+        mix_direction = np.random.choice([-1, 1])
+
+        if mix_direction == 1:
+            return prev_rec_dur - duration_to_mix, offsets
+        else:
+            return 0, offsets + (target_duration - duration_to_mix)
+
+    def sample_same_speaker_cut(self, speaker_id, skip_id, greedy_sample, max_duration):
+        speaker_cuts = self.per_speaker_enrollments[speaker_id]
+        filtered_cuts = speaker_cuts.filter(lambda cut: cut.recording_id != skip_id and cut.duration <= max_duration)
+        weights = np.array([cut.duration for cut in filtered_cuts])
+        if greedy_sample:
+            idx = np.argmax(weights)
+            return filtered_cuts[idx]
+        sampled_idx = np.random.choice(len(filtered_cuts), p=weights / sum(weights))
+        return filtered_cuts[sampled_idx]
+
+    def generate_enrollment_mixture(self, original_cut, speaker_id, greedy_sample, max_enrollment_len=30.0):
+        if isinstance(original_cut, MixedCut):
+            for track in original_cut.tracks:
+                if speaker_id in self.get_cut_spks(track.cut):
+                    skip_id = re.sub("_vp.*$", "", track.cut.recording_id)
+                    break
+            else:
+                raise ValueError("Did not find speaker in original cut!")
+        else:
+            skip_id = re.sub("_vp.*$", "", original_cut.recording_id)
+        same_spk_cut = self.sample_same_speaker_cut(speaker_id, skip_id, greedy_sample=greedy_sample,
+                                                    max_duration=max_enrollment_len)
         other_speakers = random.sample(self.enrollment_speakers, 3)
-        other_cuts = [self.enrollment_cutset[self.per_speaker_enrollments[other_speaker][0][1]] for
+        other_cuts = [self.per_speaker_enrollments[other_speaker].sample() for
                       other_speaker in other_speakers if other_speaker != speaker_id]
-        other_cut = mix_three_cuts(cut1=same_spk_cut,
-                                   cut2=other_cuts[0],
-                                   cut3=other_cuts[1],
-                                   sampling_rate=16000,
-                                   serialize='none',
-                                   max_overlaps=[1, 1, 1],
-                                   min_overlaps=[0.3, 0.8, 0.8],
-                                   max_snrs=[0, 0, 0],
-                                   normalize_loudness=True,
-                                   max_duration=30.0
-                                   )
-        return other_cut
+
+        other_lens = [other_cuts[0].duration, other_cuts[1].duration]
+
+        overlap_factor = np.random.uniform(0.3, 1.0)
+        target_offset, other_offsets = self.sample_offsets(same_spk_cut.duration, other_lens, overlap_factor)
+
+        target_spk_cut_end = same_spk_cut.start + target_offset + same_spk_cut.duration
+
+        if target_spk_cut_end > max_enrollment_len:
+            # Higher overlap is needed
+            target_offset = max_enrollment_len - (same_spk_cut.start + same_spk_cut.duration)
+
+        tracks = [MixTrack(cut=same_spk_cut, offset=target_offset),
+                  MixTrack(cut=other_cuts[0], offset=other_offsets[0]),
+                  MixTrack(cut=other_cuts[1], offset=other_offsets[1])]
+
+        # Ensure that enrollment mixture is not longer than max_enrollment_len
+        final_tracks = []
+        for track in tracks:
+            if (track.cut.duration + track.offset) > max_enrollment_len:
+                current_cut = track.cut
+                track.cut = MonoCut(id=current_cut.id, duration=max(max_enrollment_len - track.offset, 0),
+                                    start=current_cut.start, channel=current_cut.channel,
+                                    supervisions=current_cut.supervisions, recording=current_cut.recording)
+            if track.cut.duration > 0.0:
+                final_tracks.append(track)
+        enrollment_mixture = MixedCut(id=f"enrollment_{skip_id}_{speaker_id}", tracks=final_tracks)
+
+        return enrollment_mixture
 
     def get_conditioning_cut(self, cut: Union[Cut, MixedCut], speaker_id, greedy_sample):
         if hasattr(cut, "use_external_enrollment") and cut.use_external_enrollment:
             if speaker_id == "-1":  # we are decoding with real diarization and we didn't align current speaker without any of real ones
                 speaker_id = list(self.per_speaker_enrollments.keys())[0]  # select random speaker
-            random.shuffle(self.per_speaker_enrollments[speaker_id])
-            for (recording_id, idx) in self.per_speaker_enrollments[speaker_id]:
-                if isinstance(cut, MixedCut):
-                    if all([recording_id not in get_cut_recording_id(track.cut) for track in cut.tracks]):
-                        other_cut = self.generate_enrollment_mixture(idx, speaker_id)
-                        break
-                elif recording_id not in get_cut_recording_id(cut):
-                    other_cut = self.generate_enrollment_mixture(idx, speaker_id)
-                    break
-            else:
-                raise ValueError("Cannot find enrollment cut for this speaker.")
+            other_cut = self.generate_enrollment_mixture(cut, speaker_id, greedy_sample=greedy_sample)
         else:
             parent_cut = self.get_potentionally_parent_recording(cut)
-            other_cut = self.select_random_internal_enrollment(spk_id=speaker_id, cut=parent_cut, greedy_sample=greedy_sample)
+            other_cut = self.select_random_internal_enrollment(spk_id=speaker_id, cut=parent_cut,
+                                                               greedy_sample=greedy_sample)
         return other_cut
 
     def cut_to_sample(self, cut: Cut, speaker_id: str, is_nested: bool = False):

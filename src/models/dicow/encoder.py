@@ -70,8 +70,8 @@ class DiCoWEncoder(WhisperEncoder):
                 )
                 for _ in range(num_fddts)
             ])
-            if config.use_enrollments and config.scb_layers is not None:
-                self.ca_enrolls = nn.ModuleList([SpeakerCommunicationBlock(config) for _ in range(config.scb_layers)])
+        if config.use_enrollments and config.scb_layers is not None:
+            self.ca_enrolls = nn.ModuleList([SpeakerCommunicationBlock(config) for _ in range(config.scb_layers)])
         self.first_task_token = self.config.vocab_size - 30 * 50 - 1 - 6  # 30 seconds of 50 Hz timestamps -1 to get to 0.0 and -6 number of tasks
         self.post_init()
 
