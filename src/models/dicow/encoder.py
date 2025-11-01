@@ -209,6 +209,7 @@ class DiCoWEncoder(WhisperEncoder):
 
                 if idx == self.config.scb_layers -1:
                     hidden_states = hidden_states[::2]
+                    stno_mask = stno_mask[::2]
                 """</DiCoW CODE>"""
 
                 layer_outputs = encoder_layer(
