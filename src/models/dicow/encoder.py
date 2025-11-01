@@ -206,10 +206,10 @@ class DiCoWEncoder(WhisperEncoder):
 
                 if self.config.use_enrollments and idx < self.config.scb_layers:
                     hidden_states = self.ca_enrolls[idx](hidden_states)
-
-                if idx == self.config.scb_layers -1:
-                    hidden_states = hidden_states[::2]
-                    stno_mask = stno_mask[::2]
+                    if idx == self.config.scb_layers -1:
+                        # enrollment representations are not longer needed
+                        hidden_states = hidden_states[::2]
+                        stno_mask = stno_mask[::2]
                 """</DiCoW CODE>"""
 
                 layer_outputs = encoder_layer(
