@@ -76,7 +76,7 @@ class CustomDiagonalLinear(nn.Module):
             out += self.bias
         return out
 
-class InterpolationGate(nn.Module):
+class Gate(nn.Module):
     def __init__(self, items, init_val=0.0):
         super().__init__()
         self.init_val = init_val
@@ -84,8 +84,8 @@ class InterpolationGate(nn.Module):
         self.reset_parameters()
 
     def forward(self, orig_seq, new_seq):
-        gate_act = torch.nn.functional.sigmoid(self.gate)
-        output = (1 - gate_act) * orig_seq + gate_act * new_seq
+        gate_act = torch.nn.functional.tanh(self.gate)
+        output = orig_seq + gate_act * new_seq
         return output
 
     def reset_parameters(self):
@@ -95,10 +95,10 @@ class InterpolationGate(nn.Module):
 def propagate_first_half_embeds_init(module):
     # Zero out all weights initially
     # module.weight.data.zero_()
-    torch.nn.init.xavier_uniform_(module.weight, gain=1e-3)
+    torch.nn.init.xavier_uniform_(module.weight, gain=1e-1)
 
-    # Create identity mapping for first half of input (q_orig)
-    # Input: [q_orig, cross_attn_output] -> map q_orig to first embed_dim outputs
+    # Create identity mapping for first half of input (cross_attn_output)
+    # Input: [cross_attn_output, q_orig] -> map cross_attn_output to first embed_dim outputs
     module.weight.data[:module.weight.shape[1] // 2, :module.weight.shape[1] // 2] += torch.eye(
         module.weight.shape[1] // 2)
 
@@ -108,14 +108,13 @@ def propagate_first_half_embeds_init(module):
 
 def propage_first_embeds_to_match_output_dim_init(module):
     # module.weight.data.zero_()
-    torch.nn.init.xavier_uniform_(module.weight, gain=1e-3)
+    torch.nn.init.xavier_uniform_(module.weight, gain=1e-1)
 
     # Create identity mapping from first embed_dim inputs to output
     module.weight.data[:, :module.weight.shape[0]] += torch.eye(module.weight.shape[0])
 
     # Zero bias for second linear
     module.bias.data.zero_()
-
 
 # Cross attention block that can easily learn to ignore cross attention initially
 class CrossAttentionEnrollBlock(nn.Module):
@@ -133,7 +132,7 @@ class CrossAttentionEnrollBlock(nn.Module):
 
         # Layer normalization (pre-norm style)
         # self.norm_attn = nn.LayerNorm(self.embed_dim, eps=layer_norm_eps)
-        self.cross_gate = InterpolationGate(1,init_val=-1.0)
+        self.cross_gate = Gate(1,init_val=.0)
         # Feed-forward network that maps concat space back to single channel
         self.ffn = nn.Sequential(
             CustomLinear(self.embed_dim * 2, self.ffn_dim, init_fun=propagate_first_half_embeds_init),
@@ -161,7 +160,7 @@ class CrossAttentionEnrollBlock(nn.Module):
         )[0]
 
         # Concatenate attention output with original normalized query
-        q_concat = torch.cat([q, attn_output], dim=-1)  # (B, T, 2*F)
+        q_concat = torch.cat([attn_output, q], dim=-1)  # (B, T, 2*F)
 
         # Feed-forward processing (no normalization to preserve initialization)
         updated_q = self.ffn(q_concat)  # (B, T, F)

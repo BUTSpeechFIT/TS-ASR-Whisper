@@ -4,7 +4,7 @@ from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput
 from transformers.models.whisper.modeling_whisper import WhisperEncoder, WhisperEncoderLayer, WhisperAttention
 from .FDDT import FDDT
 from .config import DiCoWConfig
-from .layers import CustomLinear, CustomDiagonalLinear, InterpolationGate, SpeakerCommunicationBlock
+from .layers import CustomLinear, CustomDiagonalLinear, Gate, SpeakerCommunicationBlock
 
 
 class DiCoWEncoder(WhisperEncoder):
@@ -77,7 +77,7 @@ class DiCoWEncoder(WhisperEncoder):
 
     def _init_weights(self, module):
         super()._init_weights(module)
-        if isinstance(module, CustomLinear) or isinstance(module, CustomDiagonalLinear) or isinstance(module, InterpolationGate):
+        if isinstance(module, CustomLinear) or isinstance(module, CustomDiagonalLinear) or isinstance(module, Gate):
             module.reset_parameters()
 
     def get_output_embeddings(self):
@@ -206,6 +206,9 @@ class DiCoWEncoder(WhisperEncoder):
 
                 if self.config.use_enrollments and idx < self.config.scb_layers:
                     hidden_states = self.ca_enrolls[idx](hidden_states)
+
+                if idx == self.config.scb_layers -1:
+                    hidden_states = hidden_states[::2]
                 """</DiCoW CODE>"""
 
                 layer_outputs = encoder_layer(
@@ -224,9 +227,6 @@ class DiCoWEncoder(WhisperEncoder):
 
         if output_hidden_states:
             encoder_states = encoder_states + (hidden_states,)
-
-        if enrollments is not None:
-            hidden_states = hidden_states[::2]
 
         if return_logits:
             hidden_states = hidden_states
