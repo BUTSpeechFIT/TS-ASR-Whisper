@@ -22,6 +22,7 @@ An enrollment segment—automatically selected where the diarizer predicts the t
 
 > **Note:** For inference-only usage without training, see our dedicated [inference repository](https://github.com/BUTSpeechFIT/DiCoW) with a streamlined browser interface.
 
+> **Note2:** For older training configurations and models, pleaser refer to the [v1 branch](https://github.com/BUTSpeechFIT/TS-ASR-Whisper/tree/v1).
 ---
 
 ## 📦 Checkpoints
