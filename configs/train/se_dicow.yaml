@@ -16,7 +16,7 @@ data:
     - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_train-other-500.jsonl.gz
     - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_test-clean.jsonl.gz
   train_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_train_sc_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s_external_enrollment.jsonl.gz # This marks that enrollment mixtures should be created
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s_external_enrollment.jsonl.gz
