@@ -1,105 +1,270 @@
 # Target Speaker ASR with Whisper
+[![Paper](https://img.shields.io/badge/Paper-IEEE-blue)](https://ieeexplore.ieee.org/document/10887683)
+[![Models](https://img.shields.io/badge/Models-HuggingFace-yellow)](https://huggingface.co/collections/BUT-FIT/dicow)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue)]()
 
-This repository contains the official implementation of the following publications:
+This repository contains the **official implementation** of the following publications:
 
-- Target Speaker Whisper (available on [arxiv](https://arxiv.org/pdf/2409.09543))
-- DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition (available on [arxiv](https://arxiv.org/pdf/2501.00114))
+- **Target Speaker Whisper** — [IEEE Xplore](https://ieeexplore.ieee.org/document/10887683)  
+- **DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition** — [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S088523082500066X)  
+- **SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper** — *coming soon* ([TBD]())
 
-## Checkpoints
-We've released 2 checkpoints:
-1. A pre-trained CTC Whisper large-v3-turbo: [Download Link](https://nextcloud.fit.vutbr.cz/s/2AHfK2Gj2Jfa6EP)
-2. A pre-trained DiCoW (i.e. 1. + finetuning on AMI, NOTSOFAR, Libri2Mix): [HuggingFace](https://huggingface.co/BUT-FIT/DiCoW_v2)
+---
 
-## Training Setup
-1. Clone the repository: `git clone ...; cd ...`
-2. Run `git submodule init; git submodule update`
-3. Setup python environment (using conda or virtual environment):
-    - Conda: `conda create -n ts_asr_whisper python=3.11`
-    - Virtual env: `python -m venv ts_asr_whisper`
-4. Activate your environment
-5. Install packages: `pip install -r requirements.txt`
-6. (Optional) Install flash attention to speed up the model training & inference: `pip install flash-attn==2.7.2.post1` (flash attn requires `torch` to be already installed; hence, cannot be installed through `requirements.txt`)
-7. Change the paths in `configs/local_paths.sh` (variables are explained in the shell script) based on your setup
-8. Install `ffmpeg` and `sox` (i.e. using `conda` or `apt`)
-9. Change paths in `scripts/data/prepare.sh` (if needed - by default, data is going to be prepared and saved to `./data`) and execute it to prepare the data
-10. Run the code
+## 🎯 Project Overview
+**DiCoW (Diarization-Conditioned Whisper)** enhances Whisper for **target-speaker ASR** by conditioning the model on **frame-level diarization probabilities**.  
+These probabilities are converted into **Silence–Target–Non-Target–Overlap (STNO)** masks and injected into each encoder layer through **Frame-level Diarization-Dependent Transformations (FDDT)**.  
+This approach enables Whisper to focus on the desired speaker without explicit speaker embeddings, making it robust to unseen speakers and diverse acoustic conditions.
 
-## Usage
-Our codebase uses Hydra configuration package. All config yaml files are located in `./configs`. The base configuration file with default values is `configs/base.yaml` (all the parameters are explained below).
+**SE-DiCoW (Self-Enrolled DiCoW)** resolves ambiguities in overlapping speech regions by introducing a **self-enrollment mechanism**.  
+An enrollment segment—automatically selected where the diarizer predicts the target speaker as most active—is used as a reference through **cross-attention conditioning** at encoder layers to further bias the model toward the target speaker.
 
-Currently, our codebase offers 3 run modes:
-1. **pre-train**: Pre-train whisper encoder CTC
-2. **fine-tune**: Fine-tune the whole Whisper with target speaker amplifiers to perform target speaker ASR
-3. **decode**: Decode with pre-trained model
+> **Note:** For inference-only usage without training, see our dedicated [inference repository](https://github.com/BUTSpeechFIT/DiCoW) with a streamlined browser interface.
 
-The codebase supports 3 compute grid systems: SGE, PBS, SLURM. Besides, one can also run training/decoding without any grid submission system by omitting the submission command (i.e. sbatch in the case of SLURM).
+---
 
-To run the codebase, execute one of the following lines:
+## 📦 Checkpoints
+
+| Model | Description | Link |
+|--------|--------------|------|
+| **CTC Whisper large-v3-turbo** | Pre-trained encoder model | [Download](https://nextcloud.fit.vutbr.cz/s/2AHfK2Gj2Jfa6EP) |
+| **DiCoW Models** | Fine-tuned diarization-conditioned Whisper models | [Hugging Face Collection](https://huggingface.co/collections/BUT-FIT/dicow) |
+
+---
+
+## ⚙️ Setup and Installation
+
+### 1. Clone the Repository
 ```bash
-# pre-train
-sbatch ./scripts/training/submit_slurm.sh +pretrain=ctc_librispeech_large
+git clone https://github.com/BUTSpeechFIT/TS-ASR-Whisper
+cd TS-ASR-Whisper
+````
 
-# Fine-tune
-sbatch ./scripts/training/submit_slurm.sh +train=icassp/table1_final-models/ami
+### 2. Create a Python Environment
 
-# Decode
-sbatch ./scripts/training/submit_slurm.sh +decode=best_ami
+Use **conda** or **venv**:
+
+**Conda**
+
+```bash
+conda create -n ts_asr_whisper python=3.11
+conda activate ts_asr_whisper
 ```
 
-As SGE and PBS do not support variable-passing through shell arguments, you need to specify the config through variable list as:
-```
-qsub -v "CFG=+decode=best_ami" ./scripts/training/submit_sge.sh
+**Virtual Environment**
+
+```bash
+python -m venv ts_asr_whisper
+source ts_asr_whisper/bin/activate
 ```
 
-### Config Details
-As you can see above, the configs are not specified via yaml file paths. Instead, Hydra uses so-called "config groups". All of our config files contain `# @package _global_` on the first line, which specifies that the given values are overwriting the global default values specified in `./configs/base.yaml`. If the line is not present in the config yaml file, Hydra will produce a nested object based on the relative file path.
-Furthermore, as can be seen the `train/icassp*` config hierarchy, one can create hierarchical configuration by specifying defaults as:
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
 ```
+
+*(Optional)* To accelerate training and inference:
+
+```bash
+pip install flash-attn==2.7.2.post1
+```
+
+> ⚠️ `flash-attn` requires `torch` to be installed beforehand and is therefore **not included** in `requirements.txt`.
+
+### 4. Configure Paths
+
+Edit [`configs/local_paths.sh`](configs/local_paths.sh) according to your environment.
+All variables are documented directly within the script.
+
+### 5. Install Additional Tools
+
+Ensure that `ffmpeg` and `sox` are available:
+
+```bash
+conda install -c conda-forge ffmpeg sox
+# or
+sudo apt install ffmpeg sox
+```
+
+---
+
+## 🎧 Data Preparation
+
+Before training or decoding, datasets must be prepared.
+We provide a dedicated repository for this purpose:
+👉 [**mt-asr-data-prep**](https://github.com/BUTSpeechFIT/mt-asr-data-prep)
+
+Follow its instructions, then update `MANIFEST_DIR` in `configs/local_paths.sh`.
+
+---
+
+## 🚀 Usage
+
+The codebase uses **[Hydra](https://hydra.cc/)** for configuration management.
+All configuration files are located in `./configs`, with default parameters in `configs/base.yaml`.
+
+### Run Modes
+
+| Mode          | Description                                                            |
+| ------------- | ---------------------------------------------------------------------- |
+| **pre-train** | Pre-train the Whisper encoder using CTC                                |
+| **fine-tune** | Fine-tune Whisper with diarization conditioning for target-speaker ASR |
+| **decode**    | Decode using a pre-trained or fine-tuned model                         |
+
+### Example Commands
+
+Scripts are provided for SLURM-based systems.
+To run locally, simply omit the `sbatch` prefix.
+
+```bash
+# Pre-train Whisper encoder
+sbatch ./scripts/training/submit_slurm.sh +pretrain=turbo
+
+# Fine-tune DiCoW
+sbatch ./scripts/training/submit_slurm.sh +train=dicow_v3
+
+# Decode with a trained model
+sbatch ./scripts/training/submit_slurm.sh +decode=dicow_v3_greedy
+```
+---
+
+## 🧩 Configuration Details
+
+Hydra configurations are modular and rely on **config groups** instead of direct YAML file paths.
+Each configuration file typically begins with:
+
+```yaml
+# @package _global_
+```
+
+This ensures that its parameters override global defaults from `configs/base.yaml`.
+
+Configurations can also **inherit** from others using the `defaults` field, for example:
+
+```yaml
+# @package _global_
 defaults:
-  - /train/icassp/table1_final-models/base # "/" + relative path to the config
+  - /train/dicow_v3
 ```
-This way, it is easy to create a configuration hierarchy the same way we did for our ICASSP.
 
-Furthermore, none of the YAML config files contain any paths, as we strived for maximal inter-cluster/setup compatibility. Instead, Hydra package substitutes shell variables 
+This means the configuration **inherits all parameters** from `/train/dicow_v3` and can override specific values.
+This design ensures consistency and reusability across different training and evaluation setups.
 
-## Config Params
+### Bash Variables
 
-### BASH Variables
-Parameters are described in `configs/local_paths.sh`. Edit the values accordingly.
+Defined and described in [`configs/local_paths.sh`](configs/local_paths.sh).
 
-### YAML Config Variables
-Parameters are described in `docs/config.md`. Edit the values accordingly.
+### YAML Config Parameters
 
-## License
-
-This project is licensed under the [Apache License 2.0](LICENSE).
+All configuration options are described in `src/utils/training_args.py`.
 
 
-## Citation
-If you use our model or code, please, cite:
+---
+
+## 🚢 Model Export
+
+Trained models can be exported directly to the **Hugging Face Hub** using the provided export utility.
+
+Before running the export, make sure you have:
+
+* Created a corresponding model card file named `<HUB_MODEL_NAME>.md` in `export_sources/readmes/`.
+* Optionally updated `export_sources/generation_config.json` if your model requires custom decoding parameters.
+
+Once prepared, run the following command:
+
+```bash
+python ./utils/export_dicow.py \
+  --model_path <MODEL_DIR> \
+  --model_name <HUB_MODEL_NAME> \
+  --org <HUB_ORG> \
+  --base_whisper_model openai/whisper-large-v3-turbo
 ```
-@misc{polok2024dicowdiarizationconditionedwhispertarget,
-      title={DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition}, 
-      author={Alexander Polok and Dominik Klement and Martin Kocour and Jiangyu Han and Federico Landini and Bolaji Yusuf and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
-      year={2024},
-      eprint={2501.00114},
-      archivePrefix={arXiv},
-      primaryClass={eess.AS},
-      url={https://arxiv.org/abs/2501.00114}, 
+
+Where:
+
+* `<MODEL_DIR>` — path to the directory containing the trained model checkpoint.
+* `<HUB_MODEL_NAME>` — name of the target model repository on the Hugging Face Hub.
+* `<HUB_ORG>` — Hugging Face organization or user under which the model will be published.
+
+The script packages the checkpoint, configuration, and model card, then uploads them to the specified Hub repository for easy sharing and reproducibility.
+
+---
+
+## 📊 Evaluation
+
+For transparent and reproducible evaluation, we host a public benchmark leaderboard on Hugging Face:
+👉 [**EMMA JSALT25 Benchmark**](https://huggingface.co/spaces/BUT-FIT/EMMA_leaderboard)
+
+This step expects the evaluated model to be **available on Hugging Face Hub**.
+If you do **not** wish to export your model but still want to submit results, you can initialize it **locally** using the `reinit_from` option under the **`model.setup`** section in your YAML configuration.
+When using `reinit_from`, make sure to specify **all model initialization arguments** exactly as they were during training so the model is reconstructed correctly.
+
+To generate a submission file, use the helper script:
+
+```bash
+ORG=BUT-FIT MODEL=DiCoW_v3_2 ./scripts/create_emma_submission.sh
+```
+
+This script collects all decoding hypotheses and saves them in a JSON file formatted for leaderboard submission.
+Once created, simply upload this file to the Hugging Face space linked above to appear on the leaderboard.
+
+---
+
+## 📜 License
+
+Source codes in this repository are licensed under the [Apache License 2.0](LICENSE).
+
+---
+
+## 📚 Citation
+
+If you use our models or code, please cite the following works:
+
+```bibtex
+@INPROCEEDINGS{10887683,
+  author={Polok, Alexander and Klement, Dominik and Wiesner, Matthew and Khudanpur, Sanjeev and Černocký, Jan and Burget, Lukáš},
+  booktitle={ICASSP 2025 - IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+  title={Target Speaker {ASR} with {Whisper}},
+  year={2025},
+  pages={1-5},
+  doi={10.1109/ICASSP49660.2025.10887683}
 }
-@misc{polok2024targetspeakerasrwhisper,
-      title={Target Speaker ASR with Whisper}, 
-      author={Alexander Polok and Dominik Klement and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
-      year={2024},
-      eprint={2409.09543},
-      archivePrefix={arXiv},
-      primaryClass={eess.AS},
-      url={https://arxiv.org/abs/2409.09543}, 
+
+@article{POLOK2026101841,
+  title = {{DiCoW}: Diarization-conditioned {Whisper} for target speaker automatic speech recognition},
+  journal = {Computer Speech & Language},
+  volume = {95},
+  pages = {101841},
+  year = {2026},
+  doi = {10.1016/j.csl.2025.101841},
+  url = {https://www.sciencedirect.com/science/article/pii/S088523082500066X},
+  author = {Alexander Polok and Dominik Klement and Martin Kocour and Jiangyu Han and Federico Landini and Bolaji Yusuf and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
+  keywords = {Diarization-conditioned Whisper, Target-speaker ASR, Speaker diarization, Long-form ASR, Whisper adaptation}
+}
+
+@misc{polok2026dicowse,
+  title        = {{SE-DiCoW}: Self-Enrolled Diarization-Conditioned {Whisper}},
+  author       = {Alexander Polok and Dominik Klement and Samuele Cornell and Matthew Wiesner
+                  and Jan Černocký and Sanjeev Khudanpur and Lukáš Burget},
+  note         = {Submitted to ICASSP 2026}
 }
 ```
 
-## Contributing
-We welcome contributions! If you’d like to add features or improve our pipeline, please open an issue or submit a pull request.
+---
 
-## Contact
-For more information, feel free to contact us: [ipoloka@fit.vut.cz](mailto:ipoloka@fit.vut.cz), [xkleme15@vutbr.cz](mailto:xkleme15@vutbr.cz).
+## 🤝 Contributing
+
+Contributions are welcome.
+If you’d like to improve the code, add new features, or extend the training pipeline, please open an issue or submit a pull request.
+
+---
+
+## 📬 Contact
+
+For questions or collaboration, please contact:
+
+* [ipoloka@fit.vut.cz](mailto:ipoloka@fit.vut.cz)
+* [iklement@fit.vut.cz](mailto:iklement@fit.vut.cz)
+
