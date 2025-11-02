@@ -3,7 +3,6 @@ defaults:
   - /train/dicow_v3
 experiment: se_dicow
 
-
 model:
   scb_layers: 8
   prefixes_to_preheat: ['model.encoder.additional_layer', 'model.encoder.additional_self_attention_layer', 'model.encoder.lm_head', 'model.encoder.subsample_conv1', 'model.encoder.subsample_conv2', 'model.encoder.fddts', 'model.encoder.initial_fddt', 'model.encoder.ca_enrolls']
@@ -22,7 +21,6 @@ data:
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s_external_enrollment.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s_external_enrollment.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_custom_cutset_train-3mix_external_enrollment.jsonl.gz
-
   eval_cutsets:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
