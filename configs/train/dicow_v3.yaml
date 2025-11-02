@@ -51,8 +51,8 @@ training:
   remove_timestamps_from_ctc: true
   eval_strategy: steps
   save_strategy: steps
-  eval_steps: 500
-  save_steps: 500
+  eval_steps: 1000
+  save_steps: 1000
   overall_batch_size: 96
   learning_rate: 2e-6
   per_device_eval_batch_size: 32
@@ -63,7 +63,8 @@ training:
   use_fddt: true
   metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_tcp_wer
   watch_grads: false
-  max_steps: 30000
+  max_steps: 32000
+  use_fddt_only_n_steps: 2000
   train_metrics_list: ["tcp_wer"]
   eval_metrics_list: ["tcp_wer"]
   early_stopping_patience: -1

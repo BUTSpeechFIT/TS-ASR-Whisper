@@ -13,6 +13,7 @@ data:
   enrollment_cutsets:
     - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_train-clean-100.jsonl.gz
     - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_train-clean-360.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_train-other-500.jsonl.gz
     - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_test-clean.jsonl.gz
   train_cutsets:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_train_sc_30s.jsonl.gz
