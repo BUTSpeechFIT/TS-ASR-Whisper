@@ -23,7 +23,7 @@ data:
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_custom_cutset_train-3mix_external_enrollment.jsonl.gz
 
   eval_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_eval_sc.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-ihm-mix_cutset_test.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean_external_enrollment.jsonl.gz

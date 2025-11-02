@@ -22,9 +22,9 @@ model:
 data:
   use_libri: false
   train_cutsets:
-    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_train_sc_30s.jsonl.gz
-  dev_cutsets: ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_dev_sc.jsonl.gz
-  eval_cutsets: ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_eval_sc.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+  dev_cutsets: ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
+  eval_cutsets: ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   use_timestamps: true
   train_text_norm: "whisper_nsf"
   eval_text_norm: "whisper_nsf"
@@ -83,7 +83,7 @@ training:
   save_steps: 1000 #  If strategy is steps, it will save every save_steps
   save_total_limit: 1
 
-  metric_for_best_model: eval_notsofar_eval_sc_cutset_tcp_wer
+  metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_tcp_wer
   train_metrics_list: ["tcp_wer", "cp_wer"]
   eval_metrics_list: ["tcp_wer", "cp_wer"]
 
