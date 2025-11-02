@@ -1,7 +1,8 @@
 # @package _global_
-experiment: "DiCoW_v3_2_beam_joint"
 defaults:
   - /decode/dicow_v3_greedy
+
+experiment: "DiCoW_v3_2_beam_joint"
 
 training:
   generation_num_beams: 5
