@@ -9,16 +9,16 @@ model:
 
 data:
   train_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_train_sc_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_custom_cutset_train-3mix.jsonl.gz
   dev_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_dev_sc.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
   eval_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1-sdm_cutset_eval_sc.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-ihm-mix_cutset_test.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean.jsonl.gz
@@ -51,8 +51,8 @@ training:
   remove_timestamps_from_ctc: true
   eval_strategy: steps
   save_strategy: steps
-  eval_steps: 500
-  save_steps: 500
+  eval_steps: 1000
+  save_steps: 1000
   overall_batch_size: 96
   learning_rate: 2e-6
   per_device_eval_batch_size: 32
@@ -61,9 +61,10 @@ training:
   dataloader_pin_memory: true
   use_fddt_only_n_epochs: 0
   use_fddt: true
-  metric_for_best_model: eval_notsofar1-sdm_cutset_dev_sc_tcp_wer
+  metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_tcp_wer
   watch_grads: false
-  max_steps: 30000
+  max_steps: 32000
+  use_fddt_only_n_steps: 2000
   train_metrics_list: ["tcp_wer"]
   eval_metrics_list: ["tcp_wer"]
   early_stopping_patience: -1
