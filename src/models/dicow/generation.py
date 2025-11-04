@@ -250,7 +250,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                 generation_config.eos_token_id,
                 generation_config.decoder_start_token_id,
                 self.tokenizer,
-                generation_config.ctc_margin,
+                0,
                 generation_config.ctc_weight,
                 generation_config.num_beams,
                 False,
@@ -370,9 +370,12 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                         result.append((0, [empty_text_token], 30))
 
                 # Determine whether segment fits in one block or wraps to the next
-                if ((start_time + correction) // 30 == (end_time + correction) // 30) or (end_time + correction) % 30 == 0:
+                if ((start_time + correction) // 30 == (end_time + correction) // 30):
                     # Segment fits within a single 30s window
                     result.append(((start_time + correction) % 30, tokens, (end_time + correction) % 30))
+                elif (end_time + correction) % 30 == 0:
+                    result.append(((start_time + correction) % 30, tokens, 30))
+                    correction = Decimal(0.0)
                 else:
                     # Segment would wrap across a 30s boundary
                     new_seg_start = (correction + start_time) % 30
