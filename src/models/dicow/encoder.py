@@ -45,17 +45,6 @@ class DiCoWEncoder(WhisperEncoder):
         if config.use_fddt:
             num_fddts = self.config.apply_fddt_to_n_layers if self.config.apply_fddt_to_n_layers != -1 else len(
                 self.layers)
-            self.initial_fddt = FDDT(
-                d_model=config.d_model,
-                non_target_rate=config.non_target_fddt_value,
-                fddt_init=config.fddt_init,
-                is_diagonal=config.fddt_is_diagonal,
-                bias_only=config.fddt_bias_only,
-                use_silence=config.fddt_use_silence,
-                use_target=config.fddt_use_target,
-                use_overlap=config.fddt_use_overlap,
-                use_non_target=config.fddt_use_non_target,
-            )
             self.fddts = nn.ModuleList([
                 FDDT(
                     d_model=config.d_model,
@@ -70,6 +59,18 @@ class DiCoWEncoder(WhisperEncoder):
                 )
                 for _ in range(num_fddts)
             ])
+            if config.use_pre_pos_fddt:
+                self.initial_fddt = FDDT(
+                    d_model=config.d_model,
+                    non_target_rate=config.non_target_fddt_value,
+                    fddt_init=config.fddt_init,
+                    is_diagonal=config.fddt_is_diagonal,
+                    bias_only=config.fddt_bias_only,
+                    use_silence=config.fddt_use_silence,
+                    use_target=config.fddt_use_target,
+                    use_overlap=config.fddt_use_overlap,
+                    use_non_target=config.fddt_use_non_target,
+                )
         if config.use_enrollments and config.scb_layers is not None:
             self.ca_enrolls = nn.ModuleList([SpeakerCommunicationBlock(config) for _ in range(config.scb_layers)])
         self.first_task_token = self.config.vocab_size - 30 * 50 - 1 - 6  # 30 seconds of 50 Hz timestamps -1 to get to 0.0 and -6 number of tasks
@@ -169,7 +170,7 @@ class DiCoWEncoder(WhisperEncoder):
         inputs_embeds = inputs_embeds.permute(0, 2, 1)
 
         """<DiCoW CODE>"""
-        if self.config.use_fddt:
+        if self.config.use_fddt and self.config.use_pre_pos_fddt:
             inputs_embeds = self.initial_fddt(inputs_embeds, stno_mask)
         """</DiCoW CODE>"""
 

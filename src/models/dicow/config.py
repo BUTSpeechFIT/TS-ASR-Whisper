@@ -29,9 +29,9 @@ class DiCoWConfig(WhisperConfig):
             apply_fddt_to_n_layers: int = -1,
             fddt_init: str = 'suppressive',  # random, non-disturbing
             non_target_fddt_value: float = 0.0,
-            use_initial_fddt: bool = False,
             use_enrollments: bool = False,
             scb_layers: Optional[int] = None,
+            use_pre_pos_fddt: bool = False,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -54,9 +54,9 @@ class DiCoWConfig(WhisperConfig):
         self.apply_fddt_to_n_layers = apply_fddt_to_n_layers
         self.fddt_init = fddt_init
         self.non_target_fddt_value = non_target_fddt_value
-        self.use_initial_fddt = use_initial_fddt
         self.use_enrollments = use_enrollments
         self.scb_layers = scb_layers
+        self.use_pre_pos_fddt = use_pre_pos_fddt
 
 
 

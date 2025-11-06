@@ -81,8 +81,8 @@ class ModelArguments:
 
     non_target_fddt_value: Optional[float] = field(default=1.0, metadata={
         "help": "Non target FDDT value for initialization"})
-    use_initial_fddt: Optional[bool] = field(default=True, metadata={
-        "help": "Whether to use initial FDDT before adding positional embeddings."})
+    use_pre_pos_fddt: Optional[bool] = field(default=True, metadata={
+        "help": "Whether to use FDDT before addition of positional embeddings."})
     prefixes_to_preheat: Optional[List[str]] = field(
         default=None, metadata={"help": "List of prefixes to preheat."}
     )
@@ -91,6 +91,7 @@ class ModelArguments:
     scb_layers: Optional[int] = field(default=None, metadata={
         "help": "Number of SCB layers."
     })
+
 
 
     def __post_init__(self):
