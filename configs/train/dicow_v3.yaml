@@ -63,7 +63,8 @@ training:
   use_fddt: true
   metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_tcp_wer
   watch_grads: false
-  max_steps: 32000
+  max_steps: 40000
+  lr_scheduler_type: cosine
   use_fddt_only_n_steps: 2000
   train_metrics_list: ["tcp_wer"]
   eval_metrics_list: ["tcp_wer"]
