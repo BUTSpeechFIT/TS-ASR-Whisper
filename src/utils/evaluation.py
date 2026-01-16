@@ -258,8 +258,7 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
             if (label_ids == -100).all():
                 continue
             label_ids[label_ids == -100] = trainer.processing_class.pad_token_id
-            cut_id, spk_id = trainer.processing_class.decode(label_ids, skip_special_tokens=True,
-                                                      decode_with_timestamps=True).split(",")
+            cut_id, spk_id = trainer.processing_class.decode(label_ids, skip_special_tokens=True).split(",")
             if (cut_id, spk_id) in processed_sessions_ids:
                 # In DDP setup sampler can return the same session multiple times
                 continue

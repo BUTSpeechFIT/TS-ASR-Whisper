@@ -75,7 +75,8 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                                     cur_bsz,
                                     batch_idx_map,
                                     seek,
-                                    kwargs):
+                                    kwargs,
+                                    attention_mask):
         """This method also prepares STNO masks and other kwargs for generation."""
 
         seek_vad = seek // 2
@@ -108,17 +109,20 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
             for key in kwargs["enrollments"]:
                 kwargs["enrollments"][key] = kwargs["enrollments"][key][batch_idx_map]
 
+        if attention_mask is not None:
+            attention_mask = attention_mask[batch_idx_map]
+
         if "labels" in kwargs:
             kwargs['labels'] = kwargs["labels"][batch_idx_map]
             kwargs['upp_labels'] = kwargs["upp_labels"][batch_idx_map]
-        return kwargs
+        return kwargs, attention_mask
 
 
     def _retrieve_init_tokens(self, input_features, batch_size, generation_config, config, num_segment_frames, kwargs):
         task = getattr(generation_config, "task", None)
         language = getattr(generation_config, "language", None)
 
-        forced_decoder_ids = generation_config.forced_decoder_ids
+        forced_decoder_ids = generation_config.forced_decoder_ids if hasattr(generation_config, "forced_decoder_ids") else None
         if forced_decoder_ids is not None:
             if language is None and task is None and forced_decoder_ids[0][1] is None:
                 logger.warning_once(
@@ -503,6 +507,9 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                     # segment does not fit into decoding window, so we need to rollback
                     segment_offset = start_timestamp_pos * input_stride - 100  # timestamp might be inaccurate
                     skip = True
+            elif timestamps.numel() == 0 and len(seek_sequence) > 1:
+                # Decoding without timestamps, return output as it is
+                pass
             else:
                 # empty sequence, or sequence w/o timestamps
                 skip = True
@@ -581,7 +588,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
     ):
         kwargs_local = copy.deepcopy(kwargs)
         max_frames = attention_mask.sum(-1).cpu().to(torch.long)
-        kwargs_local = self.prepare_kwargs_for_generate(max_frames, cur_bsz, batch_idx_map, seek, kwargs_local)
+        kwargs_local, attention_mask = self.prepare_kwargs_for_generate(max_frames, cur_bsz, batch_idx_map, seek, kwargs_local, attention_mask)
         seek_sequences, seek_outputs, should_skip, do_condition_on_prev_tokens, model_output_type = super().generate_with_fallback(
             segment_input,
             decoder_input_ids,

@@ -7,7 +7,7 @@ import wandb
 import yaml
 from lhotse import CutSet, SupervisionSegment, MonoCut
 from meeteval.io.seglst import SegLstSegment
-from utils.training_args import Cfg
+from src.utils.training_args import Cfg
 import os
 
 from transformers.utils import logging
@@ -16,7 +16,7 @@ logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
 
-def update_generation_config(model, training_args, decoding_args):
+def update_generation_config(model, training_args, decoding_args, predict_timestamps):
     """
     Update the generation kwargs of the model with the training and decoding args
     """
@@ -26,10 +26,10 @@ def update_generation_config(model, training_args, decoding_args):
         "begin_suppress_tokens": None,
         "length_penalty": decoding_args.length_penalty,
         "ctc_weight": decoding_args.decoding_ctc_weight,
-        "ctc_margin": 0,
-        "return_timestamps": True,
+        "return_timestamps": predict_timestamps,
         "max_initial_timestamp_index": None,
         "repetition_penalty": decoding_args.repetition_penalty,
+        "forced_decoder_ids": None
     }
     not_used_args = model.generation_config.update(**gen_kwargs)
     # print gen_kwargs that were not used

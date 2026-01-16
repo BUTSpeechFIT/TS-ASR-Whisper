@@ -118,7 +118,7 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
         self.tokenizer = tokenizer
 
     def get_enc_logits(self, hidden_states):
-        encoder = self.model.encoder
+        encoder = self.model.get_encoder()
         hidden_states = encoder.possibly_update_last_hidden_states(hidden_states)
         logits = encoder.lm_head(hidden_states)
         return logits
@@ -225,4 +225,4 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
         )
 
     def _get_feat_extract_output_lengths(self, attention_mask: torch.LongTensor) -> torch.LongTensor:
-        return (self.model.encoder._get_feat_extract_output_lengths(attention_mask) / 4).ceil()
+        return (self.model.get_encoder()._get_feat_extract_output_lengths(attention_mask) / 4).ceil()

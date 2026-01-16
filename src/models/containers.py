@@ -61,11 +61,7 @@ class WhisperContainer:
             self.tokenizer.set_prefix_tokens(predict_timestamps=predict_timestamps)
 
         self.model.set_tokenizer(self.tokenizer)
-        self.model.generation_config.forced_decoder_ids = None
         self.model.config.forced_decoder_ids = None
-
-        if predict_timestamps:
-            self.model.generation_config.return_timestamps = predict_timestamps
 
         if use_lora:
             lora_config = LoraConfig(

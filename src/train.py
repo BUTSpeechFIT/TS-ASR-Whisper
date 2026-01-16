@@ -8,7 +8,7 @@ from transformers import EarlyStoppingCallback
 from transformers.utils import logging
 
 from data.collators import DataCollator
-from data.local_datasets import build_datasets, TS_ASR_Dataset, load_cutsets
+from data.local_datasets import build_datasets, TS_ASR_Dataset, load_cutsets, LhotseLongFormDataset
 from models.containers import WhisperContainer, get_optimizer
 from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
@@ -83,13 +83,15 @@ class ModelTrainer:
         dev_datasets = build_datasets(
             self.data_args.dev_cutsets, self.data_args,
             self.text_norm, self.container, self.data_args.dev_diar_cutsets,
-            enrollment_cutset=enrollment_cutset
+            enrollment_cutset=enrollment_cutset,
+            dataset_class=LhotseLongFormDataset
         )
 
         eval_datasets = build_datasets(
             self.data_args.eval_cutsets, self.data_args,
             self.text_norm, self.container, self.data_args.eval_diar_cutsets,
-            enrollment_cutset=enrollment_cutset
+            enrollment_cutset=enrollment_cutset,
+            dataset_class=LhotseLongFormDataset
         )
 
         return dev_datasets, eval_datasets
@@ -211,7 +213,8 @@ class ModelTrainer:
         create_lower_uppercase_mapping(self.container.tokenizer)
         self._log_model_parameters()
         self._load_model_weights()
-        update_generation_config(self.model, self.training_args, self.decoding_args)
+        update_generation_config(self.model, self.training_args, self.decoding_args,
+                                 predict_timestamps=self.data_args.use_timestamps)
 
         # Create trainer
         collator = self._create_data_collator()

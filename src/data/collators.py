@@ -147,17 +147,16 @@ class DataCollator:
             raise ValueError(f"Some inputs are longform and some are not")
 
         in_longform = longform[0]
-
         labels = self.tokenizer([sample["transcript"] for sample in inputs],
                                 padding="longest", max_length=self.max_length, return_tensors="pt")
-        feats = pad_sequence([
-            sample['input_features'].squeeze().T for sample in inputs]).permute(1, 2, 0)
-        masks = pad_sequence([
-            sample['attention_mask'].T for sample in inputs]).squeeze().T
+        feats = pad_sequence([sample['input_features'].T for sample in inputs], batch_first=True)
+        if feats.ndim == 3:
+            feats= feats.transpose(1, -1)
+        masks = pad_sequence([sample['attention_mask'] for sample in inputs], batch_first=True)
 
-        stno_masks = pad_sequence([sample['stno_mask'].T for sample in inputs]).permute(1, 2, 0)
+        stno_masks = pad_sequence([sample['stno_mask'] for sample in inputs], batch_first=True).transpose(1,-1)
 
-        orig_stno_masks_len = [sample['stno_mask'].shape[1] for sample in inputs]
+        orig_stno_masks_len = [sample['stno_mask'].shape[0] for sample in inputs]
         for i, sample in enumerate(stno_masks):
             stno_masks[i][0, orig_stno_masks_len[i]:] = 1
 

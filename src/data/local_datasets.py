@@ -181,7 +181,7 @@ class TS_ASR_DatasetSuperclass:
         target_spk = spk_mask[s_index] * anyone_else
         non_target_spk = (1 - spk_mask[s_index]) * (1 - anyone_else)
         overlapping_speech = spk_mask[s_index] - target_spk
-        stno_mask = np.stack([sil_frames, target_spk, non_target_spk, overlapping_speech], axis=0)
+        stno_mask = np.stack([sil_frames, target_spk, non_target_spk, overlapping_speech], axis=0).T
         return stno_mask
 
     def get_features(self, cut: Cut):
@@ -202,7 +202,7 @@ class TS_ASR_DatasetSuperclass:
             truncation=False, padding="longest",
             pad_to_multiple_of=self.feature_extractor.n_samples
         )
-        return batch['input_features'], batch['attention_mask']
+        return batch['input_features'][0], batch['attention_mask'][0]
 
     @staticmethod
     def sample_enrollment_window(arr, window_size=30, greedy_sample=False, skew_param=5.0):
@@ -412,7 +412,7 @@ class TS_ASR_DatasetSuperclass:
                    "transcript": transcription, "is_long_form": False}
 
         if self.use_enrollments and not is_nested:
-            other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=False)
+            other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=True)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
 
         if hasattr(cut, "lang"):
@@ -571,7 +571,7 @@ def load_cutsets(cutset_list, use_enrollments):
 
 
 def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArguments,
-                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True, ):
+                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True, dataset_class=LhotseLongFormDataset):
     logger.info('Using LhotseLongFormDataset')
     if cutset_paths is None or len(cutset_paths) == 0:
         raise ValueError("'cutset_paths' is None or empty. Please provide valid 'cutset_paths' for the dataset")
@@ -600,7 +600,7 @@ def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArgument
         for idx, cutset_path in enumerate(cutset_paths):
             if "libri" in cutset_path:
                 cutsets[idx].use_enrollment = True
-    return {os.path.basename(path).removesuffix(".jsonl.gz"): LhotseLongFormDataset(cutset=cutset, references=ref,
+    return {os.path.basename(path).removesuffix(".jsonl.gz"): dataset_class(cutset=cutset, references=ref,
                                                                                     use_timestamps=data_args.use_timestamps,
                                                                                     text_norm=text_norm,
                                                                                     feature_extractor=container.feature_extractor,
