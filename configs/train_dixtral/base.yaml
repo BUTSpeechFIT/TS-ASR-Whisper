@@ -1,0 +1,62 @@
+# @package _global_
+experiment: dixtral_base
+
+wandb:
+  project: dixtral
+
+model:
+  dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
+  dixtral_load_fddt_from: "/mnt/proj1/open-33-6/ipoloka/TS-ASR-Whisper/exp/dicow_v3_largee/checkpoint-31000"
+  prefixes_to_preheat: ['additional_self_attention_layer', 'additional_layer', 'audio_tower.fddts', 'audio_tower.initial_fddt']
+  params_to_keep_frozen_keywords:
+      - language_model
+      - multi_modal_projector
+      - audio_tower.conv1
+      - audio_tower.conv2
+      - audio_tower.embed_positions
+      - ctc_lm_head
+
+training:
+#  decode_only: True
+  train_dixtral: True
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 16
+  dataloader_num_workers: 1
+  dataloader_prefetch_factor: 2
+  dataloader_pin_memory: True
+  gradient_accumulation_steps: 4
+  overall_batch_size: null
+  remove_timestamps_from_ctc: true
+  metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_utt_group_max_30s_wer
+  use_fddt_only_n_epochs: 0
+  use_fddt_only_n_steps: 500
+  save_steps: 500
+  eval_steps: 500
+  eval_strategy: "steps"
+  save_strategy: "steps"
+  eval_on_start: False
+  load_best_model_at_end: False
+  use_lora: False
+  learning_rate: 2e-5
+  warmup_steps: 1000
+  logging_steps: 5
+  generation_max_length: 128
+  early_stopping_patience: -1
+
+data:
+  use_timestamps: false
+  train_text_norm: "voxtral"
+  train_cutsets:
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
+  dev_cutsets:
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset_utt_group_max_30s.jsonl.gz
+  eval_cutsets:
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean.jsonl.gz
+  dataset_weights:
+    - 3
+    - 3
+    - 1

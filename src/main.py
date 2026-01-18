@@ -4,6 +4,7 @@ from omegaconf import DictConfig, OmegaConf
 from transformers.utils import logging
 
 from pretrain_encoder import main as pretrain_encoder
+from train_dixtral import main as train_dixtral
 from train import main as train
 from utils.training_args import Cfg, instantiate_arg_classes, process_config
 
@@ -23,6 +24,8 @@ def main(cfg: DictConfig) -> None:
 
     if cfg.training.pretrain_encoder:
         pretrain_encoder(cfg)
+    elif cfg.training.train_dixtral:
+        train_dixtral(cfg)
     else:
         train(cfg)
 

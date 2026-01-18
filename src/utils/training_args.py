@@ -63,6 +63,10 @@ class ModelArguments:
     pre_ctc_sub_sample: Optional[bool] = field(default=False, metadata={"help": "Whether to subsample encoder outputs."})
     whisper_model: Optional[str] = field(default="openai/whisper-small.en",
                                          metadata={"help": "Model to use for Whisper."})
+    dixtral_base_model: Optional[str] = field(default=None,
+                                      metadata={"help": "Model to use for DiXtral."})
+    dixtral_load_fddt_from: Optional[str] = field(default=None,
+                                          metadata={"help": "Model to initialize fddt params from."})
     reinit_encoder_from: Optional[str] = field(default=False,
                                                metadata={"help": "Path to encoder model to reinit from."})
     reinit_from: Optional[str] = field(default=False, metadata={"help": "Path to model to reinit from."})
@@ -183,6 +187,7 @@ class DecodingArguments:
 @dataclass
 class CustomTrainingArguments(GeneralTrainingArguments):
     pretrain_encoder: Optional[bool] = field(default=False, metadata={"help": "Pretrain encoder."})
+    train_dixtral: Optional[bool] = field(default=False, metadata={"help": "Train LLM based model."})
     decode_only: Optional[bool] = field(default=False, metadata={"help": "Only decode."})
     use_custom_optimizer: Optional[bool] = field(default=False, metadata={"help": "Use custom optimizer."})
     use_fddt_only_n_epochs: Optional[int] = field(default=0,
