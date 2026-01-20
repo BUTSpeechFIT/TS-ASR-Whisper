@@ -46,7 +46,7 @@ class DixtralContainer:
 
             # Then override specific values
             config.audio_config.use_dicow_encoder = True
-            config.audio_config.ctc_weight = 0.1
+            config.audio_config.ctc_weight = 0.2
             config.audio_config.additional_layer = True
             config.audio_config.additional_self_attention_layer = False
             config.audio_config.pre_ctc_sub_sample = False
