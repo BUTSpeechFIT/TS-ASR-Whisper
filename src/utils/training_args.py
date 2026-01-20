@@ -184,6 +184,7 @@ class DecodingArguments:
 class CustomTrainingArguments(GeneralTrainingArguments):
     pretrain_encoder: Optional[bool] = field(default=False, metadata={"help": "Pretrain encoder."})
     decode_only: Optional[bool] = field(default=False, metadata={"help": "Only decode."})
+    train_sot: Optional[bool] = field(default=False, metadata={"help": "Train SOT."})
     use_custom_optimizer: Optional[bool] = field(default=False, metadata={"help": "Use custom optimizer."})
     use_fddt_only_n_epochs: Optional[int] = field(default=0,
                                                   metadata={"help": "Use fddts only for n epochs."})

@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from functools import partial
@@ -7,6 +8,7 @@ from typing import Dict, List, Callable
 import lhotse
 import pandas as pd
 import wandb
+import  meeteval
 from accelerate.utils import broadcast_object_list
 from jiwer import cer, compute_measures
 from lhotse import CutSet
@@ -289,3 +291,92 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
 
     metrics = broadcast_object_list([metrics], from_process=0)
     return metrics[0]
+
+
+
+def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="????"):
+    session_preds[session_preds == -100] = tokenizer.pad_token_id
+    transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
+                                  skip_special_tokens=True)
+    per_spk_transcripts = transcript.split(sot_split_token)
+    output = []
+    for transcript in per_spk_transcripts:
+        output.append(text_norm(truncate_at_repeating_ngram(transcript)))
+    return output
+
+
+def merge_supervisions(target_spk_supervision):
+    new_merged_list = []
+    for supervision in sorted(target_spk_supervision, key=lambda x: x.start):
+        if len(new_merged_list) == 0:
+            supervision.end_ = supervision.end
+            supervision.text_ = supervision.text
+            new_merged_list.append(supervision)
+        else:
+            if round(new_merged_list[-1].end_, 2) == round(supervision.start, 2) or supervision.start - \
+                    new_merged_list[-1].end_ <= 0.0:
+                new_merged_list[-1].end_ = supervision.end
+                new_merged_list[-1].text_ = new_merged_list[-1].text_ + " " + supervision.text
+            else:
+                supervision.end_ = supervision.end
+                supervision.text_ = supervision.text
+                new_merged_list.append(supervision)
+    return new_merged_list
+
+
+def get_cut_spks(cut):
+    spks = set()
+    for suppervision in cut.supervisions:
+        spks.add(suppervision.speaker)
+    return sorted(spks)
+
+
+def extract_transcript(cut, text_norm):
+    transcripts = {}
+    for speaker_id in get_cut_spks(cut):
+        target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
+        merged_supervisions = merge_supervisions(target_spk_supervisions)
+        transcription = " ".join([text_norm(segment.text_) for segment in merged_supervisions])
+        transcripts[speaker_id] = transcription
+    return transcripts
+
+
+def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=None, dataset=None,
+                             save_visualizations=True):
+    # if not main process, return
+    metrics = {}
+    if trainer.accelerator.is_main_process:
+        if dataset is not None:
+            references_cs = dataset.references.to_eager()
+        else:
+            references_cs = trainer.eval_dataset.references.to_eager()
+
+        refs = {}
+        hyps = {}
+        # Iterate over the predictions and process them
+        processed_sessions_ids = set()
+        for index, session_preds in enumerate(pred.predictions):
+            label_ids = pred.label_ids[index]
+            if (label_ids == -100).all():
+                continue
+            label_ids[label_ids == -100] = trainer.processing_class.pad_token_id
+            cut_id = trainer.processing_class.decode(label_ids, skip_special_tokens=True)
+            if cut_id in processed_sessions_ids:
+                # In DDP setup sampler can return the same session multiple times
+                continue
+            session_out = process_session_sot(session_preds, trainer.processing_class, text_norm)
+            ref = extract_transcript(references_cs[cut_id], text_norm)
+            refs[cut_id] = ref
+            hyps[cut_id] = session_out
+        cp_wer = meeteval.wer.wer.cp_word_error_rate_multifile(reference=refs, hypothesis=hyps)
+        os.makedirs(output_dir, exist_ok=True)
+        with open(os.path.join(output_dir, "cp.wer"), "w") as file:
+            json.dump(str(cp_wer), file)
+        with open(os.path.join(output_dir, "hyp.json"), "w") as file:
+            json.dump(hyps, file)
+        with open(os.path.join(output_dir, "ref.json"), "w") as file:
+            json.dump(hyps, file)
+        metrics = vars(meeteval.wer.combine_error_rates(cp_wer))
+    metrics = broadcast_object_list([metrics], from_process=0)
+    return metrics[0]
+
