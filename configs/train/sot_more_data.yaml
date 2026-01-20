@@ -1,0 +1,56 @@
+# @package _global_
+experiment: sot_ami_v4_more_data
+model:
+  whisper_model: openai/whisper-large-v3-turbo
+  reinit_encoder_from: null
+  params_to_keep_frozen_keywords: []
+  ctc_weight: 0.0
+
+data:
+  use_timestamps: false
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s.jsonl.gz
+  dev_cutsets:
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_dev_utt_group_max_30s.jsonl.gz
+  eval_cutsets:
+    - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test_utt_group_max_30s.jsonl.gz
+  dataset_weights:
+    - 4
+    - 4
+    - 1
+    - 1
+
+aug:
+  musan_root: ${oc.env:MUSAN_ROOT}
+  musan_augment_prob: 0.3
+
+training:
+  train_sot: true
+  remove_timestamps_from_ctc: true
+  eval_strategy: steps
+  save_strategy: steps
+  eval_steps: 1000
+  save_steps: 1000
+  overall_batch_size: 32
+  generation_max_length: 440
+  learning_rate: 2e-5
+  per_device_eval_batch_size: 8
+  dataloader_num_workers: 0
+  dataloader_prefetch_factor: null
+  dataloader_pin_memory: false
+  use_fddt_only_n_epochs: 0
+  use_fddt_only_n_steps: 0
+  use_fddt: false
+  metric_for_best_model: eval_ami-sdm_cutset_dev_utt_group_max_30s_error_rate
+  watch_grads: false
+  max_steps: 20000
+  lr_scheduler_type: cosine
+  train_metrics_list: ["cp_wer"]
+  eval_metrics_list: ["cp_wer"]
+  early_stopping_patience: -1
+
+wandb:
+  project: "sot"
