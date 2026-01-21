@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_base_w_ctc_v3
+experiment: dixtral_base_w_ctc_v7_w_lora
 
 wandb:
   project: dixtral
@@ -7,16 +7,17 @@ wandb:
 model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
   dixtral_load_fddt_from: "/mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/dicow_large_v3"
-  prefixes_to_preheat: ['additional_self_attention_layer', 'additional_layer', 'audio_tower.fddts', 'audio_tower.initial_fddt']
+#  prefixes_to_preheat: ['additional_self_attention_layer', 'additional_layer', 'audio_tower.fddts', 'audio_tower.initial_fddt']
+  prefixes_to_preheat: ['base_model.model.audio_tower.fddts', 'base_model.model.audio_tower.initial_fddt']
   params_to_keep_frozen_keywords:
       - language_model
-      - multi_modal_projector
+#      - multi_modal_projector
       - audio_tower.conv1
       - audio_tower.conv2
       - audio_tower.embed_positions
 
 training:
-#  decode_only: True
+  use_lora: True
   train_dixtral: True
   per_device_train_batch_size: 4
   per_device_eval_batch_size: 16
@@ -35,13 +36,12 @@ training:
   save_strategy: "steps"
   eval_on_start: False
   load_best_model_at_end: False
-  use_lora: False
-  learning_rate: 1e-5
+  learning_rate: 2e-5
   warmup_steps: 4000
   logging_steps: 5
   generation_max_length: 128
   early_stopping_patience: -1
-  max_steps: 10000
+  max_steps: 20000
 
 data:
   use_timestamps: false
