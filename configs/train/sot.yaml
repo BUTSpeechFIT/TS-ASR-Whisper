@@ -1,10 +1,10 @@
 # @package _global_
-experiment: sot_ami_iterative_decoding_v3
+experiment: sot_ami_wo_ctc_v2
 model:
   whisper_model: openai/whisper-large-v3-turbo
-  reinit_encoder_from: null
+  reinit_encoder_from: ${oc.env:PRETRAINED_CTC_MODELS_PATH}/${model.whisper_model}_ctc-pretrain_libri/model.safetensors
   params_to_keep_frozen_keywords: []
-  ctc_weight: 0.0
+  ctc_weight: 0
 
 data:
   use_timestamps: false

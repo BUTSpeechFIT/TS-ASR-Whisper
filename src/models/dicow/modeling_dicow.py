@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import wandb
 import torch
 import torch.utils.checkpoint
 import torch.utils.checkpoint
@@ -196,14 +197,21 @@ class DiCoWForConditionalGeneration(WhisperForConditionalGeneration):
             dec_loss = torch.hstack((dec_loss1[..., None], dec_loss2[..., None])).min(dim=-1).values.mean()
 
             if self.config.ctc_weight > 0.0:
-                enc_lm_logits = self.get_enc_logits(outputs.encoder_last_hidden_state)
+                # enc_lm_logits = self.get_enc_logits(outputs.encoder_last_hidden_state)
                 enc_labels = labels.clone()
                 for token in self.tokenizer.prefix_tokens:
                     if (enc_labels[:, 0] == token).all():
                         enc_labels = enc_labels[:, 1:]
                 enc_labels[enc_labels == self.config.eos_token_id] = -100
+                #
+                # ctc_loss = self.get_encoder().get_loss(enc_lm_logits, enc_labels)
+                ctc_loss = self.get_encoder().get_speaker_ctc_loss(
+                    outputs.encoder_last_hidden_state,
+                    enc_labels
+                )
+                if wandb.run is not None:
+                    wandb.log({"ctc_loss": ctc_loss, "CE_loss": dec_loss})
 
-                ctc_loss = self.get_encoder().get_loss(enc_lm_logits, enc_labels)
                 loss = (1 - self.config.ctc_weight) * dec_loss + self.config.ctc_weight * ctc_loss
             else:
                 loss = dec_loss

@@ -12,6 +12,8 @@ class DiCoWEncoder(WhisperEncoder):
 
     def __init__(self, config: DiCoWConfig):
         super().__init__(config)
+        self.config.num_speakers = 8
+        self.config.speaker_token_id = 25629
         self.ctc_weight = config.ctc_weight
         if config.additional_layer and self.ctc_weight > 0.0:
             self.additional_layer = WhisperEncoderLayer(config)
@@ -40,6 +42,10 @@ class DiCoWEncoder(WhisperEncoder):
                 bias=False,
             )
         if self.ctc_weight > 0.0:
+            self.spk_transforms = nn.ModuleList([
+                nn.Linear(config.d_model, config.d_model, bias=False)
+                for _ in range(self.config.num_speakers)
+            ])
             self.lm_head = nn.Linear(config.d_model, config.vocab_size + 1, bias=False)
         self.final_dropout = nn.Dropout(config.final_dropout)
         if config.use_fddt:
@@ -84,7 +90,38 @@ class DiCoWEncoder(WhisperEncoder):
     def get_output_embeddings(self):
         return None
 
+    def split_labels_by_speaker(self, labels):
+        """
+        labels: LongTensor [B, L]
+        returns: List[num_speakers] of LongTensor [B, L] with -100 padding
+        """
+        B, L = labels.shape
+        num_spk = self.config.num_speakers
+        sep = self.config.speaker_token_id
+
+        spk_labels = [
+            labels.new_full((B, L), fill_value=-100)
+            for _ in range(num_spk)
+        ]
+
+        for b in range(B):
+            cur_spk = 0
+            pos = 0
+            for tok in labels[b]:
+                if tok == sep:
+                    cur_spk += 1
+                    pos = 0
+                    if cur_spk >= num_spk:
+                        break
+                else:
+                    if cur_spk < num_spk:
+                        spk_labels[cur_spk][b, pos] = tok
+                        pos += 1
+
+        return spk_labels
+
     def possibly_update_last_hidden_states(self, hidden_states):
+
         if hasattr(self, "additional_layer"):
             hidden_states, = self.additional_layer(
                 hidden_states,
@@ -104,6 +141,30 @@ class DiCoWEncoder(WhisperEncoder):
         if hasattr(self, "subsample_conv2"):
             hidden_states = self.subsample_conv2(self.subsample_conv1(hidden_states.transpose(1, 2))).transpose(1, 2)
         return hidden_states
+
+    def get_speaker_ctc_loss(self, hidden_states, labels):
+        """
+        hidden_states: [B, T, D]
+        labels: [B, L] with speaker separators
+        """
+        hidden_states = self.possibly_update_last_hidden_states(hidden_states)
+
+        spk_labels = self.split_labels_by_speaker(labels)
+        losses = []
+
+        for s, (W_s, lbl_s) in enumerate(zip(self.spk_transforms, spk_labels)):
+            # speaker-specific transform
+            spk_hidden = W_s(hidden_states)
+
+            # shared CTC head
+            logits = self.lm_head(spk_hidden)
+
+            # check if this speaker exists in batch
+            loss_s = self.get_loss(logits, lbl_s)
+
+            losses.append(loss_s)
+
+        return torch.stack(losses).sum()
 
     def get_loss(self, logits, labels):
         if labels.max() >= self.config.vocab_size:

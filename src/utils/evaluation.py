@@ -293,36 +293,36 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
     return metrics[0]
 
 
-def process_session_sot(session_preds, tokenizer, text_norm):
-    session_preds[session_preds == -100] = tokenizer.pad_token_id
-    transcript = tokenizer.decode(
-        session_preds,
-        decode_with_timestamps=True,
-        skip_special_tokens=True,
-    )
-
-    # Split on speaker markers: one or more '!' followed by whitespace
-    per_spk_transcripts = re.split(r'!+\s+', transcript)
-
-    output = []
-    for t in per_spk_transcripts:
-        if not t.strip():
-            continue
-        output.append(
-            text_norm(truncate_at_repeating_ngram(t.strip()))
-        )
-
-    return output
-
-# def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="????"):
+# def process_session_sot(session_preds, tokenizer, text_norm):
 #     session_preds[session_preds == -100] = tokenizer.pad_token_id
-#     transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
-#                                   skip_special_tokens=True)
-#     per_spk_transcripts = transcript.split(sot_split_token)
+#     transcript = tokenizer.decode(
+#         session_preds,
+#         decode_with_timestamps=True,
+#         skip_special_tokens=True,
+#     )
+#
+#     # Split on speaker markers: one or more '!' followed by whitespace
+#     per_spk_transcripts = re.split(r'!+\s+', transcript)
+#
 #     output = []
-#     for transcript in per_spk_transcripts:
-#         output.append(text_norm(truncate_at_repeating_ngram(transcript)))
+#     for t in per_spk_transcripts:
+#         if not t.strip():
+#             continue
+#         output.append(
+#             text_norm(truncate_at_repeating_ngram(t.strip()))
+#         )
+#
 #     return output
+
+def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="????"):
+    session_preds[session_preds == -100] = tokenizer.pad_token_id
+    transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
+                                  skip_special_tokens=True)
+    per_spk_transcripts = transcript.split(sot_split_token)
+    output = []
+    for transcript in per_spk_transcripts:
+        output.append(text_norm(truncate_at_repeating_ngram(transcript)))
+    return output
 
 def merge_supervisions(target_spk_supervision):
     new_merged_list = []
