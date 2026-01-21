@@ -142,9 +142,24 @@ class SOT_DatasetSuperclass:
                 return self.parent_csets[self.parent_recording_to_id[get_cut_recording_id(cut)]]
         return cut
 
-    def serialize_transcripts(self, transcripts: List[str], serialization_token="????"):
+    def serialize_transcripts(self, transcripts: List[str]):
+        # Sort transcripts by length (longest first)
         transcripts_sorted = sorted(transcripts, key=lambda x: len(x), reverse=True)
-        return serialization_token.join(transcripts_sorted)
+
+        num_speakers = len(transcripts_sorted)
+        serialized = []
+
+        for i, transcript in enumerate(transcripts_sorted):
+            # Replace any existing exclamation marks in the transcript
+            cleaned_transcript = transcript.replace("!", ".")
+            bangs = "!" * (num_speakers - i)
+            serialized.append(f"{bangs}{cleaned_transcript}")
+
+        return "".join(serialized)
+    #
+    # def serialize_transcripts(self, transcripts: List[str], serialization_token="????"):
+    #     transcripts_sorted = sorted(transcripts, key=lambda x: len(x), reverse=True)
+    #     return serialization_token.join(transcripts_sorted)
 
     def cut_to_sample(self, cut: Cut):
         features, att_mask = self.get_features(cut)

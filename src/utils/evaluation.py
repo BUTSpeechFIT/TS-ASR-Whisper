@@ -293,17 +293,36 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
     return metrics[0]
 
 
-
-def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="????"):
+def process_session_sot(session_preds, tokenizer, text_norm):
     session_preds[session_preds == -100] = tokenizer.pad_token_id
-    transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
-                                  skip_special_tokens=True)
-    per_spk_transcripts = transcript.split(sot_split_token)
+    transcript = tokenizer.decode(
+        session_preds,
+        decode_with_timestamps=True,
+        skip_special_tokens=True,
+    )
+
+    # Split on speaker markers: one or more '!' followed by whitespace
+    per_spk_transcripts = re.split(r'!+\s+', transcript)
+
     output = []
-    for transcript in per_spk_transcripts:
-        output.append(text_norm(truncate_at_repeating_ngram(transcript)))
+    for t in per_spk_transcripts:
+        if not t.strip():
+            continue
+        output.append(
+            text_norm(truncate_at_repeating_ngram(t.strip()))
+        )
+
     return output
 
+# def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="????"):
+#     session_preds[session_preds == -100] = tokenizer.pad_token_id
+#     transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
+#                                   skip_special_tokens=True)
+#     per_spk_transcripts = transcript.split(sot_split_token)
+#     output = []
+#     for transcript in per_spk_transcripts:
+#         output.append(text_norm(truncate_at_repeating_ngram(transcript)))
+#     return output
 
 def merge_supervisions(target_spk_supervision):
     new_merged_list = []
@@ -366,16 +385,20 @@ def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_l
                 continue
             session_out = process_session_sot(session_preds, trainer.processing_class, text_norm)
             ref = extract_transcript(references_cs[cut_id], text_norm)
+
+            if len(session_out) > len(ref) * 2:
+                print(f"Produced too many speakers in {cut_id}: {session_out}\nClearing session output.")
+                session_out = []
             refs[cut_id] = ref
             hyps[cut_id] = session_out
-        cp_wer = meeteval.wer.wer.cp_word_error_rate_multifile(reference=refs, hypothesis=hyps)
         os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, "cp.wer"), "w") as file:
-            json.dump(str(cp_wer), file)
         with open(os.path.join(output_dir, "hyp.json"), "w") as file:
             json.dump(hyps, file)
         with open(os.path.join(output_dir, "ref.json"), "w") as file:
             json.dump(hyps, file)
+        cp_wer = meeteval.wer.wer.cp_word_error_rate_multifile(reference=refs, hypothesis=hyps)
+        with open(os.path.join(output_dir, "cp.wer"), "w") as file:
+            json.dump(str(cp_wer), file)
         metrics = vars(meeteval.wer.combine_error_rates(cp_wer))
     metrics = broadcast_object_list([metrics], from_process=0)
     return metrics[0]

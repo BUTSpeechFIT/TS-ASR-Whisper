@@ -1,5 +1,5 @@
 # @package _global_
-experiment: sot_ami_v3
+experiment: sot_ami_iterative_decoding_v3
 model:
   whisper_model: openai/whisper-large-v3-turbo
   reinit_encoder_from: null
@@ -13,7 +13,7 @@ data:
   dev_cutsets:
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_dev_utt_group_max_30s.jsonl.gz
   eval_cutsets:
-    - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test_utt_group_max_30s.jsonl.gz
+    - /mnt/scratch/tmp/ipoloka/mt_asr_data/manifests/ami/ami-sdm_cutset_test_utt_group_kaldi_30m.jsonl.gz
   dataset_weights:
     - 1
 
@@ -26,15 +26,15 @@ training:
   remove_timestamps_from_ctc: true
   eval_strategy: steps
   save_strategy: steps
-  eval_steps: 1000
-  save_steps: 1000
+  eval_steps: 500
+  save_steps: 500
   overall_batch_size: 32
   generation_max_length: 440
-  learning_rate: 2e-5
+  learning_rate: 2e-6
   per_device_eval_batch_size: 8
-  dataloader_num_workers: 0
-  dataloader_prefetch_factor: null
-  dataloader_pin_memory: false
+  dataloader_num_workers: 1
+  dataloader_prefetch_factor: 2
+  dataloader_pin_memory: true
   use_fddt_only_n_epochs: 0
   use_fddt_only_n_steps: 0
   use_fddt: false
