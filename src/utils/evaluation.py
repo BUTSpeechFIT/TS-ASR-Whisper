@@ -326,6 +326,7 @@ def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="??
 
 def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=None, dataset=None,
                              save_visualizations=True):
+    first_eval_set = next(iter(trainer.eval_dataset.values()))
     # if not main process, return
     metrics = {}
     if trainer.accelerator.is_main_process:
@@ -348,7 +349,7 @@ def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_l
                 # In DDP setup sampler can return the same session multiple times
                 continue
             session_out = process_session_sot(session_preds, trainer.processing_class, text_norm)
-            ref = trainer.eval_dataset.get_transcript_units(references_cs[cut_id])
+            ref = [item['text'] for item in first_eval_set.get_transcript_units(references_cs[cut_id])]
             if len(session_out) > len(ref) * 3:
                 print(f"Produced too many speakers in {cut_id}: {session_out}\nClearing session output.")
                 session_out = []
