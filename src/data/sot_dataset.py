@@ -200,7 +200,7 @@ class SOT_DatasetSuperclass:
     #     transcripts_sorted = sorted(transcripts, key=lambda x: len(x), reverse=True)
     #     return serialization_token.join(transcripts_sorted)
 
-    def get_transcripts(self, cut):
+    def get_transcript_units(self, cut):
         units = []
 
         for speaker_id in self.get_cut_spks(cut):
@@ -232,7 +232,10 @@ class SOT_DatasetSuperclass:
                         "start": segment.start,
                     }
                 )
+        return units
 
+    def get_transcripts(self, cut):
+        units = self.get_transcript_units(cut)
         transcripts = self.serialize_transcripts(
                        units,
                        sot_strategy=self.sot_strategy,  # <-- new config flag

@@ -1,0 +1,26 @@
+# @package _global_
+defaults:
+  - /train/sot_slf
+
+experiment: sot_all_slf
+
+data:
+  train_cutsets:
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_custom_cutset_train-3mix.jsonl.gz
+  dataset_weights:
+    - 4
+    - 6
+    - 1
+    - 1
+    - 1
+    - 1
+
+training:
+  max_steps: 30000
+  learning_rate: 2e-6
+  

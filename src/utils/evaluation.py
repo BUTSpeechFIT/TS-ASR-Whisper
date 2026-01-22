@@ -324,42 +324,6 @@ def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="??
         output.append(text_norm(truncate_at_repeating_ngram(transcript)))
     return output
 
-def merge_supervisions(target_spk_supervision):
-    new_merged_list = []
-    for supervision in sorted(target_spk_supervision, key=lambda x: x.start):
-        if len(new_merged_list) == 0:
-            supervision.end_ = supervision.end
-            supervision.text_ = supervision.text
-            new_merged_list.append(supervision)
-        else:
-            if round(new_merged_list[-1].end_, 2) == round(supervision.start, 2) or supervision.start - \
-                    new_merged_list[-1].end_ <= 0.0:
-                new_merged_list[-1].end_ = supervision.end
-                new_merged_list[-1].text_ = new_merged_list[-1].text_ + " " + supervision.text
-            else:
-                supervision.end_ = supervision.end
-                supervision.text_ = supervision.text
-                new_merged_list.append(supervision)
-    return new_merged_list
-
-
-def get_cut_spks(cut):
-    spks = set()
-    for suppervision in cut.supervisions:
-        spks.add(suppervision.speaker)
-    return sorted(spks)
-
-
-def extract_transcript(cut, text_norm):
-    transcripts = {}
-    for speaker_id in get_cut_spks(cut):
-        target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
-        merged_supervisions = merge_supervisions(target_spk_supervisions)
-        transcription = " ".join([text_norm(segment.text_) for segment in merged_supervisions])
-        transcripts[speaker_id] = transcription
-    return transcripts
-
-
 def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=None, dataset=None,
                              save_visualizations=True):
     # if not main process, return
@@ -384,9 +348,8 @@ def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_l
                 # In DDP setup sampler can return the same session multiple times
                 continue
             session_out = process_session_sot(session_preds, trainer.processing_class, text_norm)
-            ref = extract_transcript(references_cs[cut_id], text_norm)
-
-            if len(session_out) > len(ref) * 2:
+            ref = trainer.eval_dataset.get_transcript_units(references_cs[cut_id])
+            if len(session_out) > len(ref) * 3:
                 print(f"Produced too many speakers in {cut_id}: {session_out}\nClearing session output.")
                 session_out = []
             refs[cut_id] = ref
@@ -402,4 +365,3 @@ def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_l
         metrics = vars(meeteval.wer.combine_error_rates(cp_wer))
     metrics = broadcast_object_list([metrics], from_process=0)
     return metrics[0]
-
