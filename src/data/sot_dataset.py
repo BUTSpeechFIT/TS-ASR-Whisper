@@ -284,7 +284,6 @@ class LhotseLongFormDataset(SOT_Dataset):
         self.break_to_characters = break_to_characters
         cutset = cutset.to_eager()
         cutset = cutset.filter(lambda x: x.duration < 30.0)
-        cutset = cutset.subset(first=100)
         if self.break_to_characters:
             cutset = cutset.map(lambda cut: cut.map_supervisions(
                 lambda supervision: supervision.transform_text(self.add_space_between_chars)))
