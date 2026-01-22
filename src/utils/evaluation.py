@@ -349,17 +349,21 @@ def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_l
                 # In DDP setup sampler can return the same session multiple times
                 continue
             session_out = process_session_sot(session_preds, trainer.processing_class, text_norm)
-            ref = [item['text'] for item in first_eval_set.get_transcript_units(references_cs[cut_id])]
-            if len(session_out) > 20:
+            ref_units = first_eval_set.get_transcript_units(references_cs[cut_id])
+            if "speaker" in first_eval_set.sot_strategy:
+                ref_units = first_eval_set.merge_speaker_units(ref_units)
+            ref = [item['text'] for item in ref_units]
+            if len(session_out) > 20 or len(session_out) > 2 * len(ref):
                 print(f"Produced too many speakers in {cut_id}: {session_out}\nClearing session output.")
                 session_out = []
             refs[cut_id] = ref
             hyps[cut_id] = session_out
+            processed_sessions_ids.add(cut_id)
         os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, "hyp.json"), "w") as file:
             json.dump(hyps, file)
         with open(os.path.join(output_dir, "ref.json"), "w") as file:
-            json.dump(hyps, file)
+            json.dump(refs, file)
         cp_wer = meeteval.wer.wer.cp_word_error_rate_multifile(reference=refs, hypothesis=hyps)
         with open(os.path.join(output_dir, "cp.wer"), "w") as file:
             json.dump(str(cp_wer), file)

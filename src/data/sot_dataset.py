@@ -160,6 +160,22 @@ class SOT_DatasetSuperclass:
     #     return "".join(serialized)
     #
 
+    def merge_speaker_units(self, units):
+        spk_map = {}
+        for u in units:
+            spk_map.setdefault(u["speaker"], []).append(u)
+
+        items = []
+        for spk, utts in spk_map.items():
+            items.append(
+                {
+                    "speaker": spk,
+                    "text": " ".join(u["text"] for u in utts),
+                    "start": min(u["start"] for u in utts),
+                }
+            )
+        return items
+
     def serialize_transcripts(
             self,
             units,
@@ -170,20 +186,7 @@ class SOT_DatasetSuperclass:
             items = units
 
         elif sot_strategy.startswith("speaker"):
-            # group utterances by speaker
-            spk_map = {}
-            for u in units:
-                spk_map.setdefault(u["speaker"], []).append(u)
-
-            items = []
-            for spk, utts in spk_map.items():
-                items.append(
-                    {
-                        "speaker": spk,
-                        "text": " ".join(u["text"] for u in utts),
-                        "start": min(u["start"] for u in utts),
-                    }
-                )
+            items = self.merge_speaker_units(units)
 
         else:
             raise ValueError(f"Unknown SOT strategy: {sot_strategy}")
@@ -281,6 +284,7 @@ class LhotseLongFormDataset(SOT_Dataset):
         self.break_to_characters = break_to_characters
         cutset = cutset.to_eager()
         cutset = cutset.filter(lambda x: x.duration < 30.0)
+        cutset = cutset.subset(first=100)
         if self.break_to_characters:
             cutset = cutset.map(lambda cut: cut.map_supervisions(
                 lambda supervision: supervision.transform_text(self.add_space_between_chars)))
