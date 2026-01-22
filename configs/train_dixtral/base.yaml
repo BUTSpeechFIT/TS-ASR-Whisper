@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_base_w_ctc_v7_w_lora
+experiment: dixtral_base_w_ctc_v7_w_lora_longform_ft_v2
 
 wandb:
   project: dixtral
@@ -15,29 +15,31 @@ model:
       - audio_tower.conv1
       - audio_tower.conv2
       - audio_tower.embed_positions
+  reinit_from: "/mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/exp/dixtral_base_w_ctc_v7_w_lora/checkpoint-18000"
 
 training:
   use_lora: True
   train_dixtral: True
-  per_device_train_batch_size: 4
-  per_device_eval_batch_size: 16
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 4
   dataloader_num_workers: 1
   dataloader_prefetch_factor: 2
   dataloader_pin_memory: True
-  gradient_accumulation_steps: 2
+  gradient_accumulation_steps: 4
+  gradient_checkpointing: True
   overall_batch_size: null
   remove_timestamps_from_ctc: true
-  metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_utt_group_max_30s_wer
+  metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_wer
   use_fddt_only_n_epochs: 0
-  use_fddt_only_n_steps: 2000
-  save_steps: 1000
-  eval_steps: 1000
+  use_fddt_only_n_steps: 0
+  save_steps: 200
+  eval_steps: 200
   eval_strategy: "steps"
   save_strategy: "steps"
   eval_on_start: False
   load_best_model_at_end: False
   learning_rate: 2e-5
-  warmup_steps: 4000
+  warmup_steps: 2000
   logging_steps: 5
   generation_max_length: 128
   early_stopping_patience: -1
@@ -47,16 +49,16 @@ data:
   use_timestamps: false
   train_text_norm: "voxtral"
   train_cutsets:
-    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset.jsonl.gz
     - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
     - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
   dev_cutsets:
-    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset_utt_group_max_30s.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
   eval_cutsets:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
     - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
     - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean.jsonl.gz
   dataset_weights:
     - 3
-    - 3
+    - 1
     - 1
