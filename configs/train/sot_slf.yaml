@@ -31,7 +31,7 @@ training:
   save_steps: 500
   overall_batch_size: 64
   generation_max_length: 440
-  learning_rate: 1e-6
+  learning_rate: 4e-6
   per_device_eval_batch_size: 8
   dataloader_num_workers: 2
   dataloader_prefetch_factor: 2
@@ -42,7 +42,7 @@ training:
   metric_for_best_model: eval_ami-sdm_cutset_dev_utt_group_max_30s_error_rate
   watch_grads: false
   max_steps: 10000
-  warmup_steps: 4000
+  warmup_steps: 2500
   weight_decay: 0.01
   lr_scheduler_type: cosine
   train_metrics_list: ["cp_wer"]
@@ -50,4 +50,4 @@ training:
   early_stopping_patience: -1
 
 wandb:
-  project: "sot"
+  project: "sot_v2"
