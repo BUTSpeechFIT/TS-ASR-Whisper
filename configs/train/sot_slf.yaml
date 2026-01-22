@@ -43,7 +43,7 @@ training:
   watch_grads: false
   max_steps: 10000
   warmup_steps: 2500
-  weight_decay: 0.01
+  weight_decay: 0.0
   lr_scheduler_type: cosine
   train_metrics_list: ["cp_wer"]
   eval_metrics_list: ["cp_wer"]
