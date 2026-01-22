@@ -1,5 +1,5 @@
 # @package _global_
-experiment: sot_ami_wo_ctc_v2
+experiment: sot_ami_slf
 model:
   whisper_model: openai/whisper-large-v3-turbo
   reinit_encoder_from: ${oc.env:PRETRAINED_CTC_MODELS_PATH}/${model.whisper_model}_ctc-pretrain_libri/model.safetensors
@@ -29,11 +29,11 @@ training:
   save_strategy: steps
   eval_steps: 500
   save_steps: 500
-  overall_batch_size: 32
+  overall_batch_size: 64
   generation_max_length: 440
-  learning_rate: 2e-6
+  learning_rate: 1e-6
   per_device_eval_batch_size: 8
-  dataloader_num_workers: 1
+  dataloader_num_workers: 2
   dataloader_prefetch_factor: 2
   dataloader_pin_memory: true
   use_fddt_only_n_epochs: 0
@@ -41,7 +41,9 @@ training:
   use_fddt: false
   metric_for_best_model: eval_ami-sdm_cutset_dev_utt_group_max_30s_error_rate
   watch_grads: false
-  max_steps: 20000
+  max_steps: 10000
+  warmup_steps: 4000
+  weight_decay: 0.01
   lr_scheduler_type: cosine
   train_metrics_list: ["cp_wer"]
   eval_metrics_list: ["cp_wer"]

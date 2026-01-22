@@ -162,77 +162,46 @@ class SOT_DatasetSuperclass:
 
     def serialize_transcripts(
             self,
-            transcripts,
+            units,
             sot_strategy="utterance_longest_first",
             serialization_token="????",
     ):
-        """
-        transcripts: List[Dict] with keys:
-            - text: str
-            - speaker: speaker_id
-            - start: float (start time)
-        """
+        if sot_strategy.startswith("utterance"):
+            items = units
 
-        if sot_strategy == "utterance_start_time":
-            transcripts_sorted = sorted(
-                transcripts, key=lambda x: x["start"]
-            )
+        elif sot_strategy.startswith("speaker"):
+            # group utterances by speaker
+            spk_map = {}
+            for u in units:
+                spk_map.setdefault(u["speaker"], []).append(u)
 
-        elif sot_strategy == "utterance_longest_first":
-            transcripts_sorted = sorted(
-                transcripts, key=lambda x: len(x["text"]), reverse=True
-            )
-
-        elif sot_strategy == "speaker_start_time":
-            # group by speaker, order speakers by first appearance
-            spk_to_items = {}
-            for t in transcripts:
-                spk_to_items.setdefault(t["speaker"], []).append(t)
-
-            speakers_sorted = sorted(
-                spk_to_items.items(),
-                key=lambda kv: min(x["start"] for x in kv[1])
-            )
-
-            transcripts_sorted = [
-                {
-                    "speaker": spk,
-                    "text": " ".join(x["text"] for x in items),
-                    "start": min(x["start"] for x in items),
-                }
-                for spk, items in speakers_sorted
-            ]
-
-        elif sot_strategy == "speaker_longest_first":
-            spk_to_items = {}
-            for t in transcripts:
-                spk_to_items.setdefault(t["speaker"], []).append(t)
-
-            transcripts_sorted = sorted(
-                [
+            items = []
+            for spk, utts in spk_map.items():
+                items.append(
                     {
                         "speaker": spk,
-                        "text": " ".join(x["text"] for x in items),
-                        "start": min(x["start"] for x in items),
+                        "text": " ".join(u["text"] for u in utts),
+                        "start": min(u["start"] for u in utts),
                     }
-                    for spk, items in spk_to_items.items()
-                ],
-                key=lambda x: len(x["text"]),
-                reverse=True,
-            )
+                )
 
         else:
             raise ValueError(f"Unknown SOT strategy: {sot_strategy}")
 
-        return serialization_token.join(t["text"] for t in transcripts_sorted)
+        if sot_strategy.endswith("start_time"):
+            items = sorted(items, key=lambda x: x["start"])
 
+        elif sot_strategy.endswith("longest_first"):
+            items = sorted(items, key=lambda x: len(x["text"]), reverse=True)
+
+        return serialization_token.join(x["text"] for x in items)
 
     # def serialize_transcripts(self, transcripts: List[str], serialization_token="????"):
     #     transcripts_sorted = sorted(transcripts, key=lambda x: len(x), reverse=True)
     #     return serialization_token.join(transcripts_sorted)
 
     def get_transcripts(self, cut):
-        transcripts = []
+        units = []
 
         for speaker_id in self.get_cut_spks(cut):
             last_segment_unfinished = (
@@ -247,31 +216,25 @@ class SOT_DatasetSuperclass:
 
             merged_supervisions = self.merge_supervisions(target_spk_supervisions)
 
-            if not merged_supervisions:
-                continue
+            for idx, segment in enumerate(merged_supervisions):
+                text = self.get_segment_text_with_timestamps(
+                    segment,
+                    self.use_timestamps,
+                    self.text_norm,
+                    (idx == len(merged_supervisions) - 1)
+                    and last_segment_unfinished,
+                )
 
-            transcription = ("" if self.use_timestamps else " ").join(
-                [
-                    self.get_segment_text_with_timestamps(
-                        segment,
-                        self.use_timestamps,
-                        self.text_norm,
-                        (idx == len(merged_supervisions) - 1)
-                        and last_segment_unfinished,
-                    )
-                    for idx, segment in enumerate(merged_supervisions)
-                ]
-            )
+                units.append(
+                    {
+                        "speaker": speaker_id,
+                        "text": text,
+                        "start": segment.start,
+                    }
+                )
 
-            transcripts.append(
-                {
-                    "speaker": speaker_id,
-                    "text": transcription,
-                    "start": merged_supervisions[0].start,
-                }
-            )
         transcripts = self.serialize_transcripts(
-                       transcripts,
+                       units,
                        sot_strategy=self.sot_strategy,  # <-- new config flag
                    )
         return transcripts
@@ -323,7 +286,7 @@ class LhotseLongFormDataset(SOT_Dataset):
                     lambda supervision: supervision.transform_text(self.add_space_between_chars)))
 
         self._references = references
-        super().__init__(cutsets=[cutset], sot_strategy=sot_strategy **kwargs)
+        super().__init__(cutsets=[cutset], sot_strategy=sot_strategy, **kwargs)
 
         if self._references is not None:
             rids = set(get_cut_recording_id(cut) for cut in self.references)

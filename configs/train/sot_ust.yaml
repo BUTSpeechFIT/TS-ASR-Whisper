@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /train/sot_slf
+
+experiment: sot_ami_ust
+
+data:
+  sot_strategy: "utterance_start_time"
