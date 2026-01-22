@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+  - /train/sot_slf
+
+experiment: sot_10h_slf
+
+data:
+  train_cutsets:
+    - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s_10h.jsonl.gz
+
+training:
+  max_steps: 5000
+  warmup_steps: 1000
+  learning_rate: 2e-6
+  overall_batch_size: 32
+  
