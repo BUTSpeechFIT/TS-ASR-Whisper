@@ -8,6 +8,7 @@ model:
 
 data:
   use_timestamps: false
+  sot_strategy: "speaker_longest_first"
   train_cutsets:
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
   dev_cutsets:

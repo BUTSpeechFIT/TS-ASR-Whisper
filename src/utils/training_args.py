@@ -129,7 +129,7 @@ class DataArguments:
     eval_cutsets: Optional[List[str]] = field(default=None, metadata={"help": "Paths to eval cutsets."})
     merge_eval_cutsets: Optional[bool] = field(default=False, metadata={"help": "Whether to merge dev/eval cutsets."})
     use_timestamps: Optional[bool] = field(default=False, metadata={"help": "Use timestamps."})
-
+    sot_strategy: Optional[str] = field(default=None, metadata={"help": "Strategy to serialize outputs."})
     train_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for training."})
     eval_text_norm: Optional[str] = field(default=None, metadata={

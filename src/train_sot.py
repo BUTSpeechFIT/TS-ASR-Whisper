@@ -48,21 +48,14 @@ class ModelTrainer:
 
     def _load_training_cutsets(self):
         """Load and prepare training cutsets."""
-        train_cutsets = load_cutsets(self.data_args.train_cutsets, self.data_args.use_enrollments)
+        train_cutsets = load_cutsets(self.data_args.train_cutsets, False)
         return train_cutsets
 
-    def _create_enrollment_cutset(self):
-        """Create enrollment cutset if needed."""
-        if (self.data_args.use_enrollments and
-                self.data_args.enrollment_cutsets is not None):
-            return reduce(lambda x, y: x + y,
-                          [lhotse.load_manifest(cutset) for cutset in self.data_args.enrollment_cutsets])
-        return None
-
-    def _create_train_dataset(self, train_cutsets, enrollment_cutset):
+    def _create_train_dataset(self, train_cutsets):
         """Create training dataset."""
         train_dataset = SOT_Dataset(
             train_cutsets,
+            sot_strategy=self.data_args.sot_strategy,
             do_augment=self.aug_args.do_augment,
             dataset_weights=self.data_args.dataset_weights,
             use_timestamps=self.data_args.use_timestamps,
@@ -76,19 +69,17 @@ class ModelTrainer:
 
         return train_dataset
 
-    def _create_eval_datasets(self, enrollment_cutset):
+    def _create_eval_datasets(self):
         """Create development and evaluation datasets."""
         dev_datasets = build_datasets(
             self.data_args.dev_cutsets, self.data_args,
             self.text_norm, self.container, self.data_args.dev_diar_cutsets,
-            enrollment_cutset=enrollment_cutset,
             dataset_class=LhotseLongFormDataset
         )
 
         eval_datasets = build_datasets(
             self.data_args.eval_cutsets, self.data_args,
             self.text_norm, self.container, self.data_args.eval_diar_cutsets,
-            enrollment_cutset=enrollment_cutset,
             dataset_class=LhotseLongFormDataset
         )
 
@@ -194,9 +185,8 @@ class ModelTrainer:
 
         # Load data
         train_cutsets = self._load_training_cutsets()
-        enrollment_cutset = self._create_enrollment_cutset()
-        train_dataset = self._create_train_dataset(train_cutsets, enrollment_cutset)
-        dev_datasets, eval_datasets = self._create_eval_datasets(enrollment_cutset)
+        train_dataset = self._create_train_dataset(train_cutsets)
+        dev_datasets, eval_datasets = self._create_eval_datasets()
 
         # Setup model
         self.model = self.container.model

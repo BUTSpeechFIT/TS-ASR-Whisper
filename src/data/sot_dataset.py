@@ -30,6 +30,7 @@ class SOT_DatasetSuperclass:
 
     def __init__(self,
                  cutsets,
+                 sot_strategy,
                  text_norm=lambda x: x,
                  use_timestamps=False,
                  max_timestamp_pause=0.0,
@@ -45,6 +46,7 @@ class SOT_DatasetSuperclass:
                  **kwargs):
 
         self.cutsets = cutsets
+        self.sot_strategy = sot_strategy
 
         self.dataset_weights = dataset_weights
         if dataset_weights is None:
@@ -157,29 +159,127 @@ class SOT_DatasetSuperclass:
     #
     #     return "".join(serialized)
     #
-    def serialize_transcripts(self, transcripts: List[str], serialization_token="????"):
-        transcripts_sorted = sorted(transcripts, key=lambda x: len(x), reverse=True)
-        return serialization_token.join(transcripts_sorted)
+
+    def serialize_transcripts(
+            self,
+            transcripts,
+            sot_strategy="utterance_longest_first",
+            serialization_token="????",
+    ):
+        """
+        transcripts: List[Dict] with keys:
+            - text: str
+            - speaker: speaker_id
+            - start: float (start time)
+        """
+
+        if sot_strategy == "utterance_start_time":
+            transcripts_sorted = sorted(
+                transcripts, key=lambda x: x["start"]
+            )
+
+        elif sot_strategy == "utterance_longest_first":
+            transcripts_sorted = sorted(
+                transcripts, key=lambda x: len(x["text"]), reverse=True
+            )
+
+        elif sot_strategy == "speaker_start_time":
+            # group by speaker, order speakers by first appearance
+            spk_to_items = {}
+            for t in transcripts:
+                spk_to_items.setdefault(t["speaker"], []).append(t)
+
+            speakers_sorted = sorted(
+                spk_to_items.items(),
+                key=lambda kv: min(x["start"] for x in kv[1])
+            )
+
+            transcripts_sorted = [
+                {
+                    "speaker": spk,
+                    "text": " ".join(x["text"] for x in items),
+                    "start": min(x["start"] for x in items),
+                }
+                for spk, items in speakers_sorted
+            ]
+
+        elif sot_strategy == "speaker_longest_first":
+            spk_to_items = {}
+            for t in transcripts:
+                spk_to_items.setdefault(t["speaker"], []).append(t)
+
+            transcripts_sorted = sorted(
+                [
+                    {
+                        "speaker": spk,
+                        "text": " ".join(x["text"] for x in items),
+                        "start": min(x["start"] for x in items),
+                    }
+                    for spk, items in spk_to_items.items()
+                ],
+                key=lambda x: len(x["text"]),
+                reverse=True,
+            )
+
+        else:
+            raise ValueError(f"Unknown SOT strategy: {sot_strategy}")
+
+        return serialization_token.join(t["text"] for t in transcripts_sorted)
+
+
+    # def serialize_transcripts(self, transcripts: List[str], serialization_token="????"):
+    #     transcripts_sorted = sorted(transcripts, key=lambda x: len(x), reverse=True)
+    #     return serialization_token.join(transcripts_sorted)
+
+    def get_transcripts(self, cut):
+        transcripts = []
+
+        for speaker_id in self.get_cut_spks(cut):
+            last_segment_unfinished = (
+                cut.per_spk_flags.get(speaker_id, False)
+                if hasattr(cut, "per_spk_flags")
+                else False
+            )
+
+            target_spk_supervisions = list(
+                filter(lambda x: x.speaker == speaker_id, cut.supervisions)
+            )
+
+            merged_supervisions = self.merge_supervisions(target_spk_supervisions)
+
+            if not merged_supervisions:
+                continue
+
+            transcription = ("" if self.use_timestamps else " ").join(
+                [
+                    self.get_segment_text_with_timestamps(
+                        segment,
+                        self.use_timestamps,
+                        self.text_norm,
+                        (idx == len(merged_supervisions) - 1)
+                        and last_segment_unfinished,
+                    )
+                    for idx, segment in enumerate(merged_supervisions)
+                ]
+            )
+
+            transcripts.append(
+                {
+                    "speaker": speaker_id,
+                    "text": transcription,
+                    "start": merged_supervisions[0].start,
+                }
+            )
+        transcripts = self.serialize_transcripts(
+                       transcripts,
+                       sot_strategy=self.sot_strategy,  # <-- new config flag
+                   )
+        return transcripts
 
     def cut_to_sample(self, cut: Cut):
         features, att_mask = self.get_features(cut)
-
-        transcripts = []
-        for speaker_id in self.get_cut_spks(cut):
-            last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut,
-                                                                                          "per_spk_flags") else False
-            target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
-            merged_supervisions = self.merge_supervisions(target_spk_supervisions)
-            transcription = ("" if self.use_timestamps else " ").join(
-                [self.get_segment_text_with_timestamps(segment, self.use_timestamps, self.text_norm,
-                                                       (idx == len(
-                                                           merged_supervisions) - 1) and last_segment_unfinished)
-                 for idx, segment in
-                 enumerate(merged_supervisions)])
-            transcripts.append(transcription)
-
         outputs = {"input_features": features, "attention_mask": att_mask,
-                   "transcript": self.serialize_transcripts(transcripts), "is_long_form": False}
+                   "transcript": self.get_transcripts(cut) , "is_long_form": False}
 
         if hasattr(cut, "lang"):
             outputs["language"] = cut.lang
@@ -209,7 +309,7 @@ class SOT_Dataset(SOT_DatasetSuperclass, Dataset):
 
 
 class LhotseLongFormDataset(SOT_Dataset):
-    def __init__(self, cutset: CutSet,
+    def __init__(self, cutset: CutSet, sot_strategy: str,
                  references: CutSet = None, provide_gt_lang: bool = False, break_to_characters=False,
                  use_ids_as_transcripts=True, **kwargs):
         self.break_to_characters = break_to_characters
@@ -223,7 +323,7 @@ class LhotseLongFormDataset(SOT_Dataset):
                     lambda supervision: supervision.transform_text(self.add_space_between_chars)))
 
         self._references = references
-        super().__init__(cutsets=[cutset], **kwargs)
+        super().__init__(cutsets=[cutset], sot_strategy=sot_strategy **kwargs)
 
         if self._references is not None:
             rids = set(get_cut_recording_id(cut) for cut in self.references)
@@ -277,20 +377,7 @@ class LhotseLongFormDataset(SOT_Dataset):
                    "transcript": f'{cut.id}', "is_long_form": True}
 
         if not self.use_ids_as_transcripts:
-            transcripts = []
-            for speaker_id in self.get_cut_spks(cut):
-                target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
-                last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut,
-                                                                                              "per_spk_flags") else False
-                merged_supervisions = self.merge_supervisions(target_spk_supervisions)
-                transcription = ("" if self.use_timestamps else " ").join(
-                    [self.get_segment_text_with_timestamps(segment, self.use_timestamps, self.text_norm,
-                                                           (idx == len(
-                                                               merged_supervisions) - 1) and last_segment_unfinished)
-                     for idx, segment in
-                     enumerate(merged_supervisions)])
-                transcripts.append(transcription)
-            outputs["transcript"] = self.serialize_transcripts(transcripts)
+            outputs["transcript"] = self.get_transcripts(cut)
 
         if self.provide_gt_lang:
             if hasattr(cut, "lang"):

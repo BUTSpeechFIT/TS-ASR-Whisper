@@ -571,7 +571,8 @@ def load_cutsets(cutset_list, use_enrollments):
 
 
 def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArguments,
-                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True, dataset_class=LhotseLongFormDataset):
+                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True,
+                   dataset_class=LhotseLongFormDataset):
     logger.info('Using LhotseLongFormDataset')
     if cutset_paths is None or len(cutset_paths) == 0:
         raise ValueError("'cutset_paths' is None or empty. Please provide valid 'cutset_paths' for the dataset")
@@ -600,16 +601,18 @@ def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArgument
         for idx, cutset_path in enumerate(cutset_paths):
             if "libri" in cutset_path:
                 cutsets[idx].use_enrollment = True
-    return {os.path.basename(path).removesuffix(".jsonl.gz"): dataset_class(cutset=cutset, references=ref,
-                                                                                    use_timestamps=data_args.use_timestamps,
-                                                                                    text_norm=text_norm,
-                                                                                    feature_extractor=container.feature_extractor,
-                                                                                    global_lang_id=data_args.global_lang_id,
-                                                                                    provide_gt_lang=data_args.provide_gt_lang,
-                                                                                    load_channel_zero_only=data_args.load_channel_zero_only,
-                                                                                    break_to_characters="break_to_chars" in path,
-                                                                                    use_enrollments=data_args.use_enrollments,
-                                                                                    enrollment_cutset=enrollment_cutset,
-                                                                                    use_ids_as_transcripts=use_ids_as_transcripts
-                                                                                    ) for cutset, ref, path in
+    return {os.path.basename(path).removesuffix(".jsonl.gz"): dataset_class(cutset=cutset,
+                                                                            sot_strategy=data_args.sot_strategy,
+                                                                            references=ref,
+                                                                            use_timestamps=data_args.use_timestamps,
+                                                                            text_norm=text_norm,
+                                                                            feature_extractor=container.feature_extractor,
+                                                                            global_lang_id=data_args.global_lang_id,
+                                                                            provide_gt_lang=data_args.provide_gt_lang,
+                                                                            load_channel_zero_only=data_args.load_channel_zero_only,
+                                                                            break_to_characters="break_to_chars" in path,
+                                                                            use_enrollments=data_args.use_enrollments,
+                                                                            enrollment_cutset=enrollment_cutset,
+                                                                            use_ids_as_transcripts=use_ids_as_transcripts
+                                                                            ) for cutset, ref, path in
             zip(cutsets, refs, cutset_paths)}
