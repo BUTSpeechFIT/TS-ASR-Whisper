@@ -350,7 +350,7 @@ def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_l
                 continue
             session_out = process_session_sot(session_preds, trainer.processing_class, text_norm)
             ref = [item['text'] for item in first_eval_set.get_transcript_units(references_cs[cut_id])]
-            if len(session_out) > len(ref) * 3:
+            if len(session_out) > 20:
                 print(f"Produced too many speakers in {cut_id}: {session_out}\nClearing session output.")
                 session_out = []
             refs[cut_id] = ref
