@@ -14,7 +14,7 @@ data:
   dev_cutsets:
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_dev_utt_group_max_30s.jsonl.gz
   eval_cutsets:
-    - /mnt/scratch/tmp/ipoloka/mt_asr_data/manifests/ami/ami-sdm_cutset_test_utt_group_kaldi_30m.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test_utt_group_kaldi_30m.jsonl.gz
   dataset_weights:
     - 1
 
