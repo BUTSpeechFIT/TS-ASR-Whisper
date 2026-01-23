@@ -412,7 +412,7 @@ class TS_ASR_DatasetSuperclass:
                    "transcript": transcription, "is_long_form": False}
 
         if self.use_enrollments and not is_nested:
-            other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=True)
+            other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=False)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
 
         if hasattr(cut, "lang"):
