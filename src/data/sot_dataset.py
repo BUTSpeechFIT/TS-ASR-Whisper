@@ -19,10 +19,6 @@ logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
 
-def add_timestamps(transcript, sample_len, sampling_rate=16_000, precision=0.02):
-    return {"transcript": f"<|0.00|>{transcript}<|{round_nearest(sample_len / sampling_rate, precision):.2f}|>"}
-
-
 class SOT_DatasetSuperclass:
     """
         Contains all dataset-related methods that both, random and segmented datasets use.
@@ -90,7 +86,7 @@ class SOT_DatasetSuperclass:
         if skip_end_token:
             end = ""
         if use_timestamps:
-            text = start + text + end
+            text = start + " " + text + end
         return text
 
     def merge_supervisions(self, target_spk_supervision):
@@ -170,7 +166,7 @@ class SOT_DatasetSuperclass:
             items.append(
                 {
                     "speaker": spk,
-                    "text": " ".join(u["text"] for u in utts),
+                    "text": ("" if self.use_timestamps else " ").join(u["text"] for u in utts),
                     "start": min(u["start"] for u in utts),
                 }
             )
@@ -203,7 +199,7 @@ class SOT_DatasetSuperclass:
     #     transcripts_sorted = sorted(transcripts, key=lambda x: len(x), reverse=True)
     #     return serialization_token.join(transcripts_sorted)
 
-    def get_transcript_units(self, cut):
+    def get_transcript_units(self, cut, use_timestamps=None):
         units = []
 
         for speaker_id in self.get_cut_spks(cut):
@@ -222,7 +218,7 @@ class SOT_DatasetSuperclass:
             for idx, segment in enumerate(merged_supervisions):
                 text = self.get_segment_text_with_timestamps(
                     segment,
-                    self.use_timestamps,
+                    self.use_timestamps if use_timestamps is None else use_timestamps,
                     self.text_norm,
                     (idx == len(merged_supervisions) - 1)
                     and last_segment_unfinished,

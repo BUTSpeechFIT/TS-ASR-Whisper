@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /train/sot_slf
+
+experiment: sot_ami_slf_timestamps
+
+data:
+  use_timestamps: true

@@ -316,7 +316,7 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
 
 def process_session_sot(session_preds, tokenizer, text_norm, sot_split_token="????"):
     session_preds[session_preds == -100] = tokenizer.pad_token_id
-    transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
+    transcript = tokenizer.decode(session_preds, decode_with_timestamps=False,
                                   skip_special_tokens=True)
     per_spk_transcripts = transcript.split(sot_split_token)
     output = []
@@ -349,7 +349,7 @@ def compute_sot_longform_metrics(pred, trainer, output_dir, text_norm, metrics_l
                 # In DDP setup sampler can return the same session multiple times
                 continue
             session_out = process_session_sot(session_preds, trainer.processing_class, text_norm)
-            ref_units = first_eval_set.get_transcript_units(references_cs[cut_id])
+            ref_units = first_eval_set.get_transcript_units(references_cs[cut_id], use_timestamps=False)
             if "speaker" in first_eval_set.sot_strategy:
                 ref_units = first_eval_set.merge_speaker_units(ref_units)
             ref = [item['text'] for item in ref_units]
