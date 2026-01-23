@@ -42,8 +42,17 @@ class DiCoWEncoder(WhisperEncoder):
                 bias=False,
             )
         if self.ctc_weight > 0.0:
+            expansion_factor = 4
+            dropout_prob = getattr(config, "activation_dropout", 0.1)
+
             self.spk_transforms = nn.ModuleList([
-                nn.Linear(config.d_model, config.d_model, bias=False)
+                nn.Sequential(
+                    nn.Linear(config.d_model, config.d_model * expansion_factor),
+                    nn.GELU(),
+                    nn.Dropout(dropout_prob),
+                    nn.Linear(config.d_model * expansion_factor, config.d_model),
+                    nn.LayerNorm(config.d_model)
+                )
                 for _ in range(self.config.num_speakers)
             ])
             self.lm_head = nn.Linear(config.d_model, config.vocab_size + 1, bias=False)
@@ -153,8 +162,7 @@ class DiCoWEncoder(WhisperEncoder):
         losses = []
 
         for s, (W_s, lbl_s) in enumerate(zip(self.spk_transforms, spk_labels)):
-            # speaker-specific transform
-            spk_hidden = W_s(hidden_states)
+            spk_hidden = W_s(hidden_states) + hidden_states
 
             # shared CTC head
             logits = self.lm_head(spk_hidden)
@@ -211,8 +219,8 @@ class DiCoWEncoder(WhisperEncoder):
             enrollments=None
     ):
         if enrollments is not None:
-            input_features = torch.stack((input_features, enrollments['input_features']), dim=1).flatten(0,1)
-            stno_mask = torch.stack((stno_mask, enrollments['stno_mask']),dim=1).flatten(0,1)
+            input_features = torch.stack((input_features, enrollments['input_features']), dim=1).flatten(0, 1)
+            stno_mask = torch.stack((stno_mask, enrollments['stno_mask']), dim=1).flatten(0, 1)
 
         expected_seq_length = self.config.max_source_positions * self.conv1.stride[0] * self.conv2.stride[0]
         if input_features.shape[-1] != expected_seq_length:
@@ -268,7 +276,7 @@ class DiCoWEncoder(WhisperEncoder):
 
                 if self.config.use_enrollments and idx < self.config.scb_layers:
                     hidden_states = self.ca_enrolls[idx](hidden_states)
-                    if idx == self.config.scb_layers -1:
+                    if idx == self.config.scb_layers - 1:
                         # enrollment representations are not longer needed
                         hidden_states = hidden_states[::2]
                         stno_mask = stno_mask[::2]
