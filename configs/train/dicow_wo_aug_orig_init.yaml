@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train/dicow_wo_aug
+
+experiment: orig_init
+
+model:
+  non_target_fddt_value: 0.1
+  use_pre_pos_fddt: False
