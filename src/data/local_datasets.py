@@ -131,8 +131,11 @@ class TS_ASR_DatasetSuperclass:
                 supervision.text_ = supervision.text
                 new_merged_list.append(supervision)
             else:
-                if round(new_merged_list[-1].end_, 2) == round(supervision.start, 2) or supervision.start - \
-                        new_merged_list[-1].end_ <= self.max_timestamp_pause:
+                # Use round_nearest for consistency with timestamp formatting
+                prev_end = round_nearest(new_merged_list[-1].end_, 0.02)
+                curr_start = round_nearest(supervision.start, 0.02)
+
+                if prev_end == curr_start or supervision.start - new_merged_list[-1].end_ <= self.max_timestamp_pause:
                     new_merged_list[-1].end_ = supervision.end
                     new_merged_list[-1].text_ = new_merged_list[-1].text_ + " " + supervision.text
                 else:
