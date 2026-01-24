@@ -138,9 +138,9 @@ class DataArguments:
     dataset_weights: Optional[List[int]] = field(default=None, metadata={"help": "Dataset weights."})
 
     use_enrollments: Optional[bool] = field(default=False, metadata={"help": "Use enrollments."})
-    min_enrollment_mix_overlap: Optional[float] = field(default=None, metadata={"help": "Min sampled overlap ratios."})
-    max_enrollment_mix_overlap: Optional[float] = field(default=None, metadata={"help": "Max sampled overlap ratios."})
-    number_of_mixed_speakers: Optional[int] = field(default=None, metadata={"help": "Number of mixed speakers."})
+    min_enrollment_mix_overlap: Optional[float] = field(default=0.3, metadata={"help": "Min sampled overlap ratios."})
+    max_enrollment_mix_overlap: Optional[float] = field(default=1.0, metadata={"help": "Max sampled overlap ratios."})
+    number_of_mixed_speakers: Optional[int] = field(default=2, metadata={"help": "Number of mixed speakers."})
 
     # language id specific arguments
     provide_gt_lang: Optional[bool] = field(default=False, metadata={"help": "Provide ground truth language."})
