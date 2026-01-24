@@ -361,8 +361,9 @@ class TS_ASR_DatasetSuperclass:
         same_spk_cut = self.sample_same_speaker_cut(speaker_id, skip_id, greedy_sample=greedy_sample,
                                                     max_duration=max_enrollment_len)
 
-        # We sample slightly more than needed to account for potentially filtering out the target speaker_id
+        # Sample slightly more than needed to account for potentially filtering out the target speaker_id
         candidates_to_sample = num_other_speakers + 1
+        candidates_to_sample = min(len(self.enrollment_speakers), candidates_to_sample)
 
         candidate_speakers = random.sample(self.enrollment_speakers, candidates_to_sample)
 
@@ -374,10 +375,14 @@ class TS_ASR_DatasetSuperclass:
 
         other_lens = [cut.duration for cut in other_cuts]
 
-        overlap_factor = np.random.uniform(min_overlap_ratio, max_overlap_ratio)
-
-        # Assumes self.sample_offsets can handle a list of N lengths
-        target_offset, other_offsets = self.sample_offsets(same_spk_cut.duration, other_lens, overlap_factor)
+        # Only call sample_offsets if we actually have other speakers
+        if len(other_lens) > 0:
+            overlap_factor = np.random.uniform(min_overlap_ratio, max_overlap_ratio)
+            target_offset, other_offsets = self.sample_offsets(same_spk_cut.duration, other_lens, overlap_factor)
+        else:
+            # Default behavior for single speaker: start at 0, no other offsets
+            target_offset = 0.0
+            other_offsets = []
 
         if not greedy_sample and np.random.rand() < randomly_shift_target_offset_p:
             # Compute total mixture span so far
