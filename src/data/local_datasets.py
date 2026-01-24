@@ -647,6 +647,9 @@ def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArgument
                                                                             break_to_characters="break_to_chars" in path,
                                                                             use_enrollments=data_args.use_enrollments,
                                                                             enrollment_cutset=enrollment_cutset,
-                                                                            use_ids_as_transcripts=use_ids_as_transcripts
+                                                                            use_ids_as_transcripts=use_ids_as_transcripts,
+                                                                            num_other_speakers=data_args.number_of_mixed_speakers,
+                                                                            min_overlap_ratio=data_args.min_enrollment_mix_overlap,
+                                                                            max_overlap_ratio=data_args.max_enrollment_mix_overlap,
                                                                             ) for cutset, ref, path in
             zip(cutsets, refs, cutset_paths)}
