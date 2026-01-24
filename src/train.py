@@ -74,6 +74,9 @@ class ModelTrainer:
             load_channel_zero_only=self.data_args.load_channel_zero_only,
             use_enrollments=self.data_args.use_enrollments,
             enrollment_cutset=enrollment_cutset,
+            num_other_speakers=self.data_args.number_of_mixed_speakers,
+            min_overlap_ratio=self.data_args.min_enrollment_mix_overlap,
+            max_overlap_ratio=self.data_args.max_enrollment_mix_overlap,
         )
 
         return train_dataset
