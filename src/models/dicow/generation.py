@@ -315,19 +315,6 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
     def _fix_timestamps_from_segmentation(self, sequences):
         """
         Adjusts token sequences with global timestamps to fit within Whisper's 0–30s timestamp token range.
-
-        This function modifies the input sequences by inserting appropriate timestamp tokens and
-        offset corrections to ensure the decoded token order is correct, without splitting any segment.
-        It aligns all timestamps to 0.02-second precision, inserts placeholder segments to bridge
-        time gaps between 30-second windows, and maintains segment continuity during encoding.
-
-        Args:
-            sequences (dict): A dictionary containing:
-                - 'segments': A list of segment lists, each segment being a dict with 'start', 'end', and 'tokens'.
-                - 'sequences': A tensor used to determine device for padding.
-
-        Returns:
-            torch.Tensor: A batch of padded token sequences with corrected timestamp alignment.
         """
         # Get the token ID for the "<|0.00|>" timestamp used to detect dummy segments
         first_timestamp_token = self.tokenizer.get_vocab()["<|0.00|>"]
@@ -341,7 +328,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                 if len(seg['tokens']) > 0 and (len(seg['tokens']) != 1 or seg['tokens'][0] != first_timestamp_token)
             ]
 
-        # Iterate over each group of segments (e.g., one per utterance)
+        # Iterate over each group of segments
         for idx, sequence_segs in enumerate(sequences['segments']):
             result = []
             prev_segment_end_time = None
@@ -357,8 +344,11 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                 current_block = (start_time + correction) // 30
 
                 if prev_segment_end_time is not None:
-                    # If not the first segment, calculate difference in 30s windows
-                    prev_block = prev_segment_end_time // 30
+                    # We subtract a tiny epsilon from prev_segment_end_time.
+                    # If prev ended exactly at 30.0, it belongs to block 0, not block 1.
+                    # 30.0 // 30 = 1 (Wrong) | 29.999 // 30 = 0 (Correct)
+                    prev_block = (prev_segment_end_time - Decimal("0.001")) // 30
+
                     num_dummies = current_block - prev_block - 1
 
                     # Insert (30, [], 30) marker if we're moving to a new block
@@ -379,13 +369,14 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                     result.append(((start_time + correction) % 30, tokens, (end_time + correction) % 30))
                 elif (end_time + correction) % 30 == 0:
                     result.append(((start_time + correction) % 30, tokens, 30))
+                    # Important: reset correction if we landed exactly on the boundary
                     correction = Decimal(0.0)
                 else:
                     # Segment would wrap across a 30s boundary
                     new_seg_start = (correction + start_time) % 30
                     seg_duration = end_time - start_time
                     new_end_time = (end_time + correction) % 30
-                    # if segment duration is exactly 30s we have to use a correction trick, elsewise tokenizer will automatically adjust
+
                     if seg_duration == 30.0:
                         if float(new_seg_start) % 30.0 == 0.0:
                             new_end_time = Decimal(30.0)
@@ -396,7 +387,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
                     else:
                         correction = Decimal(0.0)
                     result.append((new_seg_start, tokens, new_end_time))
-                # print(f'Processed segment {i}, result: {self.tokenizer.decode(self.tokenizer("".join([f"<|{seg[0]:.2f}|>{self.tokenizer.decode(seg[1])}<|{seg[2]:.2f}|>" for seg in result]))["input_ids"], decode_with_timestamps=True)[-250:]}')
+
                 # Update the previous segment's end time for next iteration
                 prev_segment_end_time = end_time + correction
 
