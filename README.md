@@ -6,6 +6,11 @@ This repository contains the **official implementation** of the following public
 * **DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition** — [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S088523082500066X)
 * **SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper** — *coming soon* ([TBD]())
 
+This repository provides handy tools to prepare data, train, publish, and evaluate your models with just a few commands, see on picture below.
+
+<div align="center">
+  <img src="https://github.com/BUTSpeechFIT/TS-ASR-Whisper/blob/se_dicow/figure.png?raw=true" alt="SE-DiCoW Architecture" width="800"/>
+</div>
 ---
 
 ## 🎯 Project Overview
