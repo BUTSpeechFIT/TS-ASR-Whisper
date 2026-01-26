@@ -1,5 +1,4 @@
 {
-  "additional_self_attention_layer": true,
   "alignment_heads": [
     [
       2,
@@ -26,22 +25,12 @@
       14
     ]
   ],
-  "apply_fddt_to_n_layers": -1,
-  "apply_target_amp_to_n_layers": -1,
-  "attn_implementation": "flash_attention_2",
-  "begin_suppress_tokens": null
+  "begin_suppress_tokens": null,
   "bos_token_id": 50257,
   "ctc_margin": 0,
   "ctc_weight": 0,
   "decoder_start_token_id": 50258,
   "eos_token_id": 50257,
-  "fddt_bias_only": false,
-  "fddt_init": "disparagement",
-  "fddt_is_diagonal": true,
-  "fddt_use_non_target": true,
-  "fddt_use_overlap": true,
-  "fddt_use_silence": true,
-  "fddt_use_target": true,
   "is_multilingual": true,
   "lang_to_id": {
     "<|af|>": 50327,
@@ -148,15 +137,10 @@
   "language": null,
   "max_initial_timestamp_index": null,
   "max_length": 448,
-  "mt_num_speakers": 1,
   "no_timestamps_token_id": 50364,
-  "non_target_amplifier_value": 1.0,
-  "non_target_fddt_value": 1.0,
   "pad_token_id": 50257,
   "prev_sot_token_id": 50362,
-  "remove_timestamps_from_ctc": false,
   "return_timestamps": true,
-  "sub_sample": true,
   "suppress_tokens": [
     1,
     2,
@@ -247,20 +231,10 @@
     50362,
     50363
   ],
-  "target_amp_bias_only": false,
-  "target_amp_init": "disparagement",
-  "target_amp_is_diagonal": true,
-  "target_amp_use_non_target": true,
-  "target_amp_use_overlap": true,
-  "target_amp_use_silence": true,
-  "target_amp_use_target": true,
   "task": "transcribe",
   "task_to_id": {
     "transcribe": 50360,
     "translate": 50359
   },
-  "transformers_version": "4.42.0",
-  "use_fddt": true,
-  "use_initial_fddt": true,
-  "use_target_amplifiers": true
+  "transformers_version": "4.55.0"
 }

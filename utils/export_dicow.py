@@ -39,6 +39,11 @@ if __name__ == '__main__':
         repo_id=NEW_MODEL_ID,
     )
     api.upload_file(
+        path_or_fileobj=f"{os.environ['SRC_ROOT']}/export_sources/images/{args.model_name}.png",
+        path_in_repo=f"{args.model_name}.png",
+        repo_id=NEW_MODEL_ID,
+    )
+    api.upload_file(
         path_or_fileobj=f"{os.environ['SRC_ROOT']}/export_sources/generation_config.json",
         path_in_repo="generation_config.json",
         repo_id=NEW_MODEL_ID,
