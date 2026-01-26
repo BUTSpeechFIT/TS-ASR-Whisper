@@ -11,6 +11,7 @@ This repository provides handy tools to prepare data, train, publish, and evalua
 <div align="center">
   <img src="https://github.com/BUTSpeechFIT/TS-ASR-Whisper/blob/se_dicow/figure.png?raw=true" alt="SE-DiCoW Architecture" width="800"/>
 </div>
+
 ---
 
 ## 🎯 Project Overview
