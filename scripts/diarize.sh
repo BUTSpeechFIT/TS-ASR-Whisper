@@ -1,11 +1,17 @@
 #!/bin/bash
 
-# Exit on error (-e), unset variables (-u), or pipe failures (-o pipefail)
+# Exit on error (-e), or pipe failures (-o pipefail)
 set -eo pipefail
 
 # ==============================================================================
 # Setup & Configuration
 # ==============================================================================
+
+# Activate your environment
+CONDA_BASE=$(dirname $(dirname "$CONDA_EXE"))
+source "$CONDA_BASE/etc/profile.d/conda.sh"
+
+conda activate diarizen
 
 export EXPERIMENT="DiariZen"
 
