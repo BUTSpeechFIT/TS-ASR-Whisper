@@ -331,13 +331,24 @@ class TS_ASR_DatasetSuperclass:
         else:
             return 0, offsets + (target_duration - duration_to_mix)
 
-    def sample_same_speaker_cut(self, speaker_id, skip_id, greedy_sample, max_duration):
+    def sample_same_speaker_cut(self, speaker_id, skip_ids, greedy_sample, max_duration):
         speaker_cuts = self.per_speaker_enrollments[speaker_id]
-        filtered_cuts = speaker_cuts.filter(lambda cut: cut.recording_id != skip_id and cut.duration <= max_duration)
+
+        filtered_cuts = speaker_cuts.filter(
+            lambda cut: not any(cut.recording_id in skip_id for skip_id in skip_ids)
+                        and cut.duration <= max_duration
+        )
+
+        if len(filtered_cuts) == 0:
+            # Fallback or error handling if no cuts remain
+            raise ValueError(f"No valid enrollment cuts found for speaker {speaker_id} "
+                             f"after skipping {skip_ids} (Max duration: {max_duration})")
+
         weights = np.array([cut.duration for cut in filtered_cuts])
         if greedy_sample:
             idx = np.argmax(weights)
             return filtered_cuts[idx]
+
         sampled_idx = np.random.choice(len(filtered_cuts), p=weights / sum(weights))
         return filtered_cuts[sampled_idx]
 
@@ -348,18 +359,25 @@ class TS_ASR_DatasetSuperclass:
                                     min_overlap_ratio=0.3,
                                     max_overlap_ratio=1.0):
 
-        if isinstance(original_cut, MixedCut):
-            for track in original_cut.tracks:
-                if speaker_id in self.get_cut_spks(track.cut):
-                    skip_id = re.sub("_vp.*$", "", track.cut.recording_id)
-                    break
-            else:
-                raise ValueError("Did not find speaker in original cut!")
-        else:
-            skip_id = re.sub("_vp.*$", "", original_cut.recording_id)
+        # Collect all recording IDs to skip
+        skip_ids = []
 
-        same_spk_cut = self.sample_same_speaker_cut(speaker_id, skip_id, greedy_sample=greedy_sample,
-                                                    max_duration=max_enrollment_len)
+        if isinstance(original_cut, MixedCut):
+            # If MixedCut, ignore speaker mapping and add ALL tracks to skip list
+            # to prevent leakage from unmapped (id -1) or mislabeled speakers.
+            for track in original_cut.tracks:
+                clean_id = re.sub("_vp.*$", "", track.cut.recording_id)
+                skip_ids.append(clean_id)
+        else:
+            clean_id = re.sub("_vp.*$", "", original_cut.recording_id)
+            skip_ids.append(clean_id)
+
+        same_spk_cut = self.sample_same_speaker_cut(
+            speaker_id,
+            skip_ids,
+            greedy_sample=greedy_sample,
+            max_duration=max_enrollment_len
+        )
 
         # Sample slightly more than needed to account for potentially filtering out the target speaker_id
         candidates_to_sample = num_other_speakers + 1
@@ -413,7 +431,7 @@ class TS_ASR_DatasetSuperclass:
             if track.cut.duration > 0.0:
                 final_tracks.append(track)
 
-        enrollment_mixture = MixedCut(id=f"enrollment_{skip_id}_{speaker_id}", tracks=final_tracks)
+        enrollment_mixture = MixedCut(id=f"enrollment_{speaker_id}", tracks=final_tracks)
 
         return enrollment_mixture
 
@@ -622,21 +640,17 @@ def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArgument
         if diar_cutset_paths is None or len(diar_cutset_paths) == 0:
             raise ValueError(
                 "'diar_cutset_paths' is None or empty. Please provide valid 'diar_cutset_paths' for the dataset")
-        if not all(Path(p).exists() for p in diar_cutset_paths):
+        if not all(Path(p).exists() or Path(p.replace('_external_enrollment', '')) for p in diar_cutset_paths):
             wrong_paths = os.linesep.join(
-                [f"{'✗' if not Path(p).exists() else '✓'} {p}" for p in diar_cutset_paths])
+                [f"{'✗' if not Path(p).exists() and not Path(p.replace('_external_enrollment', '')).exists() else '✓'} {p}" for p in diar_cutset_paths])
             raise ValueError(f"Some diar cutset paths do not exist:{os.linesep}{wrong_paths}")
         refs = cutsets
-        cutsets = [CutSet.from_file(path) for path in diar_cutset_paths]
+        cutsets =  load_cutsets(diar_cutset_paths, data_args.use_enrollments)
         if data_args.merge_eval_cutsets:
             cutsets = [reduce(lambda a, b: a + b, cutsets)]
     else:
         refs = [None for _ in cutsets]
 
-    if data_args.use_enrollments:
-        for idx, cutset_path in enumerate(cutset_paths):
-            if "libri" in cutset_path:
-                cutsets[idx].use_enrollment = True
     return {os.path.basename(path).removesuffix(".jsonl.gz"): dataset_class(cutset=cutset, references=ref,
                                                                             use_timestamps=data_args.use_timestamps,
                                                                             text_norm=text_norm,
