@@ -25,7 +25,7 @@ export HF_HOME=
 export HF_HUB_OFFLINE=0
 
 # Add source root to the Python path.
-export PYTHONPATH="$SRC_ROOT:$PYTHONPATH"
+export PYTHONPATH="$SRC_ROOT:$SRC_ROOT/src:$PYTHONPATH"
 
 # Path for experiment outputs.
 export EXPERIMENT_PATH="${SRC_ROOT}"
