@@ -2,10 +2,10 @@
 defaults:
   - /decode/dicow_v3_greedy
 
-experiment: "SE_DiCoW_greedy"
+experiment: "SE-DiCoW_greedy"
 
 model:
-  whisper_model: "BUT-FIT/SE_DiCoW"
+  whisper_model: BUT-FIT/SE-DiCoW
 
 data:
   use_enrollments: true

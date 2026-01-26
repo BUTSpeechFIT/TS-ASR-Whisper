@@ -2,7 +2,7 @@
 defaults:
   - /decode/se_dicow_greedy
 
-experiment: "SE_DiCoW_beam_joint"
+experiment: "SE-DiCoW_beam_joint"
 
 training:
   generation_num_beams: 5

@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+  - /decode/se_dicow_beam_joint
+
+experiment: "3_25"
+
+data:
+  number_of_mixed_speakers: 3
+  min_enrollment_mix_overlap: 0.25
+  max_enrollment_mix_overlap: 0.25
+  eval_cutsets:
+    - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean.jsonl_external_enrollment.gz
+
+wandb:
+ project: "enroll_ablations"

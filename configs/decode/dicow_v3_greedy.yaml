@@ -1,11 +1,11 @@
 # @package _global_
-experiment: "DiCoW_v3_2_greedy"
+experiment: "DiCoW_v3_3_greedy"
 
 wandb:
-  project: DiCoW_decoding
+  project: DiCoW_decoding_new
 
 model:
-  whisper_model: "BUT-FIT/DiCoW_v3_2"
+  whisper_model: "BUT-FIT/DiCoW_v3_3"
 data:
   eval_cutsets:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz

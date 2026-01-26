@@ -1,0 +1,21 @@
+# @package _global_
+defaults:
+  - /decode/dicow_v3_beam_joint
+
+experiment: "DiCoW_v3_3_beam_joint_diar"
+
+data:
+  use_diar: true
+  dev_diar_cutsets:
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
+  eval_diar_cutsets:
+  - ${oc.env:MANIFEST_DIR_DIAR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/ami/ami-sdm_cutset_test.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/ami/ami-ihm-mix_cutset_test.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/librimix/librimix_cutset_libri2mix_test-clean.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/librimix/librimix_cutset_libri2mix_test-clean_aligned_noisy_external_enrollment.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/librimix/librimix_cutset_libri3mix_test-clean.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/librimix/librimix_cutset_libri3mix_test-clean_aligned_noisy_external_enrollment.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/librispeechmix/librispeechmix_cutset_test-clean-1mix.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/librispeechmix/librispeechmix_cutset_test-clean-2mix.jsonl.gz
+  - ${oc.env:MANIFEST_DIR_DIAR}/librispeechmix/librispeechmix_cutset_test-clean-3mix.jsonl.gz
