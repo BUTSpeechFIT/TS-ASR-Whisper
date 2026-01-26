@@ -170,7 +170,7 @@ __pycache__
 # Mlflow outputs
 mlruns/
 
-exp*/
+exp/
 wandb/
 configs/local_paths.sh
 
