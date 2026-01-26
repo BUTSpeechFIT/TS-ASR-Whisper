@@ -122,6 +122,9 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         task = getattr(generation_config, "task", None)
         language = getattr(generation_config, "language", None)
 
+        if "enrollments" in kwargs:
+            self.enrollments = kwargs["enrollments"]
+
         forced_decoder_ids = generation_config.forced_decoder_ids if hasattr(generation_config, "forced_decoder_ids") else None
         if forced_decoder_ids is not None:
             if language is None and task is None and forced_decoder_ids[0][1] is None:
@@ -142,6 +145,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
             return forced_decoder_ids
 
         init_tokens = super()._retrieve_init_tokens(input_features, batch_size, generation_config, config, num_segment_frames, kwargs)
+        del self.enrollments
         return init_tokens
 
     def detect_language(
@@ -200,6 +204,9 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         with torch.no_grad():
 
             """<DiCoW CODE>"""
+            if hasattr(self, "enrollments"):
+                inputs["enrollments"] = self.enrollments
+
             logits = self(**inputs, decoder_input_ids=decoder_input_ids, use_cache=False,
                           stno_mask=self.stno_mask[:, :, :num_segment_frames // 2]).logits[:, -1]
             """</DiCoW CODE>"""
