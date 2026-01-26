@@ -22,30 +22,33 @@ class WhisperContainer:
         self.model_type = model_args.whisper_model
         predict_timestamps = data_args.use_timestamps
         global_lang_id = data_args.global_lang_id
-        self.model = (DiCoWForConditionalGeneration
-                      .from_pretrained(self.model_type,
-                                       attn_implementation="flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and use_flash_attention else None,
-                                       ctc_weight=model_args.ctc_weight,
-                                       fddt_is_diagonal=model_args.fddt_is_diagonal,
-                                       fddt_bias_only=model_args.fddt_bias_only,
-                                       fddt_use_silence=model_args.fddt_use_silence,
-                                       fddt_use_target=model_args.fddt_use_target,
-                                       fddt_use_overlap=model_args.fddt_use_overlap,
-                                       fddt_use_non_target=model_args.fddt_use_non_target,
-                                       remove_timestamps_from_ctc=remove_timestamps_from_ctc,
-                                       apply_fddt_to_n_layers=model_args.apply_fddt_to_n_layers,
-                                       use_fddt=use_fddt,
-                                       fddt_init=model_args.fddt_init,
-                                       non_target_fddt_value=model_args.non_target_fddt_value,
-                                       use_pre_pos_fddt=model_args.use_pre_pos_fddt,
-                                       use_enrollments=data_args.use_enrollments,
-                                       pre_ctc_sub_sample=model_args.pre_ctc_sub_sample,
-                                       additional_layer=model_args.additional_layer,
-                                       additional_self_attention_layer=model_args.additional_self_attention_layer,
-                                       scb_layers=model_args.scb_layers,
-                                       )
+        overwrite_args = {
+            "attn_implementation": "flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and use_flash_attention else None,
+            "ctc_weight": model_args.ctc_weight,
+            "fddt_is_diagonal": model_args.fddt_is_diagonal,
+            "fddt_bias_only": model_args.fddt_bias_only,
+            "fddt_use_silence": model_args.fddt_use_silence,
+            "fddt_use_target": model_args.fddt_use_target,
+            "fddt_use_overlap": model_args.fddt_use_overlap,
+            "fddt_use_non_target": model_args.fddt_use_non_target,
+            "remove_timestamps_from_ctc": remove_timestamps_from_ctc,
+            "apply_fddt_to_n_layers": model_args.apply_fddt_to_n_layers,
+            "use_fddt": use_fddt,
+            "fddt_init": model_args.fddt_init,
+            "non_target_fddt_value": model_args.non_target_fddt_value,
+            "use_pre_pos_fddt": model_args.use_pre_pos_fddt,
+            "use_enrollments": data_args.use_enrollments,
+            "pre_ctc_sub_sample": model_args.pre_ctc_sub_sample,
+            "additional_layer": model_args.additional_layer,
+            "additional_self_attention_layer": model_args.additional_self_attention_layer,
+            "scb_layers": model_args.scb_layers,
+        }
+        clean_kwargs = {k: v for k, v in overwrite_args.items() if v is not None}
+        self.model = DiCoWForConditionalGeneration.from_pretrained(
+            self.model_type,
+            **clean_kwargs
+        )
 
-                      )
         self.model.post_init()
 
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(self.model_type)
