@@ -1,34 +1,35 @@
 # Target Speaker ASR with Whisper
-[![Paper](https://img.shields.io/badge/Paper-IEEE-blue)](https://ieeexplore.ieee.org/document/10887683)
-[![Models](https://img.shields.io/badge/Models-HuggingFace-yellow)](https://huggingface.co/collections/BUT-FIT/dicow)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11+-blue)]()
 
 This repository contains the **official implementation** of the following publications:
 
-- **Target Speaker Whisper** — [IEEE Xplore](https://ieeexplore.ieee.org/document/10887683)  
-- **DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition** — [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S088523082500066X)  
-- **SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper** — *coming soon* ([TBD]())
+* **Target Speaker Whisper** — [IEEE Xplore](https://ieeexplore.ieee.org/document/10887683)
+* **DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition** — [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S088523082500066X)
+* **SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper** — *coming soon* ([TBD]())
 
 ---
 
 ## 🎯 Project Overview
-**DiCoW (Diarization-Conditioned Whisper)** enhances Whisper for **target-speaker ASR** by conditioning the model on **frame-level diarization probabilities**.  
-These probabilities are converted into **Silence–Target–Non-Target–Overlap (STNO)** masks and injected into each encoder layer through **Frame-level Diarization-Dependent Transformations (FDDT)**.  
+
+**DiCoW (Diarization-Conditioned Whisper)** enhances Whisper for **target-speaker ASR** by conditioning the model on **frame-level diarization probabilities**.
+
+These probabilities are converted into **Silence–Target–Non-Target–Overlap (STNO)** masks and injected into each encoder layer through **Frame-level Diarization-Dependent Transformations (FDDT)**.
+
 This approach enables Whisper to focus on the desired speaker without explicit speaker embeddings, making it robust to unseen speakers and diverse acoustic conditions.
 
-**SE-DiCoW (Self-Enrolled DiCoW)** resolves ambiguities in overlapping speech regions by introducing a **self-enrollment mechanism**.  
+**SE-DiCoW (Self-Enrolled DiCoW)** resolves ambiguities in overlapping speech regions by introducing a **self-enrollment mechanism**.
+
 An enrollment segment—automatically selected where the diarizer predicts the target speaker as most active—is used as a reference through **cross-attention conditioning** at encoder layers to further bias the model toward the target speaker.
 
 > **Note:** For inference-only usage without training, see our dedicated [inference repository](https://github.com/BUTSpeechFIT/DiCoW) with a streamlined browser interface.
 
-> **Note2:** For older training configurations and models, pleaser refer to the [v1 branch](https://github.com/BUTSpeechFIT/TS-ASR-Whisper/tree/v1).
+> **Note 2:** For older training configurations and models, please refer to the [v1 branch](https://github.com/BUTSpeechFIT/TS-ASR-Whisper/tree/v1).
+
 ---
 
 ## 📦 Checkpoints
 
 | Model | Description | Link |
-|--------|--------------|------|
+| --- | --- | --- |
 | **CTC Whisper large-v3-turbo** | Pre-trained encoder model | [Download](https://nextcloud.fit.vutbr.cz/s/2AHfK2Gj2Jfa6EP) |
 | **DiCoW Models** | Fine-tuned diarization-conditioned Whisper models | [Hugging Face Collection](https://huggingface.co/collections/BUT-FIT/dicow) |
 
@@ -37,10 +38,11 @@ An enrollment segment—automatically selected where the diarizer predicts the t
 ## ⚙️ Setup and Installation
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/BUTSpeechFIT/TS-ASR-Whisper
 cd TS-ASR-Whisper
-````
+```
 
 ### 2. Create a Python Environment
 
@@ -76,7 +78,7 @@ pip install flash-attn==2.7.2.post1
 
 ### 4. Configure Paths
 
-Edit [`configs/local_paths.sh`](configs/local_paths.sh) according to your environment.
+Edit [`configs/local_paths.sh`](https://www.google.com/search?q=configs/local_paths.sh) according to your environment.
 All variables are documented directly within the script.
 
 ### 5. Install Additional Tools
@@ -89,13 +91,29 @@ conda install -c conda-forge ffmpeg sox
 sudo apt install ffmpeg sox
 ```
 
+### 6. Set Up Diarization (Optional)
+
+If you intend to run the full pipeline including diarization, you must set up the **DiariZen** toolkit.
+
+1. Clone the DiariZen repository alongside this project:
+```bash
+git clone https://github.com/BUTSpeechFIT/DiariZen.git
+```
+
+2. Follow the installation instructions provided in the [DiariZen README](https://www.google.com/search?q=https://github.com/BUTSpeechFIT/DiariZen).
+3. **Crucial Step:** Ensure `lhotse` is installed in the DiariZen environment:
+```bash
+# Activate your DiariZen environment first
+pip install lhotse
+```
+
 ---
 
 ## 🎧 Data Preparation
 
 Before training or decoding, datasets must be prepared.
 We provide a dedicated repository for this purpose:
-👉 [**mt-asr-data-prep**](https://github.com/BUTSpeechFIT/mt-asr-data-prep)
+👉 **[mt-asr-data-prep](https://github.com/BUTSpeechFIT/mt-asr-data-prep)**
 
 Follow its instructions, then update `MANIFEST_DIR` in `configs/local_paths.sh`.
 
@@ -108,11 +126,11 @@ All configuration files are located in `./configs`, with default parameters in `
 
 ### Run Modes
 
-| Mode          | Description                                                            |
-| ------------- | ---------------------------------------------------------------------- |
-| **pre-train** | Pre-train the Whisper encoder using CTC                                |
+| Mode | Description |
+| --- | --- |
+| **pre-train** | Pre-train the Whisper encoder using CTC |
 | **fine-tune** | Fine-tune Whisper with diarization conditioning for target-speaker ASR |
-| **decode**    | Decode using a pre-trained or fine-tuned model                         |
+| **decode** | Decode using a pre-trained or fine-tuned model |
 
 ### Example Commands
 
@@ -129,6 +147,7 @@ sbatch ./scripts/training/submit_slurm.sh +train=dicow_v3
 # Decode with a trained model
 sbatch ./scripts/training/submit_slurm.sh +decode=dicow_v3_greedy
 ```
+
 ---
 
 ## 🧩 Configuration Details
@@ -155,12 +174,11 @@ This design ensures consistency and reusability across different training and ev
 
 ### Bash Variables
 
-Defined and described in [`configs/local_paths.sh`](configs/local_paths.sh).
+Defined and described in [`configs/local_paths.sh`](https://www.google.com/search?q=configs/local_paths.sh).
 
 ### YAML Config Parameters
 
 All configuration options are described in `src/utils/training_args.py`.
-
 
 ---
 
@@ -196,7 +214,7 @@ The script packages the checkpoint, configuration, and model card, then uploads 
 ## 📊 Evaluation
 
 For transparent and reproducible evaluation, we host a public benchmark leaderboard on Hugging Face:
-👉 [**EMMA JSALT25 Benchmark**](https://huggingface.co/spaces/BUT-FIT/EMMA_leaderboard)
+👉 **[EMMA JSALT25 Benchmark](https://huggingface.co/spaces/BUT-FIT/EMMA_leaderboard)**
 
 This step expects the evaluated model to be **available on Hugging Face Hub**.
 If you do **not** wish to export your model but still want to submit results, you can initialize it **locally** using the `reinit_from` option under the **`model.setup`** section in your YAML configuration.
@@ -205,7 +223,7 @@ When using `reinit_from`, make sure to specify **all model initialization argume
 To generate a submission file, use the helper script:
 
 ```bash
-ORG=BUT-FIT MODEL=DiCoW_v3_2 ./scripts/create_emma_submission.sh
+./scripts/create_emma_submission.sh
 ```
 
 This script collects all decoding hypotheses and saves them in a JSON file formatted for leaderboard submission.
@@ -215,7 +233,7 @@ Once created, simply upload this file to the Hugging Face space linked above to 
 
 ## 📜 License
 
-Source codes in this repository are licensed under the [Apache License 2.0](LICENSE).
+Source codes in this repository are licensed under the [Apache License 2.0](https://www.google.com/search?q=LICENSE).
 
 ---
 
@@ -224,6 +242,13 @@ Source codes in this repository are licensed under the [Apache License 2.0](LICE
 If you use our models or code, please cite the following works:
 
 ```bibtex
+@INPROCEEDINGS{polok2026sedicow,
+  author={Polok, Alexander and Klement, Dominik and Cornell, Samuele and Wiesner, Matthew and Černocký, Jan and Khudanpur, Sanjeev and Burget, Lukáš},
+  booktitle={ICASSP 2026 - 2026 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)}, 
+  title={SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper}, 
+  year={2026},
+}
+
 @INPROCEEDINGS{10887683,
   author={Polok, Alexander and Klement, Dominik and Wiesner, Matthew and Khudanpur, Sanjeev and Černocký, Jan and Burget, Lukáš},
   booktitle={ICASSP 2025 - IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
@@ -244,13 +269,6 @@ If you use our models or code, please cite the following works:
   author = {Alexander Polok and Dominik Klement and Martin Kocour and Jiangyu Han and Federico Landini and Bolaji Yusuf and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
   keywords = {Diarization-conditioned Whisper, Target-speaker ASR, Speaker diarization, Long-form ASR, Whisper adaptation}
 }
-
-@misc{polok2026dicowse,
-  title        = {{SE-DiCoW}: Self-Enrolled Diarization-Conditioned {Whisper}},
-  author       = {Alexander Polok and Dominik Klement and Samuele Cornell and Matthew Wiesner
-                  and Jan Černocký and Sanjeev Khudanpur and Lukáš Burget},
-  note         = {Submitted to ICASSP 2026}
-}
 ```
 
 ---
@@ -268,4 +286,3 @@ For questions or collaboration, please contact:
 
 * [ipoloka@fit.vut.cz](mailto:ipoloka@fit.vut.cz)
 * [iklement@fit.vut.cz](mailto:iklement@fit.vut.cz)
-
