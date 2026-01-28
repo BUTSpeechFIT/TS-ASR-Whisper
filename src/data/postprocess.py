@@ -1,76 +1,157 @@
-"""
-We need to find a sequence that repeats the highest number of times and then remove it.
-Either the current word is the beginning of the repetitive sequence or not. If we cannot find
-"""
-import argparse
-import re
-from json import loads, dumps
-from transformers.utils import logging
-
-logging.set_verbosity_debug()
-logger = logging.get_logger("transformers")
+from collections import defaultdict
 
 
-def compute_number_occurences(str, substr):
-    if len(substr.split()) == 1:
-        return str.split().count(substr)
+def count_ngrams(text, min_n=2, max_n=5):
+    words = text.split()
+    counts = defaultdict(int)
+    for n in range(min_n, max_n + 1):
+        for i in range(len(words) - n + 1):
+            ngram_words = words[i:i + n]
+            # Skip n-grams where all words are identical (case-insensitive)
+            if all(word.lower() == ngram_words[0].lower() for word in ngram_words):
+                continue
+            ngram = ' '.join(ngram_words)
+            counts[ngram] += 1
+    return counts
 
-    return str.count(substr)
 
-
-def get_recurring_phrase(test_str):
+def truncate_at_repeating_ngram(text, ngram_length=10, min_n=1, max_n=None, min_word_threshold=30,
+                                unigram_min_repeat=10, repeat_threshold=10):
     """
-    score = len + #ofreps
+    Truncate text at the first occurrence of a repeating n-gram that occurs more than repeat_threshold times.
+
+    Args:
+        text: Input text to process
+        ngram_length: Target n-gram length to check for (default: 10 words)
+        min_n: Minimum n-gram size to check (default: 1)
+        max_n: Maximum n-gram size to check (default: ngram_length)
+        min_word_threshold: Minimum number of words required to process (default: 30)
+        unigram_min_repeat: Minimum consecutive repeats for unigrams (default: 3)
+        repeat_threshold: Minimum total occurrences of n-gram to consider it repeating (default: 2)
+
+    Returns:
+        Truncated text up to the first repeating n-gram above threshold, or original text if not found
     """
-    bestscore_substr = ""
-    bestscore = 0
-    num_reps = 0
-    wsplit = test_str.split()
+    if max_n is None:
+        max_n = ngram_length
 
-    for i in range(len(wsplit)):
-        for j in range(i + 1, len(wsplit)):
-            substr = ' '.join(wsplit[i:j])
-
-            nr = compute_number_occurences(test_str, substr)
-            current_score = min(10, j - i) + nr
-            # print(substr, current_score)
-            if current_score > bestscore:
-                bestscore_substr = substr
-                bestscore = current_score
-                num_reps = nr
-
-    return bestscore_substr, num_reps
-
-
-def remove_hallucinations(text, n_occ=10, is_debug=False):
-    recc_seq, num_occ = get_recurring_phrase(text)
-
-    if num_occ < n_occ or not recc_seq:
+    words = text.split()
+    if len(words) < min_word_threshold:
         return text
 
-    split_seq = text.split(recc_seq)
-    split_seq[0] += recc_seq
-    no_hallucination = ' '.join(split_seq)
+    earliest_truncation_idx = len(words)  # Default: no truncation
 
-    no_hallucination = re.sub(r'\s+', ' ', no_hallucination)
-    if is_debug:
-        logger.debug(text, "########", no_hallucination)
-    return no_hallucination
+    # Handle unigrams with consecutive repetition
+    if min_n == 1:
+        for i in range(len(words) - unigram_min_repeat + 1):
+            current_word = words[i].lower()
+            consecutive_count = 1
+            for j in range(i + 1, len(words)):
+                if words[j].lower() == current_word:
+                    consecutive_count += 1
+                else:
+                    break
+            if consecutive_count >= unigram_min_repeat:
+                earliest_truncation_idx = min(earliest_truncation_idx, i + 1)
+                break  # Prioritize consecutive unigrams
+
+    # Count all n-grams first
+    all_ngram_counts = count_ngrams(text, min_n=max(2, min_n), max_n=max_n)
+
+    # Find earliest occurrence of any repeated n-gram (above threshold)
+    lengths_to_check = [ngram_length] + [n for n in range(min_n, max_n + 1)
+                                         if n != ngram_length and n > 1]
+
+    for n in lengths_to_check:
+        for i in range(len(words) - n + 1):
+            ngram = ' '.join(words[i:i + n])
+            if all_ngram_counts[ngram] > repeat_threshold:
+                earliest_truncation_idx = min(earliest_truncation_idx, i + n)
+
+    # Return truncated text if needed
+    if earliest_truncation_idx < len(words):
+        return ' '.join(words[:earliest_truncation_idx])
+    return text
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--in-json', type=str, required=True)
-    parser.add_argument('--out-json', type=str, required=True)
-    parser.add_argument('--min-num-reps', type=int, default=10, required=False)
 
-    args = parser.parse_args()
+def find_first_repeating_ngram(text, target_length=10, min_n=1, max_n=None, min_word_threshold=20, unigram_min_repeat=5,
+                               ngram_min_repeat=3):
+    """
+    Find the first repeating n-gram in the text.
 
-    with open(args.in_json, 'r') as f:
-        data = loads(f.read())
+    Args:
+        text: Input text to analyze
+        target_length: Preferred n-gram length to look for
+        min_n: Minimum n-gram size to check (default: 1, includes unigrams)
+        max_n: Maximum n-gram size to check
+        min_word_threshold: Minimum number of words required to process
+        unigram_min_repeat: Minimum consecutive repeats for unigrams
+        ngram_min_repeat: Minimum total occurrences for n-grams
 
-        for x in data:
-            x['words'] = remove_hallucinations(x['words'], args.min_num_reps)
+    Returns:
+        Dictionary with details about the first repeating n-gram found, or None
+    """
+    if max_n is None:
+        max_n = target_length
 
-    with open(args.out_json, 'w') as f:
-        f.write(dumps(data))
+    words = text.split()
+
+    # Heuristic: Don't process if text is too short
+    if len(words) < min_word_threshold:
+        return None
+
+    # Special handling for unigrams (single words) - look for consecutive repeats
+    if min_n == 1:
+        for i in range(len(words) - unigram_min_repeat + 1):
+            current_word = words[i].lower()
+            consecutive_count = 1
+
+            for j in range(i + 1, len(words)):
+                if words[j].lower() == current_word:
+                    consecutive_count += 1
+                else:
+                    break
+
+            if consecutive_count >= unigram_min_repeat:
+                return {
+                    'ngram': words[i],
+                    'length': 1,
+                    'first_position': i,
+                    'repeat_position': i + 1,
+                    'words_before_repeat': i + 1,
+                    'consecutive_repeats': consecutive_count,
+                    'type': 'unigram'
+                }
+
+    # Check for n-grams with sufficient total occurrences
+    ngram_positions = {}
+    lengths_to_check = [target_length] + [n for n in range(2, max_n + 1) if n != target_length]
+
+    for n in lengths_to_check:
+        for i in range(len(words) - n + 1):
+            ngram = ' '.join(words[i:i + n])
+            if ngram not in ngram_positions:
+                ngram_positions[ngram] = []
+            ngram_positions[ngram].append(i)
+
+    # Find the earliest n-gram that repeats enough times
+    earliest_ngram = None
+    earliest_position = float('inf')
+
+    for ngram, positions in ngram_positions.items():
+        if len(positions) >= ngram_min_repeat:
+            first_occurrence_end = positions[0] + len(ngram.split())
+            if first_occurrence_end < earliest_position:
+                earliest_position = first_occurrence_end
+                earliest_ngram = {
+                    'ngram': ngram,
+                    'length': len(ngram.split()),
+                    'first_position': positions[0],
+                    'repeat_position': positions[1],
+                    'words_before_repeat': first_occurrence_end,
+                    'total_occurrences': len(positions),
+                    'type': 'ngram'
+                }
+
+    return earliest_ngram

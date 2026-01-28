@@ -2,10 +2,22 @@
 model:
   whisper_model: openai/whisper-medium
 data:
-  use_libri: true
   use_timestamps: false
-  libri_train_cached_path: null
-  libri_dev_cached_path: null
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_train-clean-100.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_train-clean-360.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_train-other-500.jsonl.gz
+  dev_cutsets:
+  - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_dev-clean.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_dev-other.jsonl.gz
+  eval_cutsets:
+  - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_test-clean.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_test-other.jsonl.gz
+  dataset_weights:
+    - 1
+    - 1
+    - 1
+
 training:
   eval_delay: 1
   pretrain_encoder: true
@@ -14,10 +26,13 @@ training:
   weight_decay: 1.0e-06
   bf16: true
   bf16_full_eval: false
-  per_device_train_batch_size: 64
-  per_device_eval_batch_size: 128
+  per_device_train_batch_size: 48
+  eval_strategy: "epoch"
+  save_strategy: "epoch"
+  overall_batch_size: null
+  per_device_eval_batch_size: 16
   gradient_accumulation_steps: 1
-  dataloader_num_workers: 16
+  dataloader_num_workers: 2
   dataloader_prefetch_factor: 2
-  metric_for_best_model: eval_wer
-  use_target_amplifiers: false
+  metric_for_best_model: eval_librispeech_cutset_dev-other_wer
+  use_fddt: false

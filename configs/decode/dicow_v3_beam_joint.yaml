@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+  - /decode/dicow_v3_greedy
+
+experiment: "DiCoW_v3_3_beam_joint"
+
+training:
+  generation_num_beams: 5
+  per_device_eval_batch_size: 2
+
+decoding:
+  decoding_ctc_weight: 0.2
+  length_penalty: 0.1

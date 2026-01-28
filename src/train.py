@@ -1,156 +1,268 @@
 import os
+from functools import reduce
+from typing import Dict, Any
 
 import lhotse
-import wandb
 from safetensors.torch import load_file
 from transformers import EarlyStoppingCallback
 from transformers.utils import logging
 
-from data.local_datasets import build_dataset, TS_ASR_Dataset, TS_ASR_Random_Dataset, DataCollator, get_text_norm
-from models.containers import WhisperQKContainer, WhisperContainer, get_optimizer
-from mt_asr.dataset import MT_ASR_Dataset, MT_Data_Collator
+from data.collators import DataCollator
+from data.local_datasets import build_datasets, TS_ASR_Dataset, load_cutsets, LhotseLongFormDataset
+from models.containers import WhisperContainer, get_optimizer
+from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
-from utils.general import create_lower_uppercase_mapping
-from utils.generation import update_generation_config
-from utils.trainers import CustomTrainer
+from utils.general import create_lower_uppercase_mapping, patch_wandb_init_with_config, update_generation_config
+from utils.trainers import CustomTrainer, GradLogger
 from utils.training_args import Cfg
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
 
-def main(cfg: Cfg) -> None:
-    logger.info(f"Config: {cfg}")
-    model_args, data_args, decoding_args, training_args = cfg.model, cfg.data, cfg.decoding, cfg.training
-    # 1. Load the training data
-    train_cutsets = [lhotse.load_manifest(cutset) for cutset in data_args.train_cutsets]
+class ModelTrainer:
+    def __init__(self, cfg: Cfg):
+        self.cfg = cfg
+        self.model_args = cfg.model
+        self.data_args = cfg.data
+        self.decoding_args = cfg.decoding
+        self.training_args = cfg.training
+        self.aug_args = cfg.aug
 
-    # 2. Create dataset instances
-    text_norm = get_text_norm(data_args.eval_text_norm)
-    train_dataset_class = TS_ASR_Random_Dataset if data_args.use_random_segmentation else TS_ASR_Dataset
-    train_dataset = train_dataset_class(train_cutsets, do_augment=data_args.do_augment,
-                                        dataset_weights=data_args.dataset_weights,
-                                        use_timestamps=data_args.use_timestamps,
-                                        musan_noises=data_args.musan_noises,
-                                        text_norm=get_text_norm(data_args.train_text_norm),
-                                        empty_transcript_ratio=data_args.empty_transcripts_ratio,
-                                        train_with_diar_outputs=data_args.train_with_diar_outputs,
-                                        audio_path_prefix=data_args.audio_path_prefix,
-                                        audio_path_prefix_replacement=data_args.audio_path_prefix_replacement,
-                                        vad_from_alignments=data_args.vad_from_alignments,
-                                        random_sentence_l_crop_p=data_args.random_sentence_l_crop_p,
-                                        random_sentence_r_crop_p=data_args.random_sentence_r_crop_p,
-                                        max_l_crop=data_args.max_l_crop,
-                                        max_r_crop=data_args.max_r_crop,
-                                        )
+        self.container = None
+        self.model = None
+        self.trainer = None
+        self.text_norm = None
 
-    # 3. Initialize container class
-    container_cls = WhisperQKContainer if model_args.use_qk_biasing else WhisperContainer
-    container = container_cls(model_type=model_args.whisper_model, pretrained_encoder=model_args.pretrained_encoder,
-                              ctc_weight=model_args.ctc_weight, shift_pos_embeds=model_args.shift_pos_embeds,
-                              training_args=training_args, predict_timestamps=data_args.use_timestamps,
-                              target_amp_is_diagonal=model_args.target_amp_is_diagonal,
-                              target_amp_bias_only=model_args.target_amp_bias_only,
-                              target_amp_use_silence=model_args.target_amp_use_silence,
-                              target_amp_use_target=model_args.target_amp_use_target,
-                              target_amp_use_overlap=model_args.target_amp_use_overlap,
-                              target_amp_use_non_target=model_args.target_amp_use_non_target,
-                              remove_timestamps_from_ctc=training_args.remove_timestamps_from_ctc,
-                              apply_target_amp_to_n_layers=model_args.apply_target_amp_to_n_layers,
-                              use_target_amplifiers=training_args.use_target_amplifiers,
-                              target_amp_init=model_args.target_amp_init,
-                              mt_num_speakers=model_args.mt_num_speakers if model_args.mt_asr else 1,
-                              )
+    def _initialize_container(self):
+        """Initialize the model container with appropriate configuration."""
+        self.container = WhisperContainer(
+            model_args=self.model_args,
+            data_args=self.data_args,
+            use_flash_attention=self.training_args.use_flash_attention,
+            remove_timestamps_from_ctc=self.training_args.remove_timestamps_from_ctc,
+            use_fddt=self.training_args.use_fddt,
+            use_lora=self.training_args.use_lora,
+            params_to_keep_frozen_keywords=self.model_args.params_to_keep_frozen_keywords,
+        )
 
-    # Create mapping between lower case and upper case tokens
-    create_lower_uppercase_mapping(container.tokenizer)
+    def _load_training_cutsets(self):
+        """Load and prepare training cutsets."""
+        train_cutsets = load_cutsets(self.data_args.train_cutsets, self.data_args.use_enrollments)
+        return train_cutsets
 
-    dev_dataset = build_dataset(data_args.dev_cutsets, data_args, decoding_args, text_norm, container,
-                                data_args.dev_diar_cutsets)
-    eval_dataset = build_dataset(data_args.eval_cutsets, data_args, decoding_args, text_norm, container,
-                                 data_args.eval_diar_cutsets)
-    if model_args.mt_asr:
-        train_dataset = MT_ASR_Dataset(train_dataset, model_args.mt_num_speakers)
-        dev_dataset = MT_ASR_Dataset(dev_dataset, model_args.mt_num_speakers)
-        eval_dataset = MT_ASR_Dataset(eval_dataset, model_args.mt_num_speakers)
+    def _create_enrollment_cutset(self):
+        """Create enrollment cutset if needed."""
+        if (self.data_args.use_enrollments and
+                self.data_args.enrollment_cutsets is not None):
+            return reduce(lambda x, y: x + y,
+                          [lhotse.load_manifest(cutset) for cutset in self.data_args.enrollment_cutsets])
+        return None
 
-    # 4. Get the model, possibly load pretrained weights and update generation config
-    model = container.model
+    def _create_train_dataset(self, train_cutsets, enrollment_cutset):
+        """Create training dataset."""
+        train_dataset = TS_ASR_Dataset(
+            train_cutsets,
+            do_augment=self.aug_args.do_augment,
+            dataset_weights=self.data_args.dataset_weights,
+            use_timestamps=self.data_args.use_timestamps,
+            musan_root=self.aug_args.musan_root,
+            musan_augment_prob=self.aug_args.musan_augment_prob,
+            text_norm=get_text_norm(self.data_args.train_text_norm),
+            feature_extractor=self.container.feature_extractor,
+            global_lang_id=self.data_args.global_lang_id,
+            load_channel_zero_only=self.data_args.load_channel_zero_only,
+            use_enrollments=self.data_args.use_enrollments,
+            enrollment_cutset=enrollment_cutset,
+            num_other_speakers=self.data_args.number_of_mixed_speakers,
+            min_overlap_ratio=self.data_args.min_enrollment_mix_overlap,
+            max_overlap_ratio=self.data_args.max_enrollment_mix_overlap,
+        )
 
-    target_amplifiers = [n for n, _ in model.named_parameters() if 'target_amplifiers' in n]
-    logger.info(f"Target amplifiers: {target_amplifiers}")
+        return train_dataset
 
-    if model_args.reinit_encoder_from:
-        enc_state_dict = load_file(model_args.reinit_encoder_from)
-        enc_state_dict_no_amplifiers = {k: v for k, v in enc_state_dict.items() if 'target_amplifiers' not in k}
-        logger.info(model.get_encoder().load_state_dict(enc_state_dict_no_amplifiers, strict=False))
+    def _create_eval_datasets(self, enrollment_cutset):
+        """Create development and evaluation datasets."""
+        dev_datasets = build_datasets(
+            self.data_args.dev_cutsets, self.data_args,
+            self.text_norm, self.container, self.data_args.dev_diar_cutsets,
+            enrollment_cutset=enrollment_cutset,
+            dataset_class=LhotseLongFormDataset
+        )
 
-    if model_args.reinit_from:
-        if model_args.reinit_from.endswith('.safetensors'):
-            state_dict = load_file(model_args.reinit_from)
-        else:
-            # load all safetensors files in directory and merge to single dictionary
-            state_dict = {}
-            for file in os.listdir(model_args.reinit_from):
-                if file.endswith('.safetensors'):
-                    state_dict.update(load_file(os.path.join(model_args.reinit_from, file)))
-        state_dict['proj_out.weight'] = state_dict['model.decoder.embed_tokens.weight']
-        logger.info('Loading model weights from: ' + model_args.reinit_from)
-        logger.info(model.load_state_dict(state_dict, strict=False))
+        eval_datasets = build_datasets(
+            self.data_args.eval_cutsets, self.data_args,
+            self.text_norm, self.container, self.data_args.eval_diar_cutsets,
+            enrollment_cutset=enrollment_cutset,
+            dataset_class=LhotseLongFormDataset
+        )
 
-    update_generation_config(model, training_args, decoding_args)
+        return dev_datasets, eval_datasets
 
-    # 5. Initialize trainer
-    collator_class = MT_Data_Collator if model_args.mt_asr else DataCollator
-    collator = collator_class(feature_extractor=container.feature_extractor, tokenizer=container.tokenizer,
-                              bos_token_id=container.model.config.decoder_start_token_id,
-                              mask_inputs=data_args.mask_inputs,
-                              max_length=training_args.generation_max_length)
+    def _load_model_weights(self):
+        """Load pretrained model weights if specified."""
+        if self.model_args.reinit_encoder_from:
+            enc_state_dict = load_file(self.model_args.reinit_encoder_from)
+            enc_state_dict_no_fddt = {k: v for k, v in enc_state_dict.items() if 'fddt' not in k}
+            logger.info(self.model.get_encoder().load_state_dict(enc_state_dict_no_fddt, strict=False))
 
-    trainer = CustomTrainer(model=model, args=training_args,
-                            eval_dataset=dev_dataset,
-                            data_collator=collator,
-                            train_dataset=train_dataset, tokenizer=container.tokenizer, container=container,
-                            optimizers=(get_optimizer(model, training_args, model_args.prefixes_to_preheat), None),
-                            callbacks=[EarlyStoppingCallback(
-                                training_args.early_stopping_patience)] if training_args.early_stopping_patience > 0 else None,
-                            params_to_keep_frozen=model_args.params_to_keep_frozen_keywords,
-                            )
+        if self.model_args.reinit_from:
+            state_dict = self._load_state_dict(self.model_args.reinit_from)
+            state_dict['proj_out.weight'] = state_dict['model.decoder.embed_tokens.weight']
+            logger.info(f'Loading model weights from: {self.model_args.reinit_from}')
+            logger.info(self.model.load_state_dict(state_dict, strict=False))
 
-    if training_args.use_amplifiers_only_n_epochs > 0 or training_args.use_amplifiers_only_n_steps > 0:
-        container.model.freeze_except(model_args.prefixes_to_preheat)
+    def _load_state_dict(self, path: str) -> Dict[str, Any]:
+        """Load state dictionary from file or directory."""
+        if path.endswith('.safetensors'):
+            return load_file(path)
 
-    if not model_args.reinit_from:
-        container.model.suppress_interactions()
+        # Load all safetensors files in directory and merge
+        state_dict = {}
+        for file in os.listdir(path):
+            if file.endswith('.safetensors'):
+                state_dict.update(load_file(os.path.join(path, file)))
+        return state_dict
 
-    # 6. Apply custom metric computation if needed
-    if training_args.predict_with_generate:
-        model.generation_config.ctc_weight = decoding_args.decoding_ctc_weight
+    def _log_model_parameters(self):
+        """Log FDDT and SCB parameters."""
+        fddts = [n for n, _ in self.model.named_parameters() if 'fddt' in n]
+        logger.info(f"FDDTs: {fddts}")
+
+    def _create_data_collator(self):
+        """Create appropriate data collator."""
+
+        return DataCollator(
+            feature_extractor=self.container.feature_extractor,
+            tokenizer=self.container.tokenizer,
+            bos_token_id=self.container.model.config.decoder_start_token_id,
+            max_length=self.training_args.generation_max_length,
+            stno_gaussian_noise_var=self.aug_args.stno_gaussian_noise_var,
+            stno_gaussian_noise_prob=self.aug_args.stno_gaussian_noise_prob,
+            stno_segment_augment_prob=self.aug_args.stno_segment_augment_prob,
+            stno_segment_change_prob=self.aug_args.stno_segment_change_prob,
+            stno_min_segment_length=self.aug_args.stno_min_segment_length,
+            stno_max_segment_length=self.aug_args.stno_max_segment_length,
+            spec_aug_prob=self.aug_args.spec_aug_prob,
+            use_enrollments=self.data_args.use_enrollments,
+        )
+
+    def _create_compute_metrics_fn(self, dev_datasets):
+        """Create metrics computation function."""
 
         def _compute_metrics(pred, dset=None, split='dev', metrics_list=None):
-            step = trainer.state.global_step
-            output_dir = f'{trainer.args.output_dir}/{split}/{step}'
+            step = self.trainer.state.global_step
+            output_dir = f'{self.trainer.args.output_dir}/{split}/{step}'
             os.makedirs(output_dir, exist_ok=True)
-            return compute_longform_metrics(pred, trainer, output_dir, text_norm,
-                                            training_args.train_metrics_list if metrics_list is None else metrics_list,
-                                            dset)
+            return compute_longform_metrics(
+                pred, self.trainer, output_dir, self.text_norm,
+                self.training_args.train_metrics_list if metrics_list is None else metrics_list,
+                dset,
+                save_visualizations=self.training_args.save_visualizations,
+            )
 
-        trainer.compute_metrics = (lambda x: _compute_metrics(x, dev_dataset))
+        return _compute_metrics
 
-    # 7. Train the model
-    if not training_args.decode_only:
-        trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
+    def _setup_wandb(self):
+        """Setup Weights & Biases logging."""
+        if "wandb" in self.training_args.report_to:
+            patch_wandb_init_with_config(self.cfg, self.training_args.store_src)
 
-    # If we don't pass an extra dataset, compute_longform_metrics would use the trainer.eval_dataset == dev_dataset.
-    trainer.compute_metrics = (
-        lambda x: _compute_metrics(x, eval_dataset, split='test', metrics_list=training_args.eval_metrics_list))
+            if self.training_args.watch_grads and self.trainer.accelerator.is_main_process:
+                self.trainer.add_callback(GradLogger(self.model))
 
-    # 8. Evaluate the model
-    trainer.args.predict_with_generate = True
-    if decoding_args.decoding_ctc_weight is not None:
-        model.generation_config.ctc_weight = decoding_args.decoding_ctc_weight
-    outputs = trainer.predict(test_dataset=eval_dataset)
-    metrics = outputs.metrics
-    logger.info(f"Metrics {metrics}")
-    if wandb.run is not None:
-        wandb.log({f"test/{key}": val for key, val in metrics.items()})
+    def _setup_fddt_training(self):
+        """Setup FDDT-only training if specified."""
+        if (self.training_args.use_fddt_only_n_epochs > 0 or
+                self.training_args.use_fddt_only_n_steps > 0):
+            self.container.freeze_except(self.model_args.prefixes_to_preheat)
+
+    def do_eval(self, eval_datasets, decoding_ctc_weight, eval_metrics_list, condition_key):
+        """Perform evaluation on given datasets."""
+        _compute_metrics = self._create_compute_metrics_fn(eval_datasets)
+
+        # Update compute_metrics for trainer
+        self.trainer.compute_metrics = (
+            lambda x: _compute_metrics(
+                x, eval_datasets[self.trainer.metric_key_prefix.removeprefix(f"{condition_key}_")],
+                split=self.trainer.metric_key_prefix, metrics_list=eval_metrics_list
+            )
+        )
+
+        # Perform evaluation
+        self.trainer.args.predict_with_generate = True
+        if decoding_ctc_weight is not None:
+            self.model.generation_config.ctc_weight = decoding_ctc_weight
+
+        metrics = self.trainer.evaluate(eval_dataset=eval_datasets, metric_key_prefix=condition_key)
+        logger.info(f"Metrics {metrics}")
+
+    def train(self):
+        """Main training pipeline."""
+        logger.info(f"Config: {self.cfg}")
+
+        # Initialize components
+        self._initialize_container()
+        self.text_norm = get_text_norm(self.data_args.eval_text_norm)
+
+        # Load data
+        train_cutsets = self._load_training_cutsets()
+        enrollment_cutset = self._create_enrollment_cutset()
+        train_dataset = self._create_train_dataset(train_cutsets, enrollment_cutset)
+        dev_datasets, eval_datasets = self._create_eval_datasets(enrollment_cutset)
+
+        # Setup model
+        self.model = self.container.model
+        create_lower_uppercase_mapping(self.container.tokenizer)
+        self._log_model_parameters()
+        self._load_model_weights()
+        update_generation_config(self.model, self.training_args, self.decoding_args,
+                                 predict_timestamps=self.data_args.use_timestamps)
+
+        # Create trainer
+        collator = self._create_data_collator()
+        callbacks = ([EarlyStoppingCallback(self.training_args.early_stopping_patience)]
+                     if self.training_args.early_stopping_patience > 0 else None)
+
+        self.trainer = CustomTrainer(
+            model=self.model,
+            args=self.training_args,
+            eval_dataset=dev_datasets,
+            data_collator=collator,
+            train_dataset=train_dataset,
+            processing_class=self.container.tokenizer,
+            container=self.container,
+            optimizers=(get_optimizer(self.model, self.training_args, self.model_args.prefixes_to_preheat), None),
+            callbacks=callbacks,
+            params_to_keep_frozen=self.model_args.params_to_keep_frozen_keywords,
+        )
+
+        # Setup additional components
+        self._setup_wandb()
+        self._setup_fddt_training()
+
+        # Setup metrics computation
+        if self.training_args.predict_with_generate:
+            self.model.generation_config.ctc_weight = self.decoding_args.decoding_ctc_weight
+            _compute_metrics = self._create_compute_metrics_fn(dev_datasets)
+
+            self.trainer.compute_metrics = (
+                lambda x: _compute_metrics(
+                    x, dev_datasets[self.trainer.metric_key_prefix.removeprefix("eval_")],
+                    split=self.trainer.metric_key_prefix,
+                    metrics_list=self.training_args.train_metrics_list
+                )
+            )
+
+        # Train and evaluate
+        if not self.training_args.decode_only:
+            self.trainer.train(resume_from_checkpoint=self.training_args.resume_from_checkpoint)
+
+        self.do_eval(eval_datasets, self.decoding_args.decoding_ctc_weight,
+                     self.training_args.eval_metrics_list, "test")
+
+
+def main(cfg: Cfg) -> None:
+    """Main entry point for training."""
+    trainer = ModelTrainer(cfg)
+    trainer.train()

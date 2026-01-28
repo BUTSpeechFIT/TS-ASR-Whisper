@@ -1,206 +1,294 @@
 # Target Speaker ASR with Whisper
 
-This repository contains the official implementation of the following publications:
+This repository contains the **official implementation** of the following publications:
 
-- Target Speaker Whisper (available on [arxiv](https://arxiv.org/pdf/2409.09543))
-- DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition (available on [arxiv](https://arxiv.org/pdf/2501.00114))
+* **Target Speaker Whisper** — [IEEE Xplore](https://ieeexplore.ieee.org/document/10887683)
+* **DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition** — [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S088523082500066X)
+* **SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper** — *coming soon* ([TBD]())
 
-## Interactive Demo
-We built a gradio app demo to make playing around with our model easy for you. To start, follow the steps below:
-1. Execute the first 3 steps of the setup below (next section).
-2. Run `cd inference_pipeline`
-3. Run `pip install -r requirements.txt`.
-4. Run `python app.py`
-5. Look for `* Running on public URL: {URL}`, copy&paste the `{URL}` to your browser and either use your microphone to record an audio sample or pass an audio recording.
-6. Hit `Submit` button and enjoy!
+This repository provides handy tools to prepare data, train, publish, and evaluate your models with just a few commands, see on picture below.
 
-## Checkpoints
-We've released 2 checkpoints:
-1. A pre-trained CTC Whisper large-v3-turbo: [Download Link](https://nextcloud.fit.vutbr.cz/s/2AHfK2Gj2Jfa6EP)
-2. A pre-trained DiCoW (i.e. 1. + finetuning on AMI, NOTSOFAR, Libri2Mix): [HuggingFace](https://huggingface.co/BUT-FIT/DiCoW_v2)
+<div align="center">
+  <img src="https://github.com/BUTSpeechFIT/TS-ASR-Whisper/blob/se_dicow/figure.png?raw=true" alt="SE-DiCoW Architecture" width="800"/>
+</div>
 
-## Training Setup
-1. Clone the repository: `git clone ...; cd ...`
-2. Run `git submodule init; git submodule update`
-3. Setup python environment (using conda or virtual environment):
-    - Conda: `conda create -n ts_asr_whisper python=3.11`
-    - Virtual env: `python -m venv ts_asr_whisper`
-4. Activate your environment
-5. Install packages: `pip install -r requirements.txt`
-6. (Optional) Install flash attention to speed up the model training & inference: `pip install flash-attn==2.7.2.post1` (flash attn requires `torch` to be already installed; hence, cannot be installed through `requirements.txt`)
-7. Change the paths in `configs/local_paths.sh` (variables are explained in the shell script) based on your setup
-8. Install `ffmpeg` and `sox` (i.e. using `conda` or `apt`)
-9. Change paths in `scripts/data/prepare.sh` (if needed - by default, data is going to be prepared and saved to `./data`) and execute it to prepare the data
-10. Run the code
+---
 
-## Usage
-Our codebase uses Hydra configuration package. All config yaml files are located in `./configs`. The base configuration file with default values is `configs/base.yaml` (all the parameters are explained below).
+## 🎯 Project Overview
 
-Currently, our codebase offers 3 run modes:
-1. **pre-train**: Pre-train whisper encoder CTC
-2. **fine-tune**: Fine-tune the whole Whisper with target speaker amplifiers to perform target speaker ASR
-3. **decode**: Decode with pre-trained model
+**DiCoW (Diarization-Conditioned Whisper)** enhances Whisper for **target-speaker ASR** by conditioning the model on **frame-level diarization probabilities**.
 
-The codebase supports 3 compute grid systems: SGE, PBS, SLURM. Besides, one can also run training/decoding without any grid submission system by omitting the submission command (i.e. sbatch in the case of SLURM).
+These probabilities are converted into **Silence–Target–Non-Target–Overlap (STNO)** masks and injected into each encoder layer through **Frame-level Diarization-Dependent Transformations (FDDT)**.
 
-To run the codebase, execute one of the following lines:
+This approach enables Whisper to focus on the desired speaker without explicit speaker embeddings, making it robust to unseen speakers and diverse acoustic conditions.
+
+**SE-DiCoW (Self-Enrolled DiCoW)** resolves ambiguities in overlapping speech regions by introducing a **self-enrollment mechanism**.
+
+An enrollment segment—automatically selected where the diarizer predicts the target speaker as most active—is used as a reference through **cross-attention conditioning** at encoder layers to further bias the model toward the target speaker.
+
+> **Note:** For inference-only usage without training, see our dedicated [inference repository](https://github.com/BUTSpeechFIT/DiCoW) with a streamlined browser interface.
+
+> **Note 2:** For older training configurations and models, please refer to the [v1 branch](https://github.com/BUTSpeechFIT/TS-ASR-Whisper/tree/v1).
+
+---
+
+## 📦 Checkpoints
+
+| Model | Description | Link |
+| --- | --- | --- |
+| **CTC Whisper large-v3-turbo** | Pre-trained encoder model | [Download](https://nextcloud.fit.vutbr.cz/s/2AHfK2Gj2Jfa6EP) |
+| **DiCoW Models** | Fine-tuned diarization-conditioned Whisper models | [Hugging Face Collection](https://huggingface.co/collections/BUT-FIT/dicow) |
+
+---
+
+## ⚙️ Setup and Installation
+
+### 1. Clone the Repository
+
 ```bash
-# pre-train
-sbatch ./scripts/training/submit_slurm.sh +pretrain=ctc_librispeech_large
-
-# Fine-tune
-sbatch ./scripts/training/submit_slurm.sh +train=icassp/table1_final-models/ami
-
-# Decode
-sbatch ./scripts/training/submit_slurm.sh +decode=best_ami
+git clone https://github.com/BUTSpeechFIT/TS-ASR-Whisper
+cd TS-ASR-Whisper
 ```
 
-As SGE and PBS do not support variable-passing through shell arguments, you need to specify the config through variable list as:
-```
-qsub -v "CFG=+decode=best_ami" ./scripts/training/submit_sge.sh
+### 2. Create a Python Environment
+
+Use **conda** or **venv**:
+
+**Conda**
+
+```bash
+conda create -n ts_asr_whisper python=3.11
+conda activate ts_asr_whisper
 ```
 
-### Config Details
-As you can see above, the configs are not specified via yaml file paths. Instead, Hydra uses so-called "config groups". All of our config files contain `# @package _global_` on the first line, which specifies that the given values are overwriting the global default values specified in `./configs/base.yaml`. If the line is not present in the config yaml file, Hydra will produce a nested object based on the relative file path.
-Furthermore, as can be seen the `train/icassp*` config hierarchy, one can create hierarchical configuration by specifying defaults as:
+**Virtual Environment**
+
+```bash
+python -m venv ts_asr_whisper
+source ts_asr_whisper/bin/activate
 ```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+*(Optional)* To accelerate training and inference:
+
+```bash
+pip install flash-attn==2.7.2.post1
+```
+
+> ⚠️ `flash-attn` requires `torch` to be installed beforehand and is therefore **not included** in `requirements.txt`.
+
+### 4. Configure Paths
+
+Edit [`configs/local_paths.sh`](https://www.google.com/search?q=configs/local_paths.sh) according to your environment.
+All variables are documented directly within the script.
+
+### 5. Install Additional Tools
+
+Ensure that `ffmpeg` and `sox` are available:
+
+```bash
+conda install -c conda-forge ffmpeg sox
+# or
+sudo apt install ffmpeg sox
+```
+
+### 6. Set Up Diarization (Optional)
+
+If you intend to run the full pipeline including diarization, you must set up the **DiariZen** toolkit.
+
+1. Clone the DiariZen repository alongside this project:
+```bash
+git clone https://github.com/BUTSpeechFIT/DiariZen.git
+```
+
+2. Follow the installation instructions provided in the [DiariZen README](https://www.google.com/search?q=https://github.com/BUTSpeechFIT/DiariZen).
+3. **Crucial Step:** Ensure `lhotse` is installed in the DiariZen environment:
+```bash
+# Activate your DiariZen environment first
+pip install lhotse
+```
+
+---
+
+## 🎧 Data Preparation
+
+Before training or decoding, datasets must be prepared.
+We provide a dedicated repository for this purpose:
+👉 **[mt-asr-data-prep](https://github.com/BUTSpeechFIT/mt-asr-data-prep)**
+
+Follow its instructions, then update `MANIFEST_DIR` in `configs/local_paths.sh`.
+
+---
+
+## 🚀 Usage
+
+The codebase uses **[Hydra](https://hydra.cc/)** for configuration management.
+All configuration files are located in `./configs`, with default parameters in `configs/base.yaml`.
+
+### Run Modes
+
+| Mode | Description |
+| --- | --- |
+| **pre-train** | Pre-train the Whisper encoder using CTC |
+| **fine-tune** | Fine-tune Whisper with diarization conditioning for target-speaker ASR |
+| **decode** | Decode using a pre-trained or fine-tuned model |
+
+### Example Commands
+
+Scripts are provided for SLURM-based systems.
+To run locally, simply omit the `sbatch` prefix.
+
+```bash
+# Pre-train Whisper encoder
+sbatch ./scripts/training/submit_slurm.sh +pretrain=turbo
+
+# Fine-tune DiCoW
+sbatch ./scripts/training/submit_slurm.sh +train=dicow_v3
+
+# Decode with a trained model
+sbatch ./scripts/training/submit_slurm.sh +decode=dicow_v3_greedy
+```
+
+---
+
+## 🧩 Configuration Details
+
+Hydra configurations are modular and rely on **config groups** instead of direct YAML file paths.
+Each configuration file typically begins with:
+
+```yaml
+# @package _global_
+```
+
+This ensures that its parameters override global defaults from `configs/base.yaml`.
+
+Configurations can also **inherit** from others using the `defaults` field, for example:
+
+```yaml
+# @package _global_
 defaults:
-  - /train/icassp/table1_final-models/base # "/" + relative path to the config
+  - /train/dicow_v3
 ```
-This way, it is easy to create a configuration hierarchy the same way we did for our ICASSP.
 
-Furthermore, none of the YAML config files contain any paths, as we strived for maximal inter-cluster/setup compatibility. Instead, Hydra package substitutes shell variables 
+This means the configuration **inherits all parameters** from `/train/dicow_v3` and can override specific values.
+This design ensures consistency and reusability across different training and evaluation setups.
 
-## Config Params
+### Bash Variables
 
-### BASH Variables
-Parameters are described in `configs/local_paths.sh`. Edit the values accordingly.
+Defined and described in [`configs/local_paths.sh`](https://www.google.com/search?q=configs/local_paths.sh).
 
+### YAML Config Parameters
 
-### YAML Config Variables
-| Parameter                                     | Type                  | Default Value                                                                                           | Description                                                                                           |
-|-----------------------------------------------|-----------------------|---------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| **data.audio_path_prefix**                    | string                | `$AUDIO_PATH_PREFIX`                                                                           | Prefix to add to audio paths.                                                                         |
-| **data.audio_path_prefix_replacement**        | string                | `$AUDIO_PATH_PREFIX_REPLACEMENT`                                                               | Prefix to replace in audio paths.                                                                     |
-| **data.cache_features_for_dev**               | bool                  | `false`                                                                                                 | Whether to cache features for the development set.                                                    |
-| **data.dataset_weights**                      | list\|null          | `null`                                                                                                  | Weights to assign to different datasets.                                                              |
-| **data.dev_dataset**                          | string                | `$NSF_DEV_DATA_PATH`                                                                         | Path to the development dataset.                                                                      |
-| **data.dev_decoding_samples**                 | int                   | `1000`                                                                                                  | Number of samples to use for decoding during development.                                             |
-| **data.do_augment**                           | bool                  | `false`                                                                                                 | Whether to apply data augmentation.                                                                   |
-| **data.empty_transcripts_ratio**              | float                 | `0.0`                                                                                                   | Ratio of training samples with empty transcripts.                                                     |
-| **data.eval_cutsets**                         | list of strings       | -                                                                                          | List of paths to evaluation cutsets.                                                                  |
-| **data.eval_dataset**                         | string                | `$NSF_EVAL_DATA_PATH`                                                                        | Path to the evaluation dataset.                                                                       |
-| **data.eval_text_norm**                       | string                | `"whisper_nsf"`                                                                                         | Text normalization method for evaluation data.                                                        |
-| **data.libri_dev_cached_path**                | string                | `$LIBRI_DEV_CACHED_PATH`                                                                       | Path to cached LibriSpeech development data.                                                          |
-| **data.libri_train_cached_path**              | string                | `$LIBRI_TRAIN_CACHED_PATH`                                                                     | Path to cached LibriSpeech training data.                                                             |
-| **data.mask_inputs**                          | bool                  | `false`                                                                                                 | Whether to mask input data.                                                                           |
-| **data.max_l_crop**                           | int                   | `0`                                                                                                     | Maximum number of tokens to crop from the left.                                                       |
-| **data.max_r_crop**                           | int                   | `0`                                                                                                     | Maximum number of tokens to crop from the right.                                                      |
-| **data.musan_noises**                         | string                | `$MUSAN_PATH`                                                                                  | Path to the MUSAN noise dataset for data augmentation.                                                |
-| **data.path_to_store_t_spk_embed**            | string\|null        | `null`                                                                                                  | Path to store target speaker embeddings.                                                              |
-| **data.random_sentence_l_crop_p**             | float                 | `0.0`                                                                                                   | Probability of random left cropping of sentences.                                                     |
-| **data.random_sentence_r_crop_p**             | float                 | `0.0`                                                                                                   | Probability of random right cropping of sentences.                                                    |
-| **data.train_cutsets**                        | list of strings       | -                                                                                          | List of paths to training cutsets (pre-processed data segments).                                      |
-| **data.train_text_norm**                      | string                | `"whisper_nsf"`                                                                                         | Text normalization method for training data.                                                          |
-| **data.train_with_diar_outputs**              | string\|null        | `null`                                                                                                  | Whether to train with diarization outputs.                                                            |
-| **data.use_libri**                            | bool                  | `false`                                                                                                 | Whether to use the LibriSpeech dataset.                                                               |
-| **data.use_random_segmentation**              | bool                  | `false`                                                                                                 | Whether to use random segmentation of audio.                                                          |
-| **data.use_timestamps**                       | bool                  | `true`                                                                                                  | Whether to use timestamps in the data.                                                                |
-| **data.vad_from_alignments**                  | bool                  | `false`                                                                                                 | Whether to use Voice Activity Detection (VAD) from alignments.                                        |
-| **decoding.condition_on_prev**                | bool                  | `false`                                                                                                 | Whether to condition on previous tokens during decoding.                                              |
-| **decoding.decoding_ctc_weight**              | float                 | `0.0`                                                                                                   | Weight of CTC during decoding.                                                                        |
-| **decoding.length_penalty**                   | float\|null         | `null`                                                                                                  | Length penalty applied during decoding.                                                               |
-| **experiment**                                | string                | `"DEFAULT_EXPERIMENT"`                                                                                  | Name of the experiment or configuration preset.                                                       |
-| **hydra.output_subdir**                       | string\|null        | `null`                                                                                                  | Subdirectory for Hydra outputs.                                                                       |
-| **model.apply_target_amp_to_n_layers**        | int                   | `-1`                                                                                                    | Number of layers to apply the target amplifier to (`-1` means all layers).                            |
-| **model.ctc_weight**                          | float                 | `0.3`                                                                                                   | Weight of the Connectionist Temporal Classification (CTC) loss in the loss function.                  |
-| **model.embed_extractor_model_path**          | string\|null        | `null`                                                                                                  | Path to a model for extracting embeddings, if any.                                                    |
-| **model.prefixes_to_preheat**                 | list of strings       | -                                                                                          | List of model parameter prefixes to preheat (initialize or warm up).                                  |
-| **model.pretrained_encoder**                  | string\|null        | `null`                                                                                                  | Path to a pre-trained encoder to initialize from, if any.                                             |
-| **model.reinit_encoder_from**                 | string\|null        | `null`                                                                                                  | Path to reinitialize the encoder from a specific checkpoint.                                          |
-| **model.reinit_from**                         | string\|null        | `null`                                                                                                  | Path to reinitialize the entire model from a specific checkpoint.                                     |
-| **model.shift_pos_embeds**                    | bool                  | `false`                                                                                                 | Whether to shift positional embeddings in the model.                                                  |
-| **model.target_amp_bias_only**                | bool                  | `false`                                                                                                 | If `true`, only the bias parameters are used in the target amplifier.                                 |
-| **model.target_amp_init**                     | string                | `"disparagement"`                                                                                       | Method to initialize the target amplifier parameters.                                                 |
-| **model.target_amp_is_diagonal**              | bool                  | `true`                                                                                                  | If set to `true`, the target amplifier is diagonal.                                                   |
-| **model.target_amp_use_non_target**           | bool                  | `true`                                                                                                  | Whether to use non-target frames in the target amplifier.                                             |
-| **model.target_amp_use_overlap**              | bool                  | `true`                                                                                                  | Whether to use overlapping frames in the target amplifier.                                            |
-| **model.target_amp_use_silence**              | bool                  | `true`                                                                                                  | Whether to use silence frames in the target amplifier.                                                |
-| **model.target_amp_use_target**               | bool                  | `true`                                                                                                  | Whether to use target frames in the target amplifier.                                                 |
-| **model.use_qk_biasing**                      | bool                  | `false`                                                                                                 | Whether to use query-key biasing in the attention mechanism.                                          |
-| **model.whisper_model**                       | string                | `"openai/whisper-small.en"`                                                                             | Name or path of the pre-trained Whisper model to use.                                                 |
-| **training.auto_find_batch_size**             | bool                  | `true`                                                                                                  | Whether to automatically find the optimal batch size.                                                 |
-| **training.bf16**                             | bool                  | `true`                                                                                                  | Whether to use bfloat16 precision during training.                                                    |
-| **training.bf16_full_eval**                   | bool                  | `true`                                                                                                  | Whether to use bfloat16 precision during evaluation.                                                  |
-| **training.dataloader_num_workers**           | int                   | `8`                                                                                                     | Number of worker threads for data loading.                                                            |
-| **training.dataloader_pin_memory**            | bool                  | `true`                                                                                                  | Whether to use pinned memory for data loading.                                                        |
-| **training.dataloader_prefetch_factor**       | int                   | `2`                                                                                                     | Number of batches to prefetch per worker.                                                             |
-| **training.ddp_find_unused_parameters**       | bool                  | `false`                                                                                                 | Whether to find unused parameters when using Distributed Data Parallel (DDP).                         |
-| **training.decode_only**                      | bool                  | `false`                                                                                                 | Whether to perform decoding only, without training.                                                   |
-| **training.do_train**                         | bool                  | `true`                                                                                                  | Whether to perform training.                                                                          |
-| **training.early_stopping_patience**          | int                   | `5`                                                                                                     | Number of epochs with no improvement after which training will be stopped.                            |
-| **training.eval_delay**                       | int                   | `2`                                                                                                     | Number of epochs or steps to delay evaluation.                                                        |
-| **training.eval_metrics_list**                | list of strings       | `["tcp_wer", "cp_wer"]`                                                                                 | List of metrics to compute during evaluation.                                                         |
-| **training.eval_steps**                       | int                   | `1000`                                                                                                  | Number of steps between evaluations (if `eval_strategy` is "steps").                                  |
-| **training.eval_strategy**                    | string                | `"epoch"`                                                                                               | Evaluation strategy (e.g., "steps" or "epoch").                                                       |
-| **training.generation_max_length**            | int                   | `225`                                                                                                   | Maximum length of generated sequences during training.                                                |
-| **training.gradient_accumulation_steps**      | int                   | `1`                                                                                                     | Steps to accumulate gradients before updating model parameters.                                       |
-| **training.greater_is_better**                | bool                  | `false`                                                                                                 | Whether a higher metric value indicates better performance.                                           |
-| **training.learning_rate**                    | float                 | `2e-6`                                                                                                  | Initial learning rate.                                                                                |
-| **training.load_best_model_at_end**           | bool                  | `true`                                                                                                  | Whether to load the best model found during training at the end.                                      |
-| **training.logging_steps**                    | int                   | `5`                                                                                                     | Number of steps between logging outputs.                                                              |
-| **training.max_steps**                        | int                   | `50000`                                                                                                 | Maximum number of training steps.                                                                     |
-| **training.metric_for_best_model**            | string                | `"eval_tcp_wer"`                                                                                        | Metric to use for selecting the best model.                                                           |
-| **training.num_train_epochs**                 | int                   | `10`                                                                                                    | Number of training epochs.                                                                            |
-| **training.output_dir**                       | string                | `$EXPERIMENT_PATH}/${experiment`                                                               | Output directory for model checkpoints and logs.                                                      |
-| **training.overall_batch_size**               | int                   | `64`                                                                                                    | Overall batch size across all devices and gradient accumulation steps.                                |
-| **training.per_device_eval_batch_size**       | int                   | `16`                                                                                                    | Batch size per device during evaluation.                                                              |
-| **training.per_device_train_batch_size**      | int                   | `1`                                                                                                     | Batch size per device during training.                                                                |
-| **training.predict_with_generate**            | bool                  | `true`                                                                                                  | Whether to use the generate method for predictions during evaluation.                                 |
-| **training.remove_timestamps_from_ctc**       | bool                  | `false`                                                                                                 | Whether to remove timestamps from CTC outputs.                                                        |
-| **training.remove_unused_columns**            | bool                  | `false`                                                                                                 | Whether to remove unused columns from the dataset.                                                    |
-| **training.run_name**                         | string                | `${experiment`                                                                                         | Name of the run (used for logging and tracking).                                                      |
-| **training.save_steps**                       | int                   | `1000`                                                                                                  | Number of steps between model saves (if `save_strategy` is "steps").                                  |
-| **training.save_strategy**                    | string                | `"epoch"`                                                                                               | Model saving strategy (e.g., "steps" or "epoch").                                                     |
-| **training.target_amp_lr_multiplier**         | float                 | `100.0`                                                                                                 | Learning rate multiplier for target amplifier parameters.                                             |
-| **training.train_metrics_list**               | list of strings       | `["tcp_wer", "cp_wer"]`                                                                                 | List of metrics to compute during training.                                                           |
-| **training.use_amplifiers_only_n_epochs**     | int                   | `1`                                                                                                     | Number of epochs to use amplifiers only.                                                              |
-| **training.use_custom_optimizer**             | bool                  | `true`                                                                                                  | Whether to use a custom optimizer.                                                                    |
-| **training.use_t_spk_embed**                  | string\|null        | `null`                                                                                                  | Whether to use target speaker embeddings.                                                             |
-| **training.use_target_amplifiers**            | bool                  | `true`                                                                                                  | Whether to use target amplifiers in the model.                                                        |
-| **training.warmup_steps**                     | int                   | `2000`                                                                                                  | Number of warm-up steps for learning rate scheduler.                                                  |
-| **training.weight_decay**                     | float                 | `0.0`                                                                                                   | Weight decay (L2 regularization) coefficient.                                                         |
-| **wandb.project**                             | string                | `"chime2024_ts_asr_whisper"`                                                                            | Name of the Weights & Biases project for logging.                                                     |
-## License
+All configuration options are described in `src/utils/training_args.py`.
 
-This project is licensed under the [Apache License 2.0](LICENSE).
+---
 
+## 🚢 Model Export
 
-## Citation
-If you use our model or code, please, cite:
+Trained models can be exported directly to the **Hugging Face Hub** using the provided export utility.
+
+Before running the export, make sure you have:
+
+* Created a corresponding model card file named `<HUB_MODEL_NAME>.md` in `export_sources/readmes/`.
+* Optionally updated `export_sources/generation_config.json` if your model requires custom decoding parameters.
+
+Once prepared, run the following command:
+
+```bash
+python ./utils/export_dicow.py \
+  --model_path <MODEL_DIR> \
+  --model_name <HUB_MODEL_NAME> \
+  --org <HUB_ORG> \
+  --base_whisper_model openai/whisper-large-v3-turbo
 ```
-@misc{polok2024dicowdiarizationconditionedwhispertarget,
-      title={DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition}, 
-      author={Alexander Polok and Dominik Klement and Martin Kocour and Jiangyu Han and Federico Landini and Bolaji Yusuf and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
-      year={2024},
-      eprint={2501.00114},
-      archivePrefix={arXiv},
-      primaryClass={eess.AS},
-      url={https://arxiv.org/abs/2501.00114}, 
+
+Where:
+
+* `<MODEL_DIR>` — path to the directory containing the trained model checkpoint.
+* `<HUB_MODEL_NAME>` — name of the target model repository on the Hugging Face Hub.
+* `<HUB_ORG>` — Hugging Face organization or user under which the model will be published.
+
+The script packages the checkpoint, configuration, and model card, then uploads them to the specified Hub repository for easy sharing and reproducibility.
+
+---
+
+## 📊 Evaluation
+
+For transparent and reproducible evaluation, we host a public benchmark leaderboard on Hugging Face:
+👉 **[EMMA JSALT25 Benchmark](https://huggingface.co/spaces/BUT-FIT/EMMA_leaderboard)**
+
+This step expects the evaluated model to be **available on Hugging Face Hub**.
+If you do **not** wish to export your model but still want to submit results, you can initialize it **locally** using the `reinit_from` option under the **`model.setup`** section in your YAML configuration.
+When using `reinit_from`, make sure to specify **all model initialization arguments** exactly as they were during training so the model is reconstructed correctly.
+
+To generate a submission file, use the helper script:
+
+```bash
+./scripts/create_emma_submission.sh
+```
+
+This script collects all decoding hypotheses and saves them in a JSON file formatted for leaderboard submission.
+Once created, simply upload this file to the Hugging Face space linked above to appear on the leaderboard.
+
+---
+
+## 📜 License
+
+Source codes in this repository are licensed under the [Apache License 2.0](https://www.google.com/search?q=LICENSE).
+
+---
+
+## 📚 Citation
+
+If you use our models or code, please cite the following works:
+
+```bibtex
+@INPROCEEDINGS{polok2026sedicow,
+  author={Polok, Alexander and Klement, Dominik and Cornell, Samuele and Wiesner, Matthew and Černocký, Jan and Khudanpur, Sanjeev and Burget, Lukáš},
+  booktitle={ICASSP 2026 - 2026 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)}, 
+  title={SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper}, 
+  year={2026},
 }
-@misc{polok2024targetspeakerasrwhisper,
-      title={Target Speaker ASR with Whisper}, 
-      author={Alexander Polok and Dominik Klement and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
-      year={2024},
-      eprint={2409.09543},
-      archivePrefix={arXiv},
-      primaryClass={eess.AS},
-      url={https://arxiv.org/abs/2409.09543}, 
+
+@INPROCEEDINGS{10887683,
+  author={Polok, Alexander and Klement, Dominik and Wiesner, Matthew and Khudanpur, Sanjeev and Černocký, Jan and Burget, Lukáš},
+  booktitle={ICASSP 2025 - IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+  title={Target Speaker {ASR} with {Whisper}},
+  year={2025},
+  pages={1-5},
+  doi={10.1109/ICASSP49660.2025.10887683}
+}
+
+@article{POLOK2026101841,
+  title = {{DiCoW}: Diarization-conditioned {Whisper} for target speaker automatic speech recognition},
+  journal = {Computer Speech & Language},
+  volume = {95},
+  pages = {101841},
+  year = {2026},
+  doi = {10.1016/j.csl.2025.101841},
+  url = {https://www.sciencedirect.com/science/article/pii/S088523082500066X},
+  author = {Alexander Polok and Dominik Klement and Martin Kocour and Jiangyu Han and Federico Landini and Bolaji Yusuf and Matthew Wiesner and Sanjeev Khudanpur and Jan Černocký and Lukáš Burget},
+  keywords = {Diarization-conditioned Whisper, Target-speaker ASR, Speaker diarization, Long-form ASR, Whisper adaptation}
 }
 ```
 
-## Contributing
-We welcome contributions! If you’d like to add features or improve our pipeline, please open an issue or submit a pull request.
+---
 
-## Contact
-For more information, feel free to contact us: [ipoloka@fit.vut.cz](mailto:ipoloka@fit.vut.cz), [xkleme15@vutbr.cz](mailto:xkleme15@vutbr.cz).
+## 🤝 Contributing
+
+Contributions are welcome.
+If you’d like to improve the code, add new features, or extend the training pipeline, please open an issue or submit a pull request.
+
+---
+
+## 📬 Contact
+
+For questions or collaboration, please contact:
+
+* [ipoloka@fit.vut.cz](mailto:ipoloka@fit.vut.cz)
+* [iklement@fit.vut.cz](mailto:iklement@fit.vut.cz)

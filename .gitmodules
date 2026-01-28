@@ -1,3 +1,0 @@
-[submodule "inference_pipeline"]
-	path = inference_pipeline
-	url = https://github.com/BUTSpeechFIT/DiCoW.git

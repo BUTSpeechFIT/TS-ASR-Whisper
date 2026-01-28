@@ -1,23 +1,24 @@
 import os
-import pickle
 import re
-import subprocess
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Callable
 
+import lhotse
 import pandas as pd
 import wandb
+from accelerate.utils import broadcast_object_list
 from jiwer import cer, compute_measures
 from lhotse import CutSet
+from lhotse.cut import MixedCut
 from lhotse.cut.data import DataCut
 from transformers import PreTrainedTokenizer
 from transformers.trainer_utils import PredictionOutput
 from transformers.utils import logging
-from accelerate.utils import broadcast_object_list
 
-from data.postprocess import remove_hallucinations
-from utils.general import cutset_to_seglst, df_to_seglst
+from data.local_datasets import LhotseLongFormDataset
+from data.postprocess import truncate_at_repeating_ngram
+from utils.general import supervisions_to_seglst, df_to_seglst, get_cut_recording_id, remove_custom_attributes
 from utils.logging_def import get_logger
 from utils.wer import calc_wer
 from utils.wer_utils import aggregate_wer_metrics, normalize_segment
@@ -68,27 +69,9 @@ def compute_metrics(output_dir: os.path, text_norm: Callable, tokenizer: PreTrai
     if wandb.run is not None:
         write_wandb_pred(pred_str, label_str, rows_to_log=wandb_pred_to_save)
 
-    # Save predictions to the run directory as pickle
-    with open(f"{output_dir}/predictions.pkl", "wb") as f:
-        pickle.dump(pred, f)
-
     path = f"{output_dir}/predictions.csv"
     df = pd.DataFrame({"label": label_str, "prediction": pred_str})
     df.to_csv(path, index=False)
-
-    sclite_files = [path.replace(".csv", f"_{type}.trn") for type in ["hyp", "ref"]]
-    for strings, file_to_save in zip([pred_str, label_str], sclite_files):
-        with open(file_to_save, "w") as file_handler:
-            for index, string in enumerate(strings):
-                file_handler.write(f"{string} (utterance_{index})\n")
-
-    sclite_cmd = f"sclite -F -D -i wsj -r {sclite_files[1]} trn -h {sclite_files[0]} trn -o snt sum dtl"
-    process = subprocess.Popen(sclite_cmd.split())  # nosec
-    try:
-        process.wait(60)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        logger.warning("Sclite evaluation timed out.")
 
     # ensure that for jiwer all labels are non empty by replacing empty labels with hyphen
     label_str = [label if label else "-" for label in label_str]
@@ -164,41 +147,76 @@ def parse_string_to_objects(s):
     return objects
 
 
-def process_session(session_preds, tokenizer, spk_id, cut: DataCut, max_repetitions=3):
+def process_session(session_preds, tokenizer, spk_id, cut: DataCut, break_to_characters=False, overflow_margin=5.0):
     session_preds[session_preds == -100] = tokenizer.pad_token_id
     transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
                                   skip_special_tokens=True)
     segments = parse_string_to_objects(transcript)
+    cut_duration = cut.end - cut.start
     for segment in segments:
-        yield {
-            'session_id': cut.recording_id,
-            'start_time': segment['start'],
-            'end_time': segment['end'],
-            'text': remove_hallucinations(segment['text'], max_repetitions),
-            'speaker_id': spk_id,
-            'wav_file_name': cut.recording.sources[0].source,
-        }
+        if break_to_characters:
+            segment['text'] = LhotseLongFormDataset.add_space_between_chars(segment['text'])
+        if segment['end'] <= cut_duration + overflow_margin:
+            yield {
+                'session_id': get_cut_recording_id(cut),
+                'start_time': segment['start'] + cut.start,
+                'end_time': segment['end'] + cut.start,
+                'text': truncate_at_repeating_ngram(segment['text']),
+                'speaker_id': spk_id,
+                'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
+            }
+        else:
+            logger.warning(f"""Detected segment out of bounds of cut. {str({
+                'session_id': get_cut_recording_id(cut),
+                'start_time': segment['start'] + cut.start,
+                'end_time': segment['end'] + cut.start,
+                'text': truncate_at_repeating_ngram(segment['text']),
+                'speaker_id': spk_id,
+                'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
+            })}""")
 
+
+
+def shift_timestamps(cut: lhotse.MonoCut):
+    def shift_timestamps_supervision(supervision):
+        supervision.start += offset
+        supervision.end += offset
+        return supervision
+
+    offset = cut.start
+    if offset > 0:
+        return map(shift_timestamps_supervision, cut.supervisions)
+    return cut.supervisions
 
 def save_session_outputs(processed_sessions: dict, current_dir, text_norm, references_cs: CutSet):
     for session_id, outputs in processed_sessions.items():
-        attributed_segments_df = pd.DataFrame(outputs)  # TODO: is it neccessary?
+        attributed_segments_df = pd.DataFrame(outputs)
         write_hypothesis_jsons(
             current_dir, session_id, attributed_segments_df, text_norm)
 
-        gt_cutset = references_cs.filter(lambda c: c.recording_id == session_id).to_eager()
-        if len(gt_cutset) == 0:
-            logger.warning(f"Session {session_id} not found in GT dataset.")
+
+        if session_id in references_cs:
+            gt_cut = references_cs[session_id]
         else:
-            filepath = Path(current_dir) / 'wer' / session_id
-            ref_seglst = cutset_to_seglst(gt_cutset)
-            ref_seglst = ref_seglst.map(partial(normalize_segment, tn=text_norm))
-            ref_seglst.dump(filepath / 'ref.json')
+            gt_cutset = references_cs.filter(lambda c: get_cut_recording_id(c) == session_id)
+            if len(gt_cutset) == 0:
+                raise ValueError(f"Session {session_id} not found in GT dataset.")
+            if len(gt_cutset) > 1:
+                raise ValueError(f"Detected more sessions with session id: {session_id}")
+            gt_cut = gt_cutset[0]
+
+        remove_custom_attributes(gt_cut)
+        filepath = Path(current_dir) / 'wer' / session_id
+        # Potentially correct shifted cutsets
+        supervisions = shift_timestamps(gt_cut)
+        ref_seglst = supervisions_to_seglst(supervisions, session_id)
+        ref_seglst = ref_seglst.map(partial(normalize_segment, tn=text_norm))
+        ref_seglst.dump(filepath / 'ref.json')
 
 
 def calculate_tcp_wer(processed_sessions, current_dir, metrics_list,
                       save_visualizations=True,
-                      collar=5, tn=None):
+                      collar=5):
     wer_dfs = []
     for session_id in processed_sessions:
         calc_wer_out = Path(current_dir) / 'wer' / session_id
@@ -213,12 +231,13 @@ def calculate_tcp_wer(processed_sessions, current_dir, metrics_list,
             ref_file,
             collar=collar,
             save_visualizations=save_visualizations,
-            metrics_list=metrics_list, tn=tn)
+            metrics_list=metrics_list)
         wer_dfs.append(session_wer)
     return wer_dfs
 
 
-def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=None, dataset=None):
+def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=None, dataset=None,
+                             save_visualizations=True):
     # if not main process, return
     metrics = {}
     if trainer.accelerator.is_main_process:
@@ -238,21 +257,21 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
             label_ids = pred.label_ids[index]
             if (label_ids == -100).all():
                 continue
-            label_ids[label_ids == -100] = trainer.tokenizer.pad_token_id
-            cut_id, spk_id = trainer.tokenizer.decode(label_ids, skip_special_tokens=True,
-                                                        decode_with_timestamps=True).split(",")
+            label_ids[label_ids == -100] = trainer.processing_class.pad_token_id
+            cut_id, spk_id = trainer.processing_class.decode(label_ids, skip_special_tokens=True).split(",")
             if (cut_id, spk_id) in processed_sessions_ids:
                 # In DDP setup sampler can return the same session multiple times
                 continue
             try:
-                cut = orig_cs[cut_id] # this will raise StopIteration, if not found
+                cut = orig_cs[cut_id]  # this will raise StopIteration, if not found
             except Exception as e:
-                raise KeyError(f"Key '{cut_id}' not found in dataset")
+                raise KeyError(f"Key '{cut_id}' not found in dataset, {e}")
 
-            if cut.recording_id not in processed_sessions:
-                processed_sessions[cut.recording_id] = []
-            processed_sessions[cut.recording_id].extend(
-                process_session(session_preds, trainer.tokenizer, spk_id, cut)
+            if get_cut_recording_id(cut) not in processed_sessions:
+                processed_sessions[get_cut_recording_id(cut)] = []
+            processed_sessions[get_cut_recording_id(cut)].extend(
+                process_session(session_preds, trainer.processing_class, spk_id, cut,
+                                break_to_characters=dataset.break_to_characters if dataset is not None else False)
             )
             processed_sessions_ids.add((cut_id, spk_id))
 
@@ -261,7 +280,7 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
 
         # Calculate WER
         wer_dfs = calculate_tcp_wer(processed_sessions, output_dir, collar=5,
-                                    save_visualizations=True, metrics_list=metrics_list, tn=text_norm)
+                                    save_visualizations=save_visualizations, metrics_list=metrics_list)
 
         # Save the WER results and calculate the average
         all_session_wer_df = pd.concat(wer_dfs, ignore_index=True)

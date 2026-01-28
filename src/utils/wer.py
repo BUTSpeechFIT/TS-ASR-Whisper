@@ -1,14 +1,12 @@
 import os
 from pathlib import Path
-from typing import Callable, Optional, Union, List
+from typing import List
 
 import meeteval
 import numpy as np
 import pandas as pd
 from meeteval.io.seglst import SegLstSegment
 from meeteval.viz.visualize import AlignmentVisualization
-from meeteval.wer.wer.orc import OrcErrorRate
-
 from utils.general import create_dummy_seg_list
 from utils.logging_def import get_logger
 from utils.wer_utils import create_vad_mask, find_group_splits, map_utterance_to_split, \
@@ -114,8 +112,7 @@ def calc_wer(out_dir: Path,
              ref_file: Path,
              collar: int = 5,
              save_visualizations: bool = False,
-             metrics_list: List[str] = None,
-             tn: Optional[Union[Callable, str]] = None) -> pd.DataFrame:
+             metrics_list: List[str] = None) -> pd.DataFrame:
     """
     Calculates tcpWER and tcorcWER for each session in hypothesis files using meeteval, and saves the error
     information to .json.

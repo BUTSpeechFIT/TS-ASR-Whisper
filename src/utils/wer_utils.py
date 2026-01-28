@@ -92,13 +92,6 @@ def merge_streams(tcorc_hyp_seglst):
     return tcorc_hyp_seglst
 
 
-def normalize_segment(segment: SegLstSegment, tn):
-    words = segment["words"]
-    words = tn(words)
-    segment["words"] = words
-    return segment
-
-
 def create_vad_mask(segments, time_step=0.1, total_duration=None):
     """
     Create a VAD mask for the given segments.

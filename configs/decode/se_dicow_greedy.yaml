@@ -1,0 +1,24 @@
+# @package _global_
+defaults:
+  - /decode/dicow_v3_greedy
+
+experiment: "SE-DiCoW_greedy"
+
+model:
+  whisper_model: BUT-FIT/SE-DiCoW
+
+data:
+  use_enrollments: true
+  eval_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami/ami-ihm-mix_cutset_test.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean_external_enrollment.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean_noisy_external_enrollment.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean.jsonl_external_enrollment.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean_noisy_external_enrollment.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-1mix_external_enrollment.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-2mix_external_enrollment.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-3mix_external_enrollment.jsonl.gz
+  enrollment_cutsets:
+    - ${oc.env:MANIFEST_DIR}/librispeech/librispeech_cutset_test-clean.jsonl.gz

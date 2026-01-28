@@ -1,9 +1,0 @@
-# @package _global_
-defaults:
-  - /train/icassp/base
-
-wandb:
-  project: icassp_table5_ft-strategy_v2_dispargement_init
-data:
-  train_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar_train_sc_cutset_30s.jsonl.gz

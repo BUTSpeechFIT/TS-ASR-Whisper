@@ -1,0 +1,71 @@
+# @package _global_
+experiment: dicow_v3
+model:
+  whisper_model: openai/whisper-large-v3-turbo
+  reinit_encoder_from: ${oc.env:PRETRAINED_CTC_MODELS_PATH}/${model.whisper_model}_ctc-pretrain_libri/model.safetensors
+  params_to_keep_frozen_keywords:
+    - "decoder"
+  non_target_fddt_value: 0.5
+
+data:
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_custom_cutset_train-3mix.jsonl.gz
+  dev_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
+  eval_cutsets:
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ami/ami-ihm-mix_cutset_test.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean_noisy.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean_noisy.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-1mix.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-2mix.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-3mix.jsonl.gz
+  dataset_weights:
+    - 6
+    - 6
+    - 1
+    - 1
+    - 1
+    - 1
+
+aug:
+  stno_gaussian_noise_var: 0.2
+  stno_gaussian_noise_prob: 0.75
+  stno_segment_augment_prob: 0.3
+  stno_segment_change_prob: 0.1
+  stno_min_segment_length: 5
+  stno_max_segment_length: 50
+  spec_aug_prob: 0.3
+  musan_root: ${oc.env:MUSAN_ROOT}
+  musan_augment_prob: 0.3
+
+training:
+  remove_timestamps_from_ctc: true
+  eval_strategy: steps
+  save_strategy: steps
+  eval_steps: 1000
+  save_steps: 1000
+  overall_batch_size: 96
+  learning_rate: 2e-6
+  per_device_eval_batch_size: 32
+  dataloader_num_workers: 4
+  dataloader_prefetch_factor: 2
+  dataloader_pin_memory: true
+  use_fddt_only_n_epochs: 0
+  use_fddt: true
+  metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_tcp_wer
+  watch_grads: false
+  max_steps: 40000
+  lr_scheduler_type: cosine
+  use_fddt_only_n_steps: 2000
+  train_metrics_list: ["tcp_wer"]
+  eval_metrics_list: ["tcp_wer"]
+  early_stopping_patience: -1

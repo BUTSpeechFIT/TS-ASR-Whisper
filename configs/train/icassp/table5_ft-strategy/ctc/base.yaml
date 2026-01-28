@@ -1,6 +1,0 @@
-# @package _global_
-defaults:
-  - /train/icassp/table5_ft-strategy/base
-
-training:
-  use_amplifiers_only_n_epochs: 0

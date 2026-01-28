@@ -1,10 +1,8 @@
-import multiprocessing
 import os
 import re
 from dataclasses import dataclass, field, fields
 from typing import Any, List, Optional
 
-import multiprocess
 from omegaconf import DictConfig
 from torch.cuda import device_count
 from transformers import Seq2SeqTrainingArguments
@@ -22,80 +20,79 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
         default="", metadata={"help": "Path to checkpoint used to restart the training."}
     )
 
-    """Preprocessing and postprocessing related arguments."""
-    tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
-    )
-    feature_extractor_name: Optional[str] = field(
-        default=None, metadata={"help": "feature extractor name or path if not the same as model_name"}
-    )
-    collator_rename_features: Optional[bool] = field(
-        default=True,
-        metadata={"help": "Rename input_features to input_values in collator."},
-    )
     """Arguments changing behavior of the training."""
     early_stopping_patience: Optional[int] = field(default=-1, metadata={"help": "Patience for early stopping."})
-    track_ctc_loss: Optional[bool] = field(default=False, metadata={"help": "Whether to log CTC loss."})
-    joint_decoding_during_training: Optional[bool] = field(
-        default=False, metadata={"help": "Whether to use joint decoding during training."}
-    )
     mask_unks: Optional[bool] = field(
         default=False, metadata={"help": "Whether to mask unknown tokens for cross entropy."}
     )
-    use_start_method_spawn: Optional[bool] = field(
-        default=False, metadata={"help": "Whether multiprocessing should be started by spawn"}
-    )
-    save_before_eval: Optional[bool] = field(
-        default=False, metadata={"help": "Whether to save model before evaluation."}
-    )
-    start_by_eval: Optional[bool] = field(default=False, metadata={"help": "Whether to start by evaluation."})
     train_metrics_list: Optional[List[str]] = field(
         default=None, metadata={"help": "List of metrics to use for evaluation."}
     )
     eval_metrics_list: Optional[List[str]] = field(
         default=None, metadata={"help": "List of metrics to use for evaluation."}
     )
-
-    def __post_init__(self):
-        if self.use_start_method_spawn:
-            multiprocessing.set_start_method("spawn", force=True)
-            # pylint: disable=no-member
-            multiprocess.set_start_method("spawn", force=True)
-            self.dataloader_persistent_workers = True
-        super().__post_init__()
+    compute_combined_metrics: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to compute combined metrics by merging across dev splits."}
+    )
+    watch_grads: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to watch gradients and params over training."}
+    )
+    store_src: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to also store source code in wandb."}
+    )
+    save_visualizations: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to store meeteval visualizations."}
+    )
+    use_flash_attention: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to use flash attention."}
+    )
+    use_lora: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to use lora in decoder."}
+    )
 
 
 @dataclass
 class ModelArguments:
     ctc_weight: Optional[float] = field(default=0, metadata={"help": "Weight of CTC loss."})
-    pretrained_encoder: Optional[str] = field(default=None, metadata={"help": "Path to pretrained encoder."})
+    additional_layer: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to add additional layer in model."}
+    )
+    additional_self_attention_layer: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to add additional self attention layer."}
+    )
+    pre_ctc_sub_sample: Optional[bool] = field(default=False, metadata={"help": "Whether to subsample encoder outputs."})
     whisper_model: Optional[str] = field(default="openai/whisper-small.en",
                                          metadata={"help": "Model to use for Whisper."})
-    use_qk_biasing: Optional[bool] = field(default=False, metadata={"help": "Use query key biasing."})
-    shift_pos_embeds: Optional[bool] = field(default=False, metadata={"help": "Shift position embeddings."})
     reinit_encoder_from: Optional[str] = field(default=False,
                                                metadata={"help": "Path to encoder model to reinit from."})
     reinit_from: Optional[str] = field(default=False, metadata={"help": "Path to model to reinit from."})
 
-    # target spk amp params
-    target_amp_is_diagonal: Optional[bool] = field(default=True, metadata={"help": "Target amp is diagonal."})
-    target_amp_bias_only: Optional[bool] = field(default=False, metadata={"help": "Target amp bias only."})
-    target_amp_use_silence: Optional[bool] = field(default=True, metadata={"help": "Target amp use silence."})
-    target_amp_use_target: Optional[bool] = field(default=True, metadata={"help": "Target amp use target."})
-    target_amp_use_overlap: Optional[bool] = field(default=True, metadata={"help": "Target amp use overlap."})
-    target_amp_use_non_target: Optional[bool] = field(default=True, metadata={"help": "Target amp use non target."})
-    apply_target_amp_to_n_layers: Optional[int] = field(default=-1, metadata={
+    # FDDT params
+    fddt_is_diagonal: Optional[bool] = field(default=True, metadata={"help": "FDDT is diagonal."})
+    fddt_bias_only: Optional[bool] = field(default=False, metadata={"help": "FDDT bias only."})
+    fddt_use_silence: Optional[bool] = field(default=True, metadata={"help": "FDDT use silence."})
+    fddt_use_target: Optional[bool] = field(default=True, metadata={"help": "FDDT use target."})
+    fddt_use_overlap: Optional[bool] = field(default=True, metadata={"help": "FDDT use overlap."})
+    fddt_use_non_target: Optional[bool] = field(default=True, metadata={"help": "FDDT use non target."})
+    apply_fddt_to_n_layers: Optional[int] = field(default=-1, metadata={
         "help": "Apply target amp to n layers. Applies to all by default."})
-    target_amp_init: Optional[str] = field(default="non-disturbing", metadata={
-        "help": "Target amp init. Possible methods: random, non-disturbing, dispargement."})
+    fddt_init: Optional[str] = field(default="supressive", metadata={
+        "help": "FDDT init. Possible methods: random, non-disturbing, supressive."})
 
+    non_target_fddt_value: Optional[float] = field(default=1.0, metadata={
+        "help": "Non target FDDT value for initialization"})
+    use_pre_pos_fddt: Optional[bool] = field(default=True, metadata={
+        "help": "Whether to use FDDT before addition of positional embeddings."})
     prefixes_to_preheat: Optional[List[str]] = field(
         default=None, metadata={"help": "List of prefixes to preheat."}
     )
-    mt_asr: Optional[bool] = field(default=False, metadata={"help": "Multi-talker ASR vs Target-speaker ASR (default)"})
-    mt_num_speakers: Optional[int] = field(default=4, metadata={"help": "Number of speakers (channels) in MT-ASR"})
     params_to_keep_frozen_keywords: Optional[List[str]] = field(default=None, metadata={
         "help": "List of key words specifying layers to keep frozen."})
+    scb_layers: Optional[int] = field(default=None, metadata={
+        "help": "Number of SCB layers."
+    })
+
+
 
     def __post_init__(self):
         if isinstance(self.reinit_encoder_from, str) and 'openai' in self.reinit_encoder_from:
@@ -107,57 +104,59 @@ class ModelArguments:
 
 
 @dataclass
+class AugmentationArguments:
+    musan_root: Optional[str] = field(default=None, metadata={"help": "Path to MUSAN."})
+    musan_augment_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability to add MUSAN noises to input."})
+    do_augment: Optional[bool] = field(default=False, metadata={"help": "Do data augmentation."})
+    stno_gaussian_noise_var: Optional[float] = field(default=None, metadata={
+        "help": "Variance of the Gaussian noise added to the VAD masks"
+    })
+    stno_gaussian_noise_prob: Optional[float] = field(default=0.0, metadata={
+        "help": "Variance of the Gaussian noise added to the VAD masks"
+    })
+    stno_segment_augment_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of segment augmentation."})
+    stno_segment_change_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of segment level augmentation."})
+    stno_min_segment_length: Optional[int] = field(default=0, metadata={"help": "Min length of augmented segment"})
+    stno_max_segment_length: Optional[int] = field(default=0, metadata={"help": "Max length of augmented segment"})
+    spec_aug_prob: Optional[float] = field(default=0.0, metadata={"help": "Probability of spec augmentation."})
+
+@dataclass
 class DataArguments:
     use_libri: Optional[bool] = field(default=False, metadata={"help": "Use LibriSpeech."})
-    libri_train_cached_path: Optional[str] = field(default=None, metadata={"help": "Path to cached LibriSpeech train."})
-    libri_dev_cached_path: Optional[str] = field(default=None, metadata={"help": "Path to cached LibriSpeech dev."})
     train_cutsets: Optional[List[str]] = field(default=None, metadata={"help": "Paths to train cutsets."})
+    enrollment_cutsets: Optional[List[str]] = field(default=None, metadata={"help": "Paths to enrollment cutsets."})
     dev_cutsets: Optional[List[str]] = field(default=None, metadata={"help": "Paths to dev cutsets."})
     eval_cutsets: Optional[List[str]] = field(default=None, metadata={"help": "Paths to eval cutsets."})
+    merge_eval_cutsets: Optional[bool] = field(default=False, metadata={"help": "Whether to merge dev/eval cutsets."})
     use_timestamps: Optional[bool] = field(default=False, metadata={"help": "Use timestamps."})
-    dev_decoding_samples: Optional[int] = field(default=None,
-                                                metadata={"help": "Number of samples used for dev decoding."})
+
     train_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for training."})
     eval_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for evaluation."})
-    musan_noises: Optional[str] = field(default="/mnt/matylda2/data/MUSAN/musan/noise",
-                                        metadata={"help": "Path to MUSAN."})
-    empty_transcripts_ratio: Optional[float] = field(default=0.0, metadata={"help": "Ratio of empty transcripts."})
-    do_augment: Optional[bool] = field(default=False, metadata={"help": "Do data augmentation."})
-    use_close_talk: Optional[bool] = field(default=False, metadata={"help": "Use close talk data (NSF option)"})
-    use_multichannel: Optional[bool] = field(default=False, metadata={"help": "Use multichannel data (NSF option)"})
-    # Replace audio source using the prefix replacement.
-    audio_path_prefix: Optional[str] = field(default=None, metadata={"help": "Path to NSF dataset."})
-    audio_path_prefix_replacement: Optional[str] = field(default=None, metadata={"help": "Path to NSF dataset."})
-    # Segmentation
-    use_random_segmentation: Optional[bool] = field(default=False, metadata={"help": "Use random segmentation."})
-    dev_dataset: Optional[str] = field(default=None, metadata={
-        "help": "Path to dev original dataset. [DEPRECATED use 'dev_cutsets' instead]"})
-    eval_dataset: Optional[str] = field(default=None, metadata={
-        "help": "Path to eval original dataset. [DEPRECATED use 'eval_cutsets' instead]"})
 
-    mask_inputs: Optional[bool] = field(default=False, metadata={"help": "Mask inputs."})
-    # Random segmentation dataset - random sentence crop
-    random_sentence_l_crop_p: Optional[float] = field(default=0.0, metadata={"help": "Random sentence left crop."})
-    random_sentence_r_crop_p: Optional[float] = field(default=0.0, metadata={"help": "Random sentence right crop."})
-    max_l_crop: Optional[int] = field(default=0, metadata={"help": "Max left crop (# words)."})
-    max_r_crop: Optional[int] = field(default=0, metadata={"help": "Max right crop (# words)."})
+    dataset_weights: Optional[List[int]] = field(default=None, metadata={"help": "Dataset weights."})
 
-    vad_from_alignments: Optional[bool] = field(default=False, metadata={
-        "help": "Compute VAD from supervision alignments - possibly more accurate."})
-    cache_features_for_dev: Optional[bool] = field(default=False, metadata={"help": "Cache features for dev."})
+    use_enrollments: Optional[bool] = field(default=False, metadata={"help": "Use enrollments."})
+    min_enrollment_mix_overlap: Optional[float] = field(default=0.3, metadata={"help": "Min sampled overlap ratios."})
+    max_enrollment_mix_overlap: Optional[float] = field(default=1.0, metadata={"help": "Max sampled overlap ratios."})
+    number_of_mixed_speakers: Optional[int] = field(default=2, metadata={"help": "Number of mixed speakers."})
 
-    dataset_weights: Optional[List[int]] = field(default=None, metadata={"help": "Path to dataset weights."})
+    # language id specific arguments
+    provide_gt_lang: Optional[bool] = field(default=False, metadata={"help": "Provide ground truth language."})
+    global_lang_id: Optional[str] = field(default=None, metadata={"help": "Global language ID."})
 
-    # diarization
-    train_with_diar_outputs: Optional[str] = field(default=None, metadata={"help": "Train with diar outputs."})
     use_diar: bool = field(default=False, metadata={
         "help": "Use diar outputs instead of ground-truth (affects e.g. long-form evaluation)."})
     dev_diar_cutsets: Optional[List[str]] = field(default=None, metadata={
         "help": "Path to file with dev diar cutset (Lhotse format)"})
     eval_diar_cutsets: Optional[List[str]] = field(default=None, metadata={
         "help": "Path to file with eval diar cutset (Lhotse format)"})
+
+
+    load_channel_zero_only: Optional[bool] = field(default=False, metadata={
+        "help": "Load channel zero only."
+    })
 
     def __post_init__(self):
         if isinstance(self.train_cutsets, str):
@@ -182,8 +181,6 @@ class DecodingArguments:
     condition_on_prev: Optional[bool] = field(default=False, metadata={"help": "Condition on previous predictions."})
     length_penalty: Optional[float] = field(default=None, metadata={"help": "Length penalty."})
     repetition_penalty: Optional[float] = field(default=None, metadata={"help": "Repetition penalty."})
-    soft_vad_temp: Optional[float] = field(default=None, metadata={
-        "help": "Apply softmax with the temperature (t > 1 => decrease entropy)"})
 
 
 @dataclass
@@ -191,13 +188,13 @@ class CustomTrainingArguments(GeneralTrainingArguments):
     pretrain_encoder: Optional[bool] = field(default=False, metadata={"help": "Pretrain encoder."})
     decode_only: Optional[bool] = field(default=False, metadata={"help": "Only decode."})
     use_custom_optimizer: Optional[bool] = field(default=False, metadata={"help": "Use custom optimizer."})
-    use_amplifiers_only_n_epochs: Optional[int] = field(default=0,
-                                                        metadata={"help": "Use amplifiers only for n epochs."})
-    use_amplifiers_only_n_steps: Optional[int] = field(default=0,
-                                                       metadata={"help": "Use amplifiers only for n steps."})
+    use_fddt_only_n_epochs: Optional[int] = field(default=0,
+                                                  metadata={"help": "Use fddts only for n epochs."})
+    use_fddt_only_n_steps: Optional[int] = field(default=0,
+                                                 metadata={"help": "Use fddts only for n steps."})
     remove_timestamps_from_ctc: Optional[bool] = field(default=False, metadata={"help": "Remove timestamps from CTC."})
-    target_amp_lr_multiplier: Optional[float] = field(default=1.0, metadata={"help": "Target amp lr multiplier."})
-    use_target_amplifiers: Optional[bool] = field(default=False, metadata={"help": "Use target amplifiers."})
+    fddt_lr_multiplier: Optional[float] = field(default=1.0, metadata={"help": "FDDT lr multiplier."})
+    use_fddt: Optional[bool] = field(default=False, metadata={"help": "Use FDDTs."})
     overall_batch_size: Optional[int] = field(default=64, metadata={"help": "Overall batch size."})
 
     # Hydra workaround. The underlying OmegaConf supports union with simple types only.
@@ -289,6 +286,7 @@ class Cfg:
     # Cfg subgroups
     model: ModelArguments = field(default_factory=ModelArguments)
     data: DataArguments = field(default_factory=DataArguments)
+    aug: AugmentationArguments = field(default_factory=AugmentationArguments)
     decoding: DecodingArguments = field(default_factory=DecodingArguments)
     training: Optional[CustomTrainingArguments] = None
     wandb: WandbConfig = field(default_factory=WandbConfig)
@@ -321,7 +319,7 @@ def instantiate_arg_classes(cfg_dic: DictConfig) -> Cfg:
     field_instances = {
         'experiment': cfg_dic['experiment'],
     }
-    cfg_fields = {'model', 'data', 'decoding', 'training', 'wandb'}
+    cfg_fields = {'model', 'data', 'aug', 'decoding', 'training', 'wandb'}
 
     for f in fields(Cfg):
         if f.name not in cfg_fields:
@@ -338,12 +336,13 @@ def instantiate_arg_classes(cfg_dic: DictConfig) -> Cfg:
 
 def process_config(cfg: Cfg):
     ngpus = device_count()
-    if ngpus > 0:
-        cfg.training.per_device_train_batch_size = cfg.training.overall_batch_size // (
-                ngpus * cfg.training.gradient_accumulation_steps)
-    else:
-        # GPU is not available
-        cfg.training.per_device_train_batch_size = cfg.training.overall_batch_size // cfg.training.gradient_accumulation_steps
+    if cfg.training.overall_batch_size is not None:
+        if ngpus > 0:
+            cfg.training.per_device_train_batch_size = cfg.training.overall_batch_size // (
+                    ngpus * cfg.training.gradient_accumulation_steps)
+        else:
+            # GPU is not available
+            cfg.training.per_device_train_batch_size = cfg.training.overall_batch_size // cfg.training.gradient_accumulation_steps
     cfg.training.run_name = cfg.training.run_name.replace('openai/whisper-', '')
     cfg.experiment = cfg.experiment.replace('openai/whisper-', '')
     cfg.training.output_dir = cfg.training.output_dir.replace('openai/whisper-', '')
