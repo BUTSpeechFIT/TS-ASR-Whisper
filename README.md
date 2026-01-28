@@ -4,7 +4,7 @@ This repository contains the **official implementation** of the following public
 
 * **Target Speaker Whisper** — [IEEE Xplore](https://ieeexplore.ieee.org/document/10887683)
 * **DiCoW: Diarization-Conditioned Whisper for Target Speaker Automatic Speech Recognition** — [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S088523082500066X)
-* **SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper** — *coming soon* ([TBD]())
+* **SE-DiCoW: Self-Enrolled Diarization-Conditioned Whisper** — [arXiv:2601.19194](https://arxiv.org/abs/2601.19194)
 
 This repository provides handy tools to prepare data, train, publish, and evaluate your models with just a few commands, see on picture below.
 
