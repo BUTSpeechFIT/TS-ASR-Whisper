@@ -15,7 +15,7 @@ from lhotse.cut.data import DataCut
 from transformers import PreTrainedTokenizer
 from transformers.trainer_utils import PredictionOutput
 from transformers.utils import logging
-
+from decimal import Decimal
 from data.local_datasets import LhotseLongFormDataset
 from data.postprocess import truncate_at_repeating_ngram
 from utils.general import supervisions_to_seglst, df_to_seglst, get_cut_recording_id, remove_custom_attributes
@@ -154,13 +154,16 @@ def process_session(session_preds, tokenizer, spk_id, cut: DataCut, break_to_cha
     segments = parse_string_to_objects(transcript)
     cut_duration = cut.end - cut.start
     for segment in segments:
+        if segment["end"] <= segment["start"]:
+            segment["end"] = segment["start"] + 0.2
+
         if break_to_characters:
             segment['text'] = LhotseLongFormDataset.add_space_between_chars(segment['text'])
         if segment['end'] <= cut_duration + overflow_margin:
             yield {
                 'session_id': get_cut_recording_id(cut),
-                'start_time': segment['start'] + cut.start,
-                'end_time': segment['end'] + cut.start,
+                'start_time': Decimal(segment['start'] + cut.start).quantize(Decimal("0.00")),
+                'end_time': Decimal(segment['end'] + cut.start).quantize(Decimal("0.00")),
                 'text': truncate_at_repeating_ngram(segment['text']),
                 'speaker_id': spk_id,
                 'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,

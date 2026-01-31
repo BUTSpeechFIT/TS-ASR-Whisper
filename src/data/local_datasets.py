@@ -469,12 +469,7 @@ class TS_ASR_DatasetSuperclass:
             other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=False)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
 
-        if hasattr(cut, "lang"):
-            outputs["language"] = cut.lang
-        elif self.global_lang_id:
-            outputs["language"] = self.global_lang_id
-        else:
-            raise ValueError("Please if your dataset does not provide lang ids, set global lang id.")
+        outputs["language"] = speaker_id.split("_")[-1]
 
         return outputs
 
@@ -582,15 +577,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                  enumerate(merged_supervisions)])
             outputs["transcript"] = transcription
 
-        if self.provide_gt_lang and not is_nested:
-            if hasattr(cut, "lang"):
-                outputs["language"] = cut.lang
-            elif self._references is not None or self.global_lang_id:
-                has_reference_lang = self.has_reference_lang(get_cut_recording_id(cut)) if hasattr(cut,
-                                                                                                   "recording_id") else False
-                outputs["language"] = has_reference_lang or self.global_lang_id
-            else:
-                raise ValueError("Please if your dataset does not provide lang ids, set global lang id.")
+        outputs["language"] = speaker_id.split("_")[-1]
 
         if self.use_enrollments and not is_nested:
             other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=True)

@@ -77,8 +77,8 @@ def supervisions_to_seglst(supervisions: list[SupervisionSegment], session_id: s
         [
             SegLstSegment(
                 session_id=session_id,
-                start_time=decimal.Decimal(sup.start),
-                end_time=decimal.Decimal(sup.end),
+                start_time=decimal.Decimal(sup.start).quantize(Decimal("0.00")),
+                end_time=decimal.Decimal(sup.end).quantize(Decimal("0.00")),
                 words=sup.text,
                 speaker=sup.speaker,
             )

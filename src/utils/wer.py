@@ -143,6 +143,13 @@ def calc_wer(out_dir: Path,
 
     ref_seglst = to_seglst(ref_file)
 
+
+    def split_to_chars(seg):
+        seg['words'] = " ".join(seg['words'].replace(" ", ""))
+        return  seg
+
+    tcp_hyp_seglst = tcp_hyp_seglst.map(split_to_chars)
+    ref_seglst =ref_seglst.map(split_to_chars)
     if len(tcp_hyp_seglst) == 0:
         tcp_hyp_seglst = create_dummy_seg_list(ref_seglst.segments[0]['session_id'])
         _LOG.warning(f"Empty tcp_wer_hyp_json, using dummy segment: {tcp_hyp_seglst.segments[0]}")

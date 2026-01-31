@@ -147,6 +147,9 @@ class DataCollator:
             raise ValueError(f"Some inputs are longform and some are not")
 
         in_longform = longform[0]
+
+        if not in_longform:
+            inputs = list(filter(lambda item: len(self.tokenizer(item["transcript"])['input_ids']) < 440, inputs))
         labels = self.tokenizer([sample["transcript"] for sample in inputs],
                                 padding="longest", max_length=self.max_length, return_tensors="pt")
         feats = pad_sequence([sample['input_features'].T for sample in inputs], batch_first=True)
