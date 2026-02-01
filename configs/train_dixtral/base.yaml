@@ -32,13 +32,13 @@ training:
   metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_wer
   use_fddt_only_n_epochs: 0
   use_fddt_only_n_steps: 0
-  save_steps: 200
-  eval_steps: 200
+  save_steps: 1000
+  eval_steps: 1000
   eval_strategy: "steps"
   save_strategy: "steps"
   eval_on_start: False
   load_best_model_at_end: False
-  learning_rate: 2e-5
+  learning_rate: 1e-4
   warmup_steps: 2000
   logging_steps: 5
   generation_max_length: 2048
