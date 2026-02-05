@@ -145,7 +145,8 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
             return forced_decoder_ids
 
         init_tokens = super()._retrieve_init_tokens(input_features, batch_size, generation_config, config, num_segment_frames, kwargs)
-        del self.enrollments
+        if "enrollments" in kwargs:
+            del self.enrollments
         return init_tokens
 
     def detect_language(
