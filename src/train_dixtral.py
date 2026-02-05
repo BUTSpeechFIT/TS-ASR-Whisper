@@ -16,7 +16,7 @@ from data.local_datasets import build_datasets, load_cutsets
 from models.dixtral.dataset import TS_ASR_Dataset_ as TS_ASR_Dataset, LhotseLongFormDataset_ as LhotseLongFormDataset
 from models.containers import get_optimizer
 from models.dixtral.container import DixtralContainer
-from utils.evaluation import get_metrics
+from utils.evaluation import compute_longform_metrics
 from txt_norm import get_text_norm
 from utils.general import create_lower_uppercase_mapping, patch_wandb_init_with_config, update_generation_config
 from utils.trainers import CustomTrainer, GradLogger
@@ -24,42 +24,6 @@ from utils.training_args import Cfg
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
-
-def compute_metrics(output_dir: os.path, text_norm, tokenizer, pred) -> Dict[str, float]:
-    preds = pred.predictions
-    labels = pred.label_ids
-    preds[preds == -100] = tokenizer.pad_token_id
-
-
-    pattern = np.array([9909, 1058, 1262, 34])
-    pat_len = len(pattern)
-
-    # Create sliding windows: (batch, num_windows, pat_len)
-    windows = np.lib.stride_tricks.sliding_window_view(
-        preds, window_shape=pat_len, axis=1
-    )
-
-    # Find exact matches
-    matches = np.all(windows == pattern, axis=2)
-
-    # Mask matched subsequences
-    for i in range(pat_len):
-        preds[:, i:i + matches.shape[1]][matches] = tokenizer.pad_token_id
-
-    labels[labels == -100] = tokenizer.pad_token_id
-    pred_str = [text_norm(re.sub(r"\<\|\d+\.\d+\|\>", " ", pred)) for pred in
-                tokenizer.batch_decode(preds, skip_special_tokens=True)]
-    label_str = [text_norm(re.sub(r"\<\|\d+\.\d+\|\>", " ", label).strip()) for label in
-                 tokenizer.batch_decode(labels, skip_special_tokens=True)]
-
-    path = f"{output_dir}/predictions.csv"
-    df = pd.DataFrame({"label": label_str, "prediction": pred_str})
-    df.to_csv(path, index=False)
-
-    # ensure that for jiwer all labels are non empty by replacing empty labels with hyphen
-    label_str = [label if label else "-" for label in label_str]
-
-    return get_metrics(label_str, pred_str)
 
 class ModelTrainer:
     def __init__(self, cfg: Cfg):
@@ -191,18 +155,19 @@ class ModelTrainer:
             max_length=self.training_args.generation_max_length,
             model_id=self.model_args.dixtral_base_model
         )
-    def _create_compute_metrics_fn(self):
+    def _create_compute_metrics_fn(self, dev_datasets):
         """Create metrics computation function."""
 
-        def _compute_metrics(pred, split='dev'):
+        def _compute_metrics(pred, dset=None, split='dev', metrics_list=None):
             step = self.trainer.state.global_step
             output_dir = f'{self.trainer.args.output_dir}/{split}/{step}'
             os.makedirs(output_dir, exist_ok=True)
-            return compute_metrics(pred=pred,
-                                   output_dir=output_dir,
-                                   text_norm=self.text_norm,
-                                   tokenizer=self.container.tokenizer,
-                                   )
+            return compute_longform_metrics(
+                pred, self.trainer, output_dir, self.text_norm,
+                self.training_args.train_metrics_list if metrics_list is None else metrics_list,
+                dset,
+                save_visualizations=self.training_args.save_visualizations,
+            )
 
         return _compute_metrics
 
@@ -222,10 +187,15 @@ class ModelTrainer:
 
     def do_eval(self, eval_datasets, decoding_ctc_weight, eval_metrics_list, condition_key):
         """Perform evaluation on given datasets."""
-        _compute_metrics = self._create_compute_metrics_fn()
+        _compute_metrics = self._create_compute_metrics_fn(eval_datasets)
 
         # Update compute_metrics for trainer
-        self.trainer.compute_metrics = lambda x: _compute_metrics(x, split=self.trainer.metric_key_prefix)
+        self.trainer.compute_metrics = (
+            lambda x: _compute_metrics(
+                x, eval_datasets[self.trainer.metric_key_prefix.removeprefix(f"{condition_key}_")],
+                split=self.trainer.metric_key_prefix, metrics_list=eval_metrics_list
+            )
+        )
 
         # Perform evaluation
         self.trainer.args.predict_with_generate = True
@@ -248,6 +218,8 @@ class ModelTrainer:
         enrollment_cutset = self._create_enrollment_cutset()
         train_dataset = self._create_train_dataset(train_cutsets, enrollment_cutset)
         dev_datasets, eval_datasets = self._create_eval_datasets(enrollment_cutset)
+
+        first_test = list(eval_datasets.keys())[0]
 
         # Setup model
         self.model = self.container.model
@@ -286,10 +258,15 @@ class ModelTrainer:
         # Setup metrics computation
         if self.training_args.predict_with_generate:
             self.model.generation_config.ctc_weight = self.decoding_args.decoding_ctc_weight
-            _compute_metrics = self._create_compute_metrics_fn()
+            _compute_metrics = self._create_compute_metrics_fn(dev_datasets)
 
-            # Update compute_metrics for trainer
-            self.trainer.compute_metrics = lambda x: _compute_metrics(x, split=self.trainer.metric_key_prefix)
+            self.trainer.compute_metrics = (
+                lambda x: _compute_metrics(
+                    x, dev_datasets[self.trainer.metric_key_prefix.removeprefix("eval_")],
+                    split=self.trainer.metric_key_prefix,
+                    metrics_list=self.training_args.train_metrics_list
+                )
+            )
 
         # Train and evaluate
         if not self.training_args.decode_only:

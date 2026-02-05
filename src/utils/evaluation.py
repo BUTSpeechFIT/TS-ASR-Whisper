@@ -3,7 +3,7 @@ import re
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Callable
-
+import numpy as np
 import lhotse
 import pandas as pd
 import wandb
@@ -149,31 +149,34 @@ def parse_string_to_objects(s):
 
 def process_session(session_preds, tokenizer, spk_id, cut: DataCut, break_to_characters=False, overflow_margin=5.0):
     session_preds[session_preds == -100] = tokenizer.pad_token_id
-    transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
-                                  skip_special_tokens=True)
-    segments = parse_string_to_objects(transcript)
-    cut_duration = cut.end - cut.start
-    for segment in segments:
-        if break_to_characters:
-            segment['text'] = LhotseLongFormDataset.add_space_between_chars(segment['text'])
-        if segment['end'] <= cut_duration + overflow_margin:
-            yield {
-                'session_id': get_cut_recording_id(cut),
-                'start_time': segment['start'] + cut.start,
-                'end_time': segment['end'] + cut.start,
-                'text': truncate_at_repeating_ngram(segment['text']),
-                'speaker_id': spk_id,
-                'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
-            }
-        else:
-            logger.warning(f"""Detected segment out of bounds of cut. {str({
-                'session_id': get_cut_recording_id(cut),
-                'start_time': segment['start'] + cut.start,
-                'end_time': segment['end'] + cut.start,
-                'text': truncate_at_repeating_ngram(segment['text']),
-                'speaker_id': spk_id,
-                'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
-            })}""")
+    session_preds = session_preds[None, :]
+    pattern = np.array([9909, 1058, 1262, 34])
+    pat_len = len(pattern)
+
+    # Create sliding windows: (batch, num_windows, pat_len)
+    windows = np.lib.stride_tricks.sliding_window_view(
+        session_preds, window_shape=pat_len, axis=1
+    )
+
+    # Find exact matches
+    matches = np.all(windows == pattern, axis=2)
+
+    # Mask matched subsequences
+    for i in range(pat_len):
+        session_preds[:, i:i + matches.shape[1]][matches] = tokenizer.pad_token_id
+
+    transcript = [re.sub(r"\<\|\d+\.\d+\|\>", " ", pred) for pred in
+                tokenizer.batch_decode(session_preds, skip_special_tokens=True)]
+
+    yield {
+        'session_id': get_cut_recording_id(cut),
+        'start_time': cut.start,
+        'end_time': cut.end,
+        'text': truncate_at_repeating_ngram(transcript[0]),
+        'speaker_id': spk_id,
+        'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
+    }
+
 
 
 

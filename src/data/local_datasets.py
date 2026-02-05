@@ -395,7 +395,7 @@ class TS_ASR_DatasetSuperclass:
                                                                greedy_sample=greedy_sample)
         return other_cut
 
-    def cut_to_sample(self, cut: Cut, speaker_id: str, is_nested: bool = False):
+    def cut_to_sample(self, cut: Cut, speaker_id: str, idx:int, is_nested: bool = False):
         stno_mask = self.get_stno_mask(cut, speaker_id)
         features, att_mask = self.get_features(cut)
 
@@ -444,7 +444,7 @@ class TS_ASR_Dataset(TS_ASR_DatasetSuperclass, Dataset):
         spks = self.get_cut_spks(cut)
         local_sid = (idx - self.to_index_mapping[cut_index]) % len(spks)
         sid = spks[local_sid]
-        return self.cut_to_sample(cut, sid)
+        return self.cut_to_sample(cut, sid, idx)
 
 
 class LhotseLongFormDataset(TS_ASR_Dataset):
@@ -453,6 +453,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                  use_ids_as_transcripts=True, **kwargs):
         self.break_to_characters = break_to_characters
         cutset = cutset.to_eager()
+        cutset = cutset.subset(first=16)
         if self.break_to_characters:
             cutset = cutset.map(lambda cut: cut.map_supervisions(
                 lambda supervision: supervision.transform_text(self.add_space_between_chars)))
@@ -508,7 +509,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
         else:
             return False
 
-    def cut_to_sample(self, cut: Cut, speaker_id, is_nested=False):
+    def cut_to_sample(self, cut: Cut, speaker_id, idx, int, is_nested=False):
         stno_mask = self.get_stno_mask(cut, speaker_id)
         features, att_mask = self.get_features(cut)
 

@@ -82,6 +82,11 @@ class DataCollator:
             "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
             "labels": torch.tensor(labels, dtype=torch.long),
         }
+
+        if "idx" in inputs[0]:
+            batch["idxs"] = tok([sample["idx"] for sample in inputs],
+                                padding="longest", max_length=self.max_length, return_tensors="pt")['input_ids']
+
         # 5) Include processor outputs needed by the model (e.g., audio features)
         for k, v in passthrough.items():
             batch[k] = v

@@ -189,7 +189,8 @@ class CustomTrainer(Seq2SeqTrainer):
         **gen_kwargs,
     ) -> tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
         # We want to disable loss computation as it is not ready for longform input
-        labels = inputs.pop("labels")
+        _ = inputs.pop("labels")
+        labels = inputs.pop("idxs")
         gen_config = self.model.generation_config
 
         if self.args.bf16_full_eval:

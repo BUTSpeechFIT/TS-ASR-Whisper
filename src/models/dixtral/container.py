@@ -55,7 +55,7 @@ class DixtralContainer:
         self.model = DixtralForConditionalGeneration.from_pretrained(
             model_id,
             config=config,
-            ignore_mismatched_sizes=True  # For new DiCoW components
+            ignore_mismatched_sizes=True,  # For new DiCoW components
         )
 
 

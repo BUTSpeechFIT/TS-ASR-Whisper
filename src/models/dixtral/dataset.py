@@ -14,12 +14,12 @@ class TS_ASR_Dataset_(TS_ASR_Dataset):
         return samples, None
 
 class LhotseLongFormDataset_(LhotseLongFormDataset, TS_ASR_Dataset_):
-    def cut_to_sample(self, cut: Cut, speaker_id, is_nested=False):
+    def cut_to_sample(self, cut: Cut, speaker_id, idx, is_nested=False):
         stno_mask = self.get_stno_mask(cut, speaker_id)
         features, att_mask = self.get_features(cut)
 
         outputs = {"input_features": features, "stno_mask": torch.tensor(stno_mask), "attention_mask": att_mask,
-                   "transcript": f'{cut.id},{speaker_id}', "is_long_form": True}
+                   "transcript": f'{cut.id},{speaker_id}', "is_long_form": True, "idx": f'{cut.id},{speaker_id}'}
 
         if not self.use_ids_as_transcripts:
             target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
