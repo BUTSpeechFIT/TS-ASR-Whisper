@@ -453,7 +453,6 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                  use_ids_as_transcripts=True, **kwargs):
         self.break_to_characters = break_to_characters
         cutset = cutset.to_eager()
-        cutset = cutset.subset(first=16)
         if self.break_to_characters:
             cutset = cutset.map(lambda cut: cut.map_supervisions(
                 lambda supervision: supervision.transform_text(self.add_space_between_chars)))

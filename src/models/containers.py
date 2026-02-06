@@ -93,19 +93,60 @@ class WhisperContainer:
                 if name.startswith(prefix):
                     param.requires_grad = True
 
-
 def get_optimizer(model, training_args, prefixes_with_higher_lr=None):
+    """
+    Returns an AdamW optimizer with support for differential learning rates
+    (higher LR for specific parameter prefixes).
+    """
     if prefixes_with_higher_lr is None:
         prefixes_with_higher_lr = []
-    if training_args.use_custom_optimizer:
-        original_whisper_params = [param for name, param in model.named_parameters() if
-                                   not any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
-        new_params = [param for name, param in model.named_parameters() if
-                      any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
-        return torch.optim.AdamW([{'params': original_whisper_params},
-                                  {'params': new_params,
-                                   'lr': training_args.fddt_lr_multiplier * training_args.learning_rate,
-                                   'weight_decay': 0.0}],
-                                 lr=training_args.learning_rate, weight_decay=training_args.weight_decay)
-    else:
-        return None
+
+    # If the user has a flag for custom optimizer logic, use it.
+    # Otherwise, you might return None to let Trainer use its default.
+    if getattr(training_args, "use_custom_optimizer", True):
+
+        adam_params_standard = []
+        adam_params_new = []
+
+        for name, param in model.named_parameters():
+            # [MEMORY SAVER] Skip frozen parameters
+            if not param.requires_grad:
+                continue
+
+            # Identify if this is a "high LR" parameter based on prefix
+            is_new_param = any(name.startswith(prefix) for prefix in prefixes_with_higher_lr)
+
+            # Sort parameters into groups
+            if is_new_param:
+                adam_params_new.append(param)
+            else:
+                adam_params_standard.append(param)
+
+        # --- Create Parameter Groups ---
+        optimizer_grouped_parameters = []
+
+        # Group 1: Standard Parameters (Base LR)
+        if adam_params_standard:
+            optimizer_grouped_parameters.append({
+                'params': adam_params_standard,
+                'lr': training_args.learning_rate,
+                'weight_decay': training_args.weight_decay
+            })
+
+        # Group 2: New/Specific Parameters (Higher LR)
+        if adam_params_new:
+            # Ensure multiplier exists in args, default to 1.0 if missing
+            multiplier = getattr(training_args, "fddt_lr_multiplier", 1.0)
+            optimizer_grouped_parameters.append({
+                'params': adam_params_new,
+                'lr': multiplier * training_args.learning_rate,
+                'weight_decay': training_args.weight_decay
+            })
+
+        # --- Initialize Standard AdamW ---
+        if len(optimizer_grouped_parameters) > 0:
+            return torch.optim.AdamW(optimizer_grouped_parameters)
+        else:
+            return None
+
+    return None

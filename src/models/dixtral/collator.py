@@ -15,6 +15,7 @@ class DataCollator:
     max_length: int
     model_id: str
     conv_subsample_factor: int = 2
+    prep_for_generate: bool = True
 
     def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]], nested=False) -> Dict[str, torch.Tensor]:
         longform = [sample['is_long_form'] for sample in inputs]
@@ -51,7 +52,7 @@ class DataCollator:
             p_att = prompt_attn[i].tolist()
             t_ids = text_ids_list[i]
 
-            if not in_longform:
+            if not in_longform or not self.prep_for_generate:
                 ids  = p_ids + t_ids + [tok.eos_token_id]
                 attn = p_att + [1] * (len(t_ids) + 1)
             else:

@@ -153,7 +153,8 @@ class ModelTrainer:
         return DataCollator(
             processor=self.container.processor,
             max_length=self.training_args.generation_max_length,
-            model_id=self.model_args.dixtral_base_model
+            model_id=self.model_args.dixtral_base_model,
+            prep_for_generate=self.training_args.predict_with_generate
         )
     def _create_compute_metrics_fn(self, dev_datasets):
         """Create metrics computation function."""

@@ -189,6 +189,12 @@ class CustomTrainer(Seq2SeqTrainer):
         **gen_kwargs,
     ) -> tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
         # We want to disable loss computation as it is not ready for longform input
+        if not self.args.predict_with_generate or prediction_loss_only:
+            _ = inputs.pop("idxs")
+            return super().prediction_step(
+                model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
+            )
+
         _ = inputs.pop("labels")
         labels = inputs.pop("idxs")
         gen_config = self.model.generation_config
