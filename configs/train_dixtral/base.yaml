@@ -1,12 +1,12 @@
 # @package _global_
-experiment: dixtral_v13_lr_adj_v2
+experiment: dixtral_v13_from_dicow_no_preheat
 
 wandb:
   project: dixtral
 
 model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
-  dixtral_load_fddt_from: ${oc.env:SRC_ROOT}/dicow_large_v3
+  dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
 
 training:
   train_dixtral: True
@@ -15,22 +15,22 @@ training:
   dataloader_num_workers: 2
   dataloader_prefetch_factor: 2
   dataloader_pin_memory: True
-  gradient_accumulation_steps: 2
+  gradient_accumulation_steps: 4
   gradient_checkpointing: False
   overall_batch_size: null
   remove_timestamps_from_ctc: true
   metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_loss
   use_fddt_only_n_epochs: 0
-  use_fddt_only_n_steps: 4000
+  use_fddt_only_n_steps: 0
   save_steps: 500
   eval_steps: 500
   eval_strategy: "steps"
   save_strategy: "steps"
   eval_on_start: False
   load_best_model_at_end: True
-  learning_rate: 2e-6
+  learning_rate: 5e-7
   weight_decay: 0.1
-  warmup_steps: 2000
+  warmup_steps: 5000
   logging_steps: 2
   generation_max_length: 1024
   early_stopping_patience: -1

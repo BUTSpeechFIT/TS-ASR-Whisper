@@ -67,6 +67,8 @@ class ModelArguments:
                                       metadata={"help": "Model to use for DiXtral."})
     dixtral_load_fddt_from: Optional[str] = field(default=None,
                                           metadata={"help": "Model to initialize fddt params from."})
+    dixtral_replace_encoder_from: Optional[str] = field(default=None,
+                                          metadata={"help": "Model to initialize encoder params from."})
     reinit_encoder_from: Optional[str] = field(default=False,
                                                metadata={"help": "Path to encoder model to reinit from."})
     reinit_from: Optional[str] = field(default=False, metadata={"help": "Path to model to reinit from."})

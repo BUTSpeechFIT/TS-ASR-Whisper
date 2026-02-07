@@ -38,8 +38,8 @@ class DixtralContainer:
             model_id,
         )
 
-        if model_args.dixtral_load_fddt_from:
-            dicow_audio_config = DiCoWConfig.from_pretrained(model_args.dixtral_load_fddt_from)
+        if model_args.dixtral_load_fddt_from or model_args.dixtral_replace_encoder_from:
+            dicow_audio_config = DiCoWConfig.from_pretrained(model_args.dixtral_load_fddt_from or model_args.dixtral_replace_encoder_from)
             for key, value in dicow_audio_config.to_dict().items():
                 if hasattr(config.audio_config, key):
                     setattr(config.audio_config, key, value)
@@ -64,6 +64,11 @@ class DixtralContainer:
             dicow = DiCoWForConditionalGeneration.from_pretrained(model_args.dixtral_load_fddt_from)
             copy_fddt_weights(self.model, dicow)
             del dicow
+        if model_args.dixtral_replace_encoder_from:
+            dicow = DiCoWForConditionalGeneration.from_pretrained(model_args.dixtral_replace_encoder_from)
+            dixtral_encoder = self.model.audio_tower
+            dicow_encoder = dicow.model.encoder
+            print(dixtral_encoder.load_state_dict(dicow_encoder.state_dict(), strict=False))
 
         # Copy language model head weights to CTC head if CTC is enabled
         if (config.audio_config.use_dicow_encoder and

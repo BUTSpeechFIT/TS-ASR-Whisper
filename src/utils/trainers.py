@@ -135,7 +135,6 @@ class CustomTrainer(Seq2SeqTrainer):
                     param.requires_grad = True
             logger.info(f"***** Unfreezing params except {self.params_to_keep_frozen}*****")
             logger.info(f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}")
-            self.optimizer = None
             self.lr_scheduler = None
             self.create_optimizer_and_scheduler(num_training_steps=self.state.max_steps)
 
@@ -241,21 +240,27 @@ class CustomTrainer(Seq2SeqTrainer):
     def create_optimizer(self):
         """
         Setup the optimizer with custom learning rate logic integrated.
+        Only adds parameters that are not already in the optimizer.
         """
         opt_model = self.model_wrapped if is_sagemaker_mp_enabled() else self.model
 
-        if self.optimizer is None:
-            # --- Start Integrated Custom Logic ---
-            decay_parameters = self.get_decay_parameter_names(opt_model)
+        # --- NEW: Track existing parameters ---
+        existing_param_ids = set()
+        if self.optimizer is not None:
+            for group in self.optimizer.param_groups:
+                for p in group['params']:
+                    existing_param_ids.add(id(p))
+        # ---------------------------------------
 
-            # Check if we should use the custom multiplier logic
+        # If we are doing a full reset (like in your training_step),
+        # self.optimizer will be None, so existing_param_ids will be empty.
+
+        if self.optimizer is None or len(existing_param_ids) > 0:
+            decay_parameters = self.get_decay_parameter_names(opt_model)
             use_custom_lr = getattr(self.args, "use_custom_optimizer", True)
             multiplier = getattr(self.args, "fddt_lr_multiplier", 1.0)
-            # Note: 'prefixes_with_higher_lr' needs to be defined in your scope
-            # or passed via self.args
             prefixes = getattr(self.args, "prefixes_to_preheat", [])
 
-            # We categorize into 4 buckets to respect both LR and Weight Decay settings
             param_groups = {
                 "std_decay": {"params": [], "weight_decay": self.args.weight_decay, "lr": self.args.learning_rate},
                 "std_no_decay": {"params": [], "weight_decay": 0.0, "lr": self.args.learning_rate},
@@ -268,12 +273,14 @@ class CustomTrainer(Seq2SeqTrainer):
                 if not p.requires_grad:
                     continue
 
-                # Check LR status
+                # --- NEW: Skip if already present ---
+                if id(p) in existing_param_ids:
+                    continue
+                # ------------------------------------
+
                 is_high_lr = any(n.startswith(prefix) for prefix in prefixes) if use_custom_lr else False
-                # Check Decay status
                 has_decay = n in decay_parameters
 
-                # Assign to the correct bucket
                 if is_high_lr:
                     group_key = "new_decay" if has_decay else "new_no_decay"
                 else:
@@ -281,37 +288,35 @@ class CustomTrainer(Seq2SeqTrainer):
 
                 param_groups[group_key]["params"].append(p)
 
-            # Remove empty groups
             optimizer_grouped_parameters = [group for group in param_groups.values() if len(group["params"]) > 0]
-            # --- End Integrated Custom Logic ---
 
             if self.optimizer_cls_and_kwargs is not None:
                 optimizer_cls, optimizer_kwargs = self.optimizer_cls_and_kwargs
             else:
                 optimizer_cls, optimizer_kwargs = self.get_optimizer_cls_and_kwargs(self.args, opt_model)
 
-            # Overwrite logic for specialized optimizers (GaLore, LOMO, etc.)
+            # Handle specialized optimizers
             if "params" in optimizer_kwargs:
                 optimizer_grouped_parameters = optimizer_kwargs.pop("params")
             if "model" in optimizer_kwargs:
                 optimizer_grouped_parameters = optimizer_kwargs.pop("model")
-            if "optimizer_dict" in optimizer_kwargs:
-                optimizer_grouped_parameters = optimizer_kwargs.pop("optimizer_dict")
 
-            self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
+            # If self.optimizer already exists, we add_param_group instead of re-initializing
+            if self.optimizer is not None:
+                for group in optimizer_grouped_parameters:
+                    self.optimizer.add_param_group(group)
+            else:
+                self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
 
+            # BitsAndBytes specific logic
             if "bitsandbytes" in str(optimizer_cls) and optimizer_kwargs.get("optim_bits", None) == 8:
                 import bitsandbytes
                 manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
-                skipped = 0
                 for module in opt_model.modules():
                     if isinstance(module, nn.Embedding):
-                        skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
-                        logger.info(f"skipped {module}: {skipped / 2 ** 20}M params")
                         manager.register_module_override(module, "weight", {"optim_bits": 32})
-                logger.info(f"skipped: {skipped / 2 ** 20}M params")
 
-        if is_sagemaker_mp_enabled():
+        if is_sagemaker_mp_enabled() and not isinstance(self.optimizer, smp.DistributedOptimizer):
             self.optimizer = smp.DistributedOptimizer(self.optimizer)
 
         return self.optimizer
