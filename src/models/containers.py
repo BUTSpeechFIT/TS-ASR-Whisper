@@ -5,17 +5,6 @@ from transformers.models.whisper import WhisperFeatureExtractor, WhisperTokenize
 from models.dicow.modeling_dicow import DiCoWForConditionalGeneration
 
 
-def supports_flash_attention():
-    """Check if a GPU supports FlashAttention."""
-    major, minor = torch.cuda.get_device_capability()
-
-    # Check if the GPU architecture is Ampere (SM 8.x) or newer (SM 9.0)
-    is_sm8x = major == 8 and minor >= 0
-    is_sm90 = major == 9 and minor == 0
-
-    return is_sm8x or is_sm90
-
-
 class WhisperContainer:
     def __init__(self, use_flash_attention=False, params_to_keep_frozen_keywords=None, remove_timestamps_from_ctc=False,
                  model_args=None, data_args=None, use_fddt=False, use_lora=False):
@@ -23,7 +12,6 @@ class WhisperContainer:
         predict_timestamps = data_args.use_timestamps
         global_lang_id = data_args.global_lang_id
         overwrite_args = {
-            "attn_implementation": "flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and use_flash_attention else None,
             "ctc_weight": model_args.ctc_weight,
             "fddt_is_diagonal": model_args.fddt_is_diagonal,
             "fddt_bias_only": model_args.fddt_bias_only,

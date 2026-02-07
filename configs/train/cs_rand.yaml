@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train/cs_cont
+
+experiment: cs_from_rand_v2
+
+model:
+  reinit_from: null
+
