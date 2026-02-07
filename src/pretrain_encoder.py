@@ -6,7 +6,7 @@ from transformers.utils import logging
 
 from data.collators import DataCollatorForPretraining
 from data.local_datasets import TS_ASR_Dataset, build_datasets
-from models.containers import WhisperContainer, get_optimizer
+from models.containers import WhisperContainer
 from txt_norm import get_text_norm
 from utils.decoding import ctc_greedy_decode
 from utils.evaluation import compute_metrics
@@ -29,7 +29,7 @@ def main(cfg: Cfg):
         use_flash_attention=training_args.use_flash_attention,
         remove_timestamps_from_ctc=training_args.remove_timestamps_from_ctc,
         use_fddt=training_args.use_fddt,
-        params_to_keep_frozen_keywords=model_args.params_to_keep_frozen_keywords,
+        params_to_keep_frozen_keywords=training_args.params_to_keep_frozen_keywords,
     )
 
     # 4. Get the model and possibly load pretrained weights
@@ -84,7 +84,6 @@ def main(cfg: Cfg):
                                                predictions, len(container.tokenizer.get_vocab()),
                                                model.config.pad_token_id
                                            )),
-                                       optimizers=(get_optimizer(model, training_args), None),
                                        processing_class=container.tokenizer, container=container)
 
     def _compute_metrics(pred):

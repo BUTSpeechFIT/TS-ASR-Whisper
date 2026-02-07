@@ -1,26 +1,24 @@
 import os
 from functools import reduce
 from typing import Dict, Any
-import re
-import pandas as pd
-import torch
+
 import lhotse
-import numpy as np
+import torch
+from peft.utils.save_and_load import _insert_adapter_name_into_state_dict
 from safetensors.torch import load_file
 from transformers import EarlyStoppingCallback
 from transformers.utils import logging
-from peft.utils.save_and_load import _insert_adapter_name_into_state_dict
 
-from models.dixtral.collator import DataCollator
 from data.local_datasets import build_datasets, load_cutsets
-from models.dixtral.dataset import TS_ASR_Dataset_ as TS_ASR_Dataset, LhotseLongFormDataset_ as LhotseLongFormDataset
-from models.containers import get_optimizer
+from models.dixtral.collator import DataCollator
 from models.dixtral.container import DixtralContainer
-from utils.evaluation import compute_longform_metrics
+from models.dixtral.dataset import TS_ASR_Dataset_ as TS_ASR_Dataset, LhotseLongFormDataset_ as LhotseLongFormDataset
 from txt_norm import get_text_norm
+from utils.evaluation import compute_longform_metrics
 from utils.general import create_lower_uppercase_mapping, patch_wandb_init_with_config, update_generation_config
 from utils.trainers import CustomTrainer, GradLogger
 from utils.training_args import Cfg
+
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
@@ -45,7 +43,7 @@ class ModelTrainer:
             model_args=self.model_args,
             remove_timestamps_from_ctc=self.training_args.remove_timestamps_from_ctc,
             use_lora=self.training_args.use_lora,
-            params_to_keep_frozen_keywords=self.model_args.params_to_keep_frozen_keywords,
+            params_to_keep_frozen_keywords=self.training_args.params_to_keep_frozen_keywords,
         )
 
     def _load_training_cutsets(self):
@@ -184,7 +182,7 @@ class ModelTrainer:
         """Setup FDDT-only training if specified."""
         if (self.training_args.use_fddt_only_n_epochs > 0 or
                 self.training_args.use_fddt_only_n_steps > 0):
-            self.container.freeze_except(self.model_args.prefixes_to_preheat)
+            self.container.freeze_except(self.training_args.prefixes_to_preheat)
 
     def do_eval(self, eval_datasets, decoding_ctc_weight, eval_metrics_list, condition_key):
         """Perform evaluation on given datasets."""
@@ -244,9 +242,8 @@ class ModelTrainer:
             train_dataset=train_dataset,
             processing_class=self.container.tokenizer,
             container=self.container,
-            optimizers=(get_optimizer(self.model, self.training_args, self.model_args.prefixes_to_preheat), None),
             callbacks=callbacks,
-            params_to_keep_frozen=self.model_args.params_to_keep_frozen_keywords,
+            params_to_keep_frozen=self.training_args.params_to_keep_frozen_keywords,
         )
 
         # Setup additional components

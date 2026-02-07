@@ -8,9 +8,12 @@ from torch.utils.data import Dataset
 from transformers import Seq2SeqTrainer, Trainer, TrainingArguments, TrainerCallback, TrainerState, TrainerControl
 from transformers.trainer_pt_utils import get_model_param_count
 from transformers.trainer_utils import EvalLoopOutput
-from transformers.utils import logging
+from transformers.utils import logging, is_sagemaker_mp_enabled
 
 from utils.compute_overall_statisctics import main as compute_overall_stats
+
+if is_sagemaker_mp_enabled():
+    import smdistributed.modelparallel.torch as smp
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
@@ -132,6 +135,8 @@ class CustomTrainer(Seq2SeqTrainer):
                     param.requires_grad = True
             logger.info(f"***** Unfreezing params except {self.params_to_keep_frozen}*****")
             logger.info(f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}")
+            self.optimizer = None
+            self.lr_scheduler = None
             self.create_optimizer_and_scheduler(num_training_steps=self.state.max_steps)
 
             self.warmup_phase = False
@@ -232,3 +237,81 @@ class CustomTrainer(Seq2SeqTrainer):
             self.log(overall_stats_dict)
             output |= overall_stats_dict
         return output
+
+    def create_optimizer(self):
+        """
+        Setup the optimizer with custom learning rate logic integrated.
+        """
+        opt_model = self.model_wrapped if is_sagemaker_mp_enabled() else self.model
+
+        if self.optimizer is None:
+            # --- Start Integrated Custom Logic ---
+            decay_parameters = self.get_decay_parameter_names(opt_model)
+
+            # Check if we should use the custom multiplier logic
+            use_custom_lr = getattr(self.args, "use_custom_optimizer", True)
+            multiplier = getattr(self.args, "fddt_lr_multiplier", 1.0)
+            # Note: 'prefixes_with_higher_lr' needs to be defined in your scope
+            # or passed via self.args
+            prefixes = getattr(self.args, "prefixes_to_preheat", [])
+
+            # We categorize into 4 buckets to respect both LR and Weight Decay settings
+            param_groups = {
+                "std_decay": {"params": [], "weight_decay": self.args.weight_decay, "lr": self.args.learning_rate},
+                "std_no_decay": {"params": [], "weight_decay": 0.0, "lr": self.args.learning_rate},
+                "new_decay": {"params": [], "weight_decay": self.args.weight_decay,
+                              "lr": self.args.learning_rate * multiplier},
+                "new_no_decay": {"params": [], "weight_decay": 0.0, "lr": self.args.learning_rate * multiplier},
+            }
+
+            for n, p in opt_model.named_parameters():
+                if not p.requires_grad:
+                    continue
+
+                # Check LR status
+                is_high_lr = any(n.startswith(prefix) for prefix in prefixes) if use_custom_lr else False
+                # Check Decay status
+                has_decay = n in decay_parameters
+
+                # Assign to the correct bucket
+                if is_high_lr:
+                    group_key = "new_decay" if has_decay else "new_no_decay"
+                else:
+                    group_key = "std_decay" if has_decay else "std_no_decay"
+
+                param_groups[group_key]["params"].append(p)
+
+            # Remove empty groups
+            optimizer_grouped_parameters = [group for group in param_groups.values() if len(group["params"]) > 0]
+            # --- End Integrated Custom Logic ---
+
+            if self.optimizer_cls_and_kwargs is not None:
+                optimizer_cls, optimizer_kwargs = self.optimizer_cls_and_kwargs
+            else:
+                optimizer_cls, optimizer_kwargs = self.get_optimizer_cls_and_kwargs(self.args, opt_model)
+
+            # Overwrite logic for specialized optimizers (GaLore, LOMO, etc.)
+            if "params" in optimizer_kwargs:
+                optimizer_grouped_parameters = optimizer_kwargs.pop("params")
+            if "model" in optimizer_kwargs:
+                optimizer_grouped_parameters = optimizer_kwargs.pop("model")
+            if "optimizer_dict" in optimizer_kwargs:
+                optimizer_grouped_parameters = optimizer_kwargs.pop("optimizer_dict")
+
+            self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
+
+            if "bitsandbytes" in str(optimizer_cls) and optimizer_kwargs.get("optim_bits", None) == 8:
+                import bitsandbytes
+                manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
+                skipped = 0
+                for module in opt_model.modules():
+                    if isinstance(module, nn.Embedding):
+                        skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
+                        logger.info(f"skipped {module}: {skipped / 2 ** 20}M params")
+                        manager.register_module_override(module, "weight", {"optim_bits": 32})
+                logger.info(f"skipped: {skipped / 2 ** 20}M params")
+
+        if is_sagemaker_mp_enabled():
+            self.optimizer = smp.DistributedOptimizer(self.optimizer)
+
+        return self.optimizer

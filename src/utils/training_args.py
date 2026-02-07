@@ -87,11 +87,6 @@ class ModelArguments:
         "help": "Non target FDDT value for initialization"})
     use_pre_pos_fddt: Optional[bool] = field(default=True, metadata={
         "help": "Whether to use FDDT before addition of positional embeddings."})
-    prefixes_to_preheat: Optional[List[str]] = field(
-        default=None, metadata={"help": "List of prefixes to preheat."}
-    )
-    params_to_keep_frozen_keywords: Optional[List[str]] = field(default=None, metadata={
-        "help": "List of key words specifying layers to keep frozen."})
     scb_layers: Optional[int] = field(default=None, metadata={
         "help": "Number of SCB layers."
     })
@@ -103,8 +98,6 @@ class ModelArguments:
             self.reinit_encoder_from = self.reinit_encoder_from.replace('openai/whisper-', '')
         if isinstance(self.reinit_from, str) and 'openai' in self.reinit_from:
             self.reinit_from = self.reinit_from.replace('openai/whisper-', '')
-        if self.params_to_keep_frozen_keywords is None:
-            self.params_to_keep_frozen_keywords = []
 
 
 @dataclass
@@ -276,7 +269,16 @@ class CustomTrainingArguments(GeneralTrainingArguments):
         default=None,
         metadata={"help": "Deprecated. Use `eval_strategy` instead"},
     )
+    prefixes_to_preheat: Optional[List[str]] = field(
+        default=None, metadata={"help": "List of prefixes to preheat."}
+    )
+    params_to_keep_frozen_keywords: Optional[List[str]] = field(default=None, metadata={
+        "help": "List of key words specifying layers to keep frozen."})
 
+    def __post_init__(self):
+        super().__post_init__()
+        if self.params_to_keep_frozen_keywords is None:
+            self.params_to_keep_frozen_keywords = []
 
 @dataclass
 class WandbConfig:

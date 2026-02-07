@@ -9,7 +9,7 @@ from transformers.utils import logging
 
 from data.collators import DataCollator
 from data.local_datasets import build_datasets, TS_ASR_Dataset, load_cutsets, LhotseLongFormDataset
-from models.containers import WhisperContainer, get_optimizer
+from models.containers import WhisperContainer
 from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
 from utils.general import create_lower_uppercase_mapping, patch_wandb_init_with_config, update_generation_config
@@ -43,7 +43,7 @@ class ModelTrainer:
             remove_timestamps_from_ctc=self.training_args.remove_timestamps_from_ctc,
             use_fddt=self.training_args.use_fddt,
             use_lora=self.training_args.use_lora,
-            params_to_keep_frozen_keywords=self.model_args.params_to_keep_frozen_keywords,
+            params_to_keep_frozen_keywords=self.training_args.params_to_keep_frozen_keywords,
         )
 
     def _load_training_cutsets(self):
@@ -172,7 +172,7 @@ class ModelTrainer:
         """Setup FDDT-only training if specified."""
         if (self.training_args.use_fddt_only_n_epochs > 0 or
                 self.training_args.use_fddt_only_n_steps > 0):
-            self.container.freeze_except(self.model_args.prefixes_to_preheat)
+            self.container.freeze_except(self.training_args.prefixes_to_preheat)
 
     def do_eval(self, eval_datasets, decoding_ctc_weight, eval_metrics_list, condition_key):
         """Perform evaluation on given datasets."""
@@ -229,9 +229,8 @@ class ModelTrainer:
             train_dataset=train_dataset,
             processing_class=self.container.tokenizer,
             container=self.container,
-            optimizers=(get_optimizer(self.model, self.training_args, self.model_args.prefixes_to_preheat), None),
             callbacks=callbacks,
-            params_to_keep_frozen=self.model_args.params_to_keep_frozen_keywords,
+            params_to_keep_frozen=self.training_args.params_to_keep_frozen_keywords,
         )
 
         # Setup additional components

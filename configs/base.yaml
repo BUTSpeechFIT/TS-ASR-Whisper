@@ -15,7 +15,6 @@ model:
   apply_fddt_to_n_layers: -1  # Means all layers
   non_target_fddt_value: 0.5
   fddt_init: "suppressive"
-  prefixes_to_preheat: ['model.encoder.additional_layer', 'model.encoder.additional_self_attention_layer', 'model.encoder.lm_head', 'model.encoder.subsample_conv1', 'model.encoder.subsample_conv2', 'model.encoder.fddts', 'model.encoder.initial_fddt']
   pre_ctc_sub_sample: true
   additional_self_attention_layer: true
 
