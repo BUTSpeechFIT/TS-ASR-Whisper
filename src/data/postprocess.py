@@ -1,59 +1,56 @@
 from collections import defaultdict
+import string
+
 
 def truncate_at_repeating_ngram(text, ngram_length=10, min_n=1, max_n=None,
                                 min_word_threshold=30, unigram_min_repeat=10,
                                 repeat_threshold=10):
     """
-    Simplified: Checks ONLY the end of the text for repeating loops.
+    Truncates text if repeating loops are found at the end,
+    ignoring case and punctuation during comparison.
     """
     words = text.split()
 
-    # 1. Safety check: Don't process very short texts
     if len(words) < min_word_threshold:
         return text
 
-    # If max_n is not set, we assume the loops are short (e.g., up to 6 words)
-    # or use the provided ngram_length if it's smaller.
     if max_n is None:
         max_n = min(ngram_length, 6)
 
-        # 2. Iterate through possible loop sizes (e.g., 1-word loop, 2-word loop...)
-    # We check small loops first as they are most common.
+    # Helper to clean words for comparison: lowercase and strip punctuation
+    # We create a translation table once for efficiency
+    table = str.maketrans('', '', string.punctuation)
+
+    def clean(word_list):
+        return [w.lower().translate(table) for w in word_list]
+
     for n in range(min_n, max_n + 1):
+        pattern_raw = words[-n:]
+        if not pattern_raw: continue
 
-        # Get the "candidate pattern" from the very end of the text
-        pattern = words[-n:]
+        # Clean the pattern we are looking for
+        pattern_clean = clean(pattern_raw)
 
-        # If pattern is too short to be unique (optional safety), skip
-        if not pattern: continue
-
-        # Count how many times this specific pattern repeats backwards
         count = 0
         idx = len(words)
 
         while idx >= n:
-            # Check previous chunk
-            chunk = words[idx - n: idx]
+            chunk_raw = words[idx - n: idx]
 
-            # Compare (case-insensitive)
-            if [w.lower() for w in chunk] == [w.lower() for w in pattern]:
+            # Compare cleaned versions
+            if clean(chunk_raw) == pattern_clean:
                 count += 1
                 idx -= n
             else:
                 break
 
-        # 3. Check Thresholds
-        # Use unigram_min_repeat if loop size is 1, otherwise repeat_threshold
         limit = unigram_min_repeat if n == 1 else repeat_threshold
 
         if count >= limit:
-            # Found a loop at the end! Truncate.
-            # We keep the text up to the start of the repetitions
-            # (Or optionally keep 1 instance: words[:idx + n])
-            return " ".join(words[:idx])
+            # Truncate and return the original text up to the loop start
+            return " ".join(words[:idx]) + " _HALUCINATION_"
 
     return text
-
 
 
 def find_first_repeating_ngram(text, target_length=10, min_n=1, max_n=None, min_word_threshold=20, unigram_min_repeat=5,

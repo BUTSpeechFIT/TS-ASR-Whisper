@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_v13_from_dicow_no_preheat
+experiment: dixtral_v15_v3
 
 wandb:
   project: dixtral
@@ -9,14 +9,15 @@ model:
   dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
 
 training:
+  decode_only: false
   train_dixtral: True
-  per_device_train_batch_size: 4
-  per_device_eval_batch_size: 3
-  dataloader_num_workers: 2
-  dataloader_prefetch_factor: 2
-  dataloader_pin_memory: True
-  gradient_accumulation_steps: 4
-  gradient_checkpointing: False
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 1
+  dataloader_num_workers: 1
+  dataloader_prefetch_factor: 1
+  dataloader_pin_memory: False
+  gradient_accumulation_steps: 3
+  gradient_checkpointing: True
   overall_batch_size: null
   remove_timestamps_from_ctc: true
   metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_loss
@@ -28,16 +29,17 @@ training:
   save_strategy: "steps"
   eval_on_start: False
   load_best_model_at_end: True
-  learning_rate: 5e-7
-  weight_decay: 0.1
+  learning_rate: 4e-5
+  weight_decay: 0.0
   warmup_steps: 5000
-  logging_steps: 2
-  generation_max_length: 1024
+  logging_steps: 5
+  generation_max_length: 2000
   early_stopping_patience: -1
-  max_steps: 20000
+  max_steps: 25000
   train_metrics_list: ["cp_wer"]
   eval_metrics_list: ["cp_wer"]
   predict_with_generate: false
+  save_visualizations: false
   prefixes_to_preheat: ['additional_self_attention_layer', 'additional_layer', 'audio_tower.fddts', 'audio_tower.initial_fddt']
   params_to_keep_frozen_keywords:
       - language_model
