@@ -1,0 +1,31 @@
+# @package _global_
+experiment: sot_ami_slf
+model:
+  whisper_model: openai/whisper-large-v3-turbo
+  reinit_from: /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/sot_ami_slf/checkpoint-3000
+  ctc_weight: 0
+
+data:
+  use_timestamps: false
+  sot_strategy: "speaker_longest_first"
+  train_cutsets:
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
+  dev_cutsets:
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_dev_utt_group_max_30s.jsonl.gz
+  eval_cutsets:
+  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test_utt_group_kaldi_30m.jsonl.gz
+  dataset_weights:
+    - 1
+
+training:
+  decode_only: true
+  train_sot: true
+  use_fddt: false
+  remove_timestamps_from_ctc: true
+  generation_max_length: 440
+  per_device_eval_batch_size: 8
+  dataloader_num_workers: 2
+  dataloader_prefetch_factor: 2
+
+wandb:
+  project: "sot_dec"
