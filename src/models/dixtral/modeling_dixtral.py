@@ -504,8 +504,8 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
 
         # CTC head
         if self.ctc_weight > 0.0:
-            self.ctc_lm_head = nn.Linear(config.text_config.hidden_size, config.text_config.vocab_size + 1, bias=False)
-
+            self.ctc_lm_head = nn.Linear(config.text_config.hidden_size, config.text_config.vocab_size, bias=False)
+            self.ctc_lm_head.weight = self.language_model.get_input_embeddings().weight
     def get_input_embeddings(self):
         return self.language_model.get_input_embeddings()
 

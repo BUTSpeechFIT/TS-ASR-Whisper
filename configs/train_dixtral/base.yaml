@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_new_v3_soft_prompt_wo_prompts_no_aug_no_preheat
+experiment: dixtral_w_ctc
 
 wandb:
   project: dixtral
@@ -52,6 +52,7 @@ training:
       - audio_tower.conv1
       - audio_tower.conv2
       - audio_tower.embed_positions
+      - ctc_lm_head
 
 data:
   use_timestamps: false

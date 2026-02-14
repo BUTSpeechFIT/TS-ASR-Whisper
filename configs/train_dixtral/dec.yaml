@@ -1,64 +1,35 @@
 # @package _global_
-experiment: dixtral_new
+experiment: dixtral_new_v2
 
 wandb:
   project: dixtral_dec
 
 model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
-  reinit_from: ""
+  dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
+  reinit_from: "/mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/exp/dixtral_new_v3_soft_prompt_wo_prompts_no_aug_no_preheat/checkpoint-6000"
 
 training:
   decode_only: True
   train_dixtral: True
-  per_device_eval_batch_size: 1
+  per_device_eval_batch_size: 2
   dataloader_num_workers: 1
   dataloader_prefetch_factor: 1
   dataloader_pin_memory: False
   remove_timestamps_from_ctc: true
-  generation_max_length: 2000
+  generation_max_length: 1000
   train_metrics_list: ["cp_wer"]
   eval_metrics_list: ["cp_wer"]
   predict_with_generate: true
   save_visualizations: true
-  prefixes_to_preheat: ['additional_self_attention_layer', 'additional_layer', 'audio_tower.fddts', 'audio_tower.initial_fddt']
-  n_last_dec_layers_to_unfreeze: 2
-  params_to_keep_frozen_keywords:
-      - language_model
-      - multi_modal_projector
-      - audio_tower.conv1
-      - audio_tower.conv2
-      - audio_tower.embed_positions
 
 data:
   use_timestamps: false
   train_cutsets:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s.jsonl.gz
   dev_cutsets:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
   eval_cutsets:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   dataset_weights:
-    - 5
-    - 5
     - 1
-    - 1
-    - 1
-  train_text_norm: voxtral
-  eval_text_norm: voxtral
-
-aug:
-  do_augment: true
-  stno_gaussian_noise_var: 0.2
-  stno_gaussian_noise_prob: 0.75
-  stno_segment_augment_prob: 0.3
-  stno_segment_change_prob: 0.1
-  stno_min_segment_length: 5
-  stno_max_segment_length: 50
-  spec_aug_prob: 0.3
-  musan_root: ${oc.env:MUSAN_ROOT}
-  musan_augment_prob: 0.3

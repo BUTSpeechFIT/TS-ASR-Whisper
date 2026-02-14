@@ -53,10 +53,10 @@ class DixtralContainer:
 
             # Then override specific values
             config.audio_config.use_dicow_encoder = True
-            config.audio_config.ctc_weight = 0.0
-            config.audio_config.additional_layer = False
-            config.audio_config.additional_self_attention_layer = False
-            config.audio_config.pre_ctc_sub_sample = False
+            # config.audio_config.ctc_weight = 0.0
+            # config.audio_config.additional_layer = False
+            # config.audio_config.additional_self_attention_layer = False
+            # config.audio_config.pre_ctc_sub_sample = False
 
 
         self.model = DixtralForConditionalGeneration.from_pretrained(
@@ -76,21 +76,6 @@ class DixtralContainer:
             dixtral_encoder = self.model.audio_tower
             dicow_encoder = dicow.model.encoder
             logger.info(dixtral_encoder.load_state_dict(dicow_encoder.state_dict(), strict=False))
-
-        # Copy language model head weights to CTC head if CTC is enabled
-        if (config.audio_config.use_dicow_encoder and
-                config.audio_config.ctc_weight > 0.0):
-            embed_tokens = self.model.language_model.model.embed_tokens
-            ctc_lm_head = self.model.ctc_lm_head  # Fixed: it's in the main model, not audio_tower
-
-            with torch.no_grad():
-                # Copy all weights except the blank token (last row)
-                ctc_lm_head.weight.data[:-1] = embed_tokens.weight.data.to(
-                    device=ctc_lm_head.weight.device,
-                    dtype=ctc_lm_head.weight.dtype
-                )
-
-            logger.info("Copied LM embed_tokens weights to CTC LM head")
 
         self.processor = AutoProcessor.from_pretrained(model_id)
 
