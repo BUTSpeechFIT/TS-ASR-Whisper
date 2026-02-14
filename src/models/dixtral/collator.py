@@ -16,6 +16,8 @@ class DataCollator:
     model_id: str
     conv_subsample_factor: int = 2
     prep_for_generate: bool = True
+    num_soft_prompts: int = 8
+    soft_prompt_token_id: int = 23
 
     def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]], nested=False) -> Dict[str, torch.Tensor]:
         longform = [sample['is_long_form'] for sample in inputs]
@@ -47,10 +49,25 @@ class DataCollator:
 
         # 3) Concatenate: input_ids = [PROMPT] + [TEXT]
         input_ids, attention_mask, labels = [], [], []
+
+        soft_ids_list = [self.soft_prompt_token_id] * self.num_soft_prompts
+        soft_att_list = [1] * self.num_soft_prompts
+
         for i in range(B):
             p_ids = prompt_ids[i].tolist()
             p_att = prompt_attn[i].tolist()
             t_ids = text_ids_list[i]
+
+            pre_trigger_ids = p_ids[:-1]
+            pre_trigger_att = p_att[:-1]
+
+            # 2. The Trigger (<transcribe>)
+            trigger_id = p_ids[-1:]
+            trigger_att = p_att[-1:]
+
+            # 3. Combine: [AUDIO] + [Soft Prompts] + [<transcribe>]
+            p_ids = pre_trigger_ids + soft_ids_list + trigger_id
+            p_att = pre_trigger_att + soft_att_list + trigger_att
 
             if not in_longform or not self.prep_for_generate:
                 ids  = p_ids + t_ids + [tok.eos_token_id]

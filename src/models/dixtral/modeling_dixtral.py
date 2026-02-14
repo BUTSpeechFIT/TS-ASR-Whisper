@@ -471,6 +471,14 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
         self.language_model = AutoModelForCausalLM.from_config(config.text_config)
         self.multi_modal_projector = VoxtralMultiModalProjector(config)
 
+        self.num_soft_prompts = config.num_soft_prompts
+        if self.num_soft_prompts > 0:
+            self.soft_prompt_token_id = getattr(config, "soft_prompt_token_id", 23)
+
+            self.soft_prompt = nn.Parameter(
+                torch.randn(1, self.num_soft_prompts, config.text_config.hidden_size)
+            )
+
         self._init_dicow_components(config)
         # Initialize weights and apply final processing
         self.post_init()
@@ -687,6 +695,20 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
             # Replace text-audio token placeholders with audio embeddings
             audio_token_mask = input_ids == self.config.audio_token_id
             inputs_embeds[audio_token_mask] = audio_embeds_flat
+
+            if self.num_soft_prompts > 0:
+                prompt_mask = (input_ids == self.soft_prompt_token_id)
+
+                if prompt_mask.any():
+                    batch_size = inputs_embeds.shape[0]
+
+                    # Expand the learned soft prompts to [Batch_Size, Num_Soft_Tokens, Hidden_Size]
+                    # Then flatten to [Batch_Size * Num_Soft_Tokens, Hidden_Size] to match the mask
+                    prompts_expanded = self.soft_prompt.expand(batch_size, -1, -1).reshape(-1,
+                                                                                           self.config.text_config.hidden_size)
+
+                    # Replace embeddings
+                    inputs_embeds[prompt_mask] = prompts_expanded
 
             # Compute CTC loss on projected embeddings if configured
             if (self.config.audio_config.use_dicow_encoder and

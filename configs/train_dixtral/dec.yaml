@@ -1,51 +1,28 @@
 # @package _global_
-experiment: dixtral_new_v3_soft_prompt_wo_prompts_no_aug_no_preheat
+experiment: dixtral_new
 
 wandb:
-  project: dixtral
+  project: dixtral_dec
 
 model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
-  dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
-  num_soft_prompts: 0
+  reinit_from: ""
 
 training:
-  auto_find_batch_size: false
-  decode_only: false
+  decode_only: True
   train_dixtral: True
-  soft_prompt_custom_init: True
-  per_device_train_batch_size: 4
   per_device_eval_batch_size: 1
-  eval_accumulation_steps: 1
   dataloader_num_workers: 1
   dataloader_prefetch_factor: 1
   dataloader_pin_memory: False
-  gradient_accumulation_steps: 3
-  gradient_checkpointing: True
-  overall_batch_size: null
   remove_timestamps_from_ctc: true
-  metric_for_best_model: eval_notsofar1_sdm_dev_set_240825.1_dev1_cutset_loss
-  use_fddt_only_n_epochs: 0
-  use_fddt_only_n_steps: 0
-  save_steps: 500
-  eval_steps: 500
-  eval_strategy: "steps"
-  save_strategy: "steps"
-  eval_on_start: False
-  load_best_model_at_end: True
-  learning_rate: 1e-5
-  weight_decay: 0.0
-  warmup_steps: 5000
-  logging_steps: 5
-  generation_max_length: 1000
-  early_stopping_patience: 3
-  max_steps: 25000
+  generation_max_length: 2000
   train_metrics_list: ["cp_wer"]
   eval_metrics_list: ["cp_wer"]
-  predict_with_generate: false
-  save_visualizations: false
-  prefixes_to_preheat: ['additional_self_attention_layer', 'additional_layer', 'audio_tower.fddts', 'audio_tower.initial_fddt', 'soft_prompt']
-  n_last_dec_layers_to_unfreeze: 1
+  predict_with_generate: true
+  save_visualizations: true
+  prefixes_to_preheat: ['additional_self_attention_layer', 'additional_layer', 'audio_tower.fddts', 'audio_tower.initial_fddt']
+  n_last_dec_layers_to_unfreeze: 2
   params_to_keep_frozen_keywords:
       - language_model
       - multi_modal_projector
@@ -75,7 +52,7 @@ data:
   eval_text_norm: voxtral
 
 aug:
-  do_augment: false
+  do_augment: true
   stno_gaussian_noise_var: 0.2
   stno_gaussian_noise_prob: 0.75
   stno_segment_augment_prob: 0.3

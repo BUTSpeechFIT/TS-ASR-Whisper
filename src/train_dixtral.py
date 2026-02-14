@@ -41,7 +41,7 @@ class ModelTrainer:
         """Initialize the model container with appropriate configuration."""
         self.container = DixtralContainer(
             model_args=self.model_args,
-            remove_timestamps_from_ctc=self.training_args.remove_timestamps_from_ctc,
+            n_last_dec_layers_to_unfreeze=self.training_args.n_last_dec_layers_to_unfreeze,
             use_lora=self.training_args.use_lora,
             params_to_keep_frozen_keywords=self.training_args.params_to_keep_frozen_keywords,
         )
@@ -125,6 +125,11 @@ class ModelTrainer:
                     adapter_state_dict = _insert_adapter_name_into_state_dict(adapter_state_dict, "default", "lora_")
 
                     logger.info(self.model.load_state_dict(adapter_state_dict, strict=False))
+        if self.training_args.soft_prompt_custom_init:
+            if hasattr(self.model, "soft_prompt"):
+                with torch.no_grad():
+                    init_embedding = self.model.language_model.base_model.embed_tokens.weight[34] # transcribe token
+                    self.model.soft_prompt.data.copy_(init_embedding.unsqueeze(0).unsqueeze(0).expand(self.model.soft_prompt.shape).clone())
 
 
 
@@ -152,8 +157,10 @@ class ModelTrainer:
             processor=self.container.processor,
             max_length=self.training_args.generation_max_length,
             model_id=self.model_args.dixtral_base_model,
-            prep_for_generate=self.training_args.predict_with_generate
+            prep_for_generate=self.training_args.predict_with_generate,
+            num_soft_prompts=self.model_args.num_soft_prompts,
         )
+
     def _create_compute_metrics_fn(self, dev_datasets):
         """Create metrics computation function."""
 
@@ -182,7 +189,11 @@ class ModelTrainer:
         """Setup FDDT-only training if specified."""
         if (self.training_args.use_fddt_only_n_epochs > 0 or
                 self.training_args.use_fddt_only_n_steps > 0):
-            self.container.freeze_except(self.training_args.prefixes_to_preheat)
+            self.container.update_model_freezing(self.training_args.prefixes_to_preheat)
+        else:
+            self.container.update_model_freezing()
+        if torch.distributed.is_initialized():
+            torch.distributed.barrier()
 
     def do_eval(self, eval_datasets, decoding_ctc_weight, eval_metrics_list, condition_key):
         """Perform evaluation on given datasets."""
@@ -198,6 +209,7 @@ class ModelTrainer:
 
         # Perform evaluation
         self.trainer.args.predict_with_generate = True
+        self.collator.prep_for_generate = True
         if decoding_ctc_weight is not None:
             self.model.generation_config.ctc_weight = decoding_ctc_weight
 
@@ -225,12 +237,12 @@ class ModelTrainer:
         create_lower_uppercase_mapping(self.container.tokenizer)
         self._log_model_parameters()
         self._load_model_weights()
+        self._setup_fddt_training()
         update_generation_config(self.model, self.training_args, self.decoding_args, predict_timestamps=self.data_args.use_timestamps)
 
         # Create trainer
-        collator = self._create_data_collator()
+        self.collator = self._create_data_collator()
         callbacks = [EarlyStoppingCallback(self.training_args.early_stopping_patience)] if self.training_args.early_stopping_patience > 0 else []
-        # callbacks.append(SaveFullPeftModelCallback())
 
         self.model.is_parallelizable = True
         self.model.model_parallel = True
@@ -238,17 +250,15 @@ class ModelTrainer:
             model=self.model,
             args=self.training_args,
             eval_dataset=dev_datasets,
-            data_collator=collator,
+            data_collator=self.collator,
             train_dataset=train_dataset,
             processing_class=self.container.tokenizer,
             container=self.container,
             callbacks=callbacks,
-            params_to_keep_frozen=self.training_args.params_to_keep_frozen_keywords,
         )
 
         # Setup additional components
         self._setup_wandb()
-        self._setup_fddt_training()
 
         for p in self.model.parameters():
             p.data = p.data.to(torch.bfloat16)

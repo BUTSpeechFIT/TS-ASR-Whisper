@@ -50,6 +50,13 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
         default=False, metadata={"help": "Whether to use lora in decoder."}
     )
 
+    n_last_dec_layers_to_unfreeze: Optional[int] = field(
+        default=0, metadata={"help": "Number of last layers to unfreeze."}
+    )
+    soft_prompt_custom_init: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to init from existing embedding."}
+    )
+
 
 @dataclass
 class ModelArguments:
@@ -92,6 +99,10 @@ class ModelArguments:
     scb_layers: Optional[int] = field(default=None, metadata={
         "help": "Number of SCB layers."
     })
+    num_soft_prompts: Optional[int] = field(default=0, metadata={
+        "help": "Number of soft prompts inserted to the prompt."
+    })
+
 
 
 

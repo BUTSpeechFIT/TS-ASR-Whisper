@@ -6,7 +6,6 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from transformers import Seq2SeqTrainer, Trainer, TrainingArguments, TrainerCallback, TrainerState, TrainerControl
-from transformers.trainer_pt_utils import get_model_param_count
 from transformers.trainer_utils import EvalLoopOutput
 from transformers.utils import logging, is_sagemaker_mp_enabled
 
@@ -107,13 +106,12 @@ class CustomTrainerEncoder(Trainer):
 
 
 class CustomTrainer(Seq2SeqTrainer):
-    def __init__(self, container, model, params_to_keep_frozen, **kwargs):
+    def __init__(self, container, model, **kwargs):
         super().__init__(model=model, **kwargs)
         self.forward_w_cast = None
         self.forward_wo_cast = None
         self.container = container
         self.warmup_phase = True
-        self.params_to_keep_frozen = params_to_keep_frozen
         self.metric_key_prefix = ""
 
     def training_step(
@@ -123,22 +121,15 @@ class CustomTrainer(Seq2SeqTrainer):
         num_items_in_batch: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         if self.warmup_phase and self.state.epoch >= self.args.use_fddt_only_n_epochs and self.state.global_step >= self.args.use_fddt_only_n_steps:
-            for name, param in self.model.named_parameters():
-                if "lora_" in name:
-                    param.requires_grad = True
-                    continue
-                for keyword in self.params_to_keep_frozen:
-                    if keyword in name:
-                        param.requires_grad = False
-                        break
-                else:
-                    param.requires_grad = True
-            logger.info(f"***** Unfreezing params except {self.params_to_keep_frozen}*****")
-            logger.info(f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}")
+            logger.info(f"***** Ending Warmup: Unfreezing remaining params*****")
+            self.container.update_model_freezing()
+
             self.lr_scheduler = None
             self.create_optimizer_and_scheduler(num_training_steps=self.state.max_steps)
 
             self.warmup_phase = False
+            if torch.distributed.is_initialized():
+                torch.distributed.barrier()
         output = super().training_step(model, inputs, num_items_in_batch)
         return output
 
@@ -179,10 +170,36 @@ class CustomTrainer(Seq2SeqTrainer):
             ignore_keys: Optional[List[str]] = None,
             metric_key_prefix: str = "eval",
     ) -> EvalLoopOutput:
+        self._move_optimizer_to_device("cpu")
+        torch.cuda.empty_cache()
         self.metric_key_prefix = metric_key_prefix
         output = super().evaluation_loop(dataloader, description, prediction_loss_only, ignore_keys, metric_key_prefix)
+        self._move_optimizer_to_device(self.model.device)
         return output
 
+    def _move_optimizer_to_device(self, device):
+        """
+        Helper to move optimizer state to a target device.
+        """
+        if self.optimizer is None:
+            return
+
+        # Iterate through all parameters in the optimizer
+        for param_group in self.optimizer.param_groups:
+            for param in param_group['params']:
+                if param.is_cuda:  # Only touch CUDA params
+                    state = self.optimizer.state[param]
+                    for key, value in state.items():
+                        # Move tensors (like exp_avg, exp_avg_sq) to target device
+                        if torch.is_tensor(value):
+                            state[key] = value.to(device)
+
+        # Explicitly empty cache to reclaim the memory immediately
+        if str(device) == "cpu":
+            torch.cuda.empty_cache()
+            logger.info("Optimizer offloaded to CPU. CUDA Cache Cleared.")
+        else:
+            logger.info("Optimizer reloaded to GPU.")
 
     def prediction_step(
         self,

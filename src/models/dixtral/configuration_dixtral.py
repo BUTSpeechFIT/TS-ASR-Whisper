@@ -56,6 +56,7 @@ class DixtralConfig(VoxtralConfig):
     def __init__(
             self,
             audio_config: dict = None,
+            num_soft_prompts: int = 0,
             **kwargs
     ):
         # Convert audio_config to DiCoW version if provided
@@ -63,3 +64,4 @@ class DixtralConfig(VoxtralConfig):
             audio_config = DixtralEncoderConfig(**audio_config)
 
         super().__init__(audio_config=audio_config, **kwargs)
+        self.num_soft_prompts = num_soft_prompts

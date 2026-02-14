@@ -1,9 +1,15 @@
+import re
+
+import torch
 from peft import LoraConfig, get_peft_model
 from transformers import AutoProcessor
-import torch
+from transformers.utils import logging
+
 from src.models.dicow.modeling_dicow import DiCoWForConditionalGeneration, DiCoWConfig
 from src.models.dixtral.modeling_dixtral import DixtralForConditionalGeneration, DixtralConfig
 
+logging.set_verbosity_debug()
+logger = logging.get_logger("transformers")
 
 # Copy FDDT parameters
 def copy_fddt_weights(dixtral_model, dicow_model):
@@ -16,7 +22,7 @@ def copy_fddt_weights(dixtral_model, dicow_model):
         dixtral_encoder.initial_fddt.load_state_dict(
             dicow_encoder.initial_fddt.state_dict()
         )
-        print("✓ Copied initial_fddt")
+        logger.info("✓ Copied initial_fddt")
 
     # Copy FDDT layers
     if hasattr(dixtral_encoder, 'fddts') and hasattr(dicow_encoder, 'fddts'):
@@ -25,17 +31,18 @@ def copy_fddt_weights(dixtral_model, dicow_model):
             dixtral_encoder.fddts[i].load_state_dict(
                 dicow_encoder.fddts[i].state_dict()
             )
-        print(f"✓ Copied {num_fddts} FDDT layers")
+        logger.info(f"✓ Copied {num_fddts} FDDT layers")
 
-    print("\n✅ All DiCoW weights copied successfully!")
+    logger.info("\n✅ All DiCoW weights copied successfully!")
 
 class DixtralContainer:
-    def __init__(self, params_to_keep_frozen_keywords=None, remove_timestamps_from_ctc=False,
+    def __init__(self, params_to_keep_frozen_keywords=None, n_last_dec_layers_to_unfreeze=0,
                  model_args=None, use_lora=False):
         model_id = model_args.dixtral_base_model
 
         config = DixtralConfig.from_pretrained(
             model_id,
+            num_soft_prompts=model_args.num_soft_prompts,
         )
 
         if model_args.dixtral_load_fddt_from or model_args.dixtral_replace_encoder_from:
@@ -68,7 +75,7 @@ class DixtralContainer:
             dicow = DiCoWForConditionalGeneration.from_pretrained(model_args.dixtral_replace_encoder_from)
             dixtral_encoder = self.model.audio_tower
             dicow_encoder = dicow.model.encoder
-            print(dixtral_encoder.load_state_dict(dicow_encoder.state_dict(), strict=False))
+            logger.info(dixtral_encoder.load_state_dict(dicow_encoder.state_dict(), strict=False))
 
         # Copy language model head weights to CTC head if CTC is enabled
         if (config.audio_config.use_dicow_encoder and
@@ -83,7 +90,7 @@ class DixtralContainer:
                     dtype=ctc_lm_head.weight.dtype
                 )
 
-            print("Copied LM embed_tokens weights to CTC LM head")
+            logger.info("Copied LM embed_tokens weights to CTC LM head")
 
         self.processor = AutoProcessor.from_pretrained(model_id)
 
@@ -105,21 +112,93 @@ class DixtralContainer:
 
             self.model = get_peft_model(self.model, lora_config)
 
-        if params_to_keep_frozen_keywords is not None:
-            for name, param in self.model.named_parameters():
-                if "lora_" in name:
-                    param.requires_grad = True
-                    continue
-                for keyword in params_to_keep_frozen_keywords:
-                    if keyword in name:
-                        param.requires_grad = False
-                        break
-                else:
-                    param.requires_grad = True
+        # 1. SAVE THE KEYWORDS to self
+        self.params_to_keep_frozen = params_to_keep_frozen_keywords
 
-    def freeze_except(self, prefixes_to_preheat):
+        self.n_last_dec_layers_to_unfreeze = n_last_dec_layers_to_unfreeze
+        self.prefixes_to_keep_training = []  # Stores the preheat prefixes persistently
+
+    def update_model_freezing(self, prefixes_to_preheat=None):
+        """
+        Master freezing controller.
+
+        Args:
+            prefixes_to_preheat (list): If provided, enters PHASE 1 (Preheat).
+                                        These prefixes are saved and will KEEP training in Phase 2.
+                                        If None, enters PHASE 2 (Finetune).
+        """
+
+        # --- 1. STATE MANAGEMENT ---
+        # If prefixes are provided, we are entering/in Phase 1. Save them.
+        if prefixes_to_preheat is not None:
+            self.prefixes_to_keep_training = prefixes_to_preheat
+            is_phase_1_strict = True
+        else:
+            # If None passed, we are in Phase 2, but we keep using the saved prefixes
+            is_phase_1_strict = False
+
+        # --- 2. SETUP CALCULATIONS ---
+        n_layers = self.n_last_dec_layers_to_unfreeze or 0
+
+        # Calculate LLM Cutoff
+        cutoff_layer = 9999
+        if hasattr(self.model, "language_model"):
+            llm_config = self.model.language_model.config
+            total_layers = getattr(llm_config, "num_hidden_layers", getattr(llm_config, "n_layer", 32))
+            cutoff_layer = total_layers - n_layers
+
+        logger.info(f"Freezing Update | Phase: {'1 (Preheat)' if is_phase_1_strict else '2 (Finetune)'}")
+
+        # --- 3. PARAMETER LOOP ---
+        trainable_count = 0
+
         for name, param in self.model.named_parameters():
-            param.requires_grad = False
-            for prefix in prefixes_to_preheat:
-                if name.startswith(prefix):
-                    param.requires_grad = True
+
+            # A. GLOBAL BLACKLIST (Highest Priority)
+            # If it's in the blacklist, it NEVER trains.
+            # This fixes the 'audio_tower.conv1' issue.
+            is_blacklisted = (self.params_to_keep_frozen is not None and
+                              any(k in name for k in self.params_to_keep_frozen))
+
+            # B. LORA (Always Trains)
+            if "lora_" in name:
+                param.requires_grad = True
+                trainable_count += param.numel()
+                continue
+
+            # C. PREHEAT WHITELIST (Persistent)
+            # If this module was preheated, it MUST stay training in Phase 2.
+            is_preheat_module = any(name.startswith(p) for p in self.prefixes_to_keep_training)
+
+            if is_preheat_module:
+                param.requires_grad = True
+                trainable_count += param.numel()
+                continue
+
+            # --- D. PHASE-SPECIFIC LOGIC ---
+
+            if is_phase_1_strict:
+                # PHASE 1: If we reached here, it wasn't LoRA and wasn't in the whitelist.
+                # So it must be FROZEN.
+                param.requires_grad = False
+
+            else:
+                # PHASE 2: Standard Finetuning Logic
+                if "language_model" in name:
+                    # Check Layer Index
+                    layer_match = re.search(r"layers\.(\d+)\.", name)
+                    if layer_match and (int(layer_match.group(1)) >= cutoff_layer):
+                        should_train = True
+                    else:
+                        should_train = not is_blacklisted
+
+                    param.requires_grad = should_train
+                else:
+                    # Default for other components (that weren't preheated or blacklisted)
+                    # e.g., unused adapters or new heads. Default to TRAIN.
+                    param.requires_grad = not is_blacklisted
+
+            if param.requires_grad:
+                trainable_count += param.numel()
+
+        logger.info(f"Freezing update complete. Total Trainable Params: {trainable_count:,}")
