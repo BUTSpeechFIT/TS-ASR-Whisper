@@ -220,12 +220,16 @@ class CustomTrainer(Seq2SeqTrainer):
         labels = inputs.pop("idxs")
         gen_config = self.model.generation_config
 
-        if self.args.bf16_full_eval:
-            with torch.autocast("cuda", dtype=torch.bfloat16):
-                loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys, **gen_kwargs)
+        if self.args.ctc_only_decoding:
+            with torch.autocast("cuda", dtype=torch.bfloat16) if self.args.bf16_full_eval else None:
+                loss, generated_tokens = self.model.decode_ctc(input_ids=inputs['input_ids'], stno_mask=inputs["stno_mask"], input_features=inputs["input_features"])
         else:
-            loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys,
-                                                                **gen_kwargs)
+            if self.args.bf16_full_eval:
+                with torch.autocast("cuda", dtype=torch.bfloat16):
+                    loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys, **gen_kwargs)
+            else:
+                loss, generated_tokens, _ = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys,
+                                                                    **gen_kwargs)
 
         if labels is not None:
             if labels.shape[-1] < gen_config.max_length:

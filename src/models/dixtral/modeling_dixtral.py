@@ -14,7 +14,7 @@
 # limitations under the License.
 import copy
 import math
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, Any, Dict
 
 import wandb
 import torch
@@ -31,10 +31,10 @@ from transformers.utils.generic import check_model_inputs
 from transformers.models.auto import AutoModel, AutoModelForCausalLM
 from .configuration_dixtral import DixtralConfig, DixtralEncoderConfig
 from transformers.models.voxtral import  VoxtralConfig
-from transformers.models.llama.modeling_llama import  LlamaDecoderLayer
-
+from transformers.generation.utils import  GenerationConfig, LogitsProcessorList
 from src.models.dicow.FDDT import FDDT
 from src.models.dicow.layers import CustomLinear, CustomDiagonalLinear
+from src.models.dixtral.decoding import CTCRescorerLogitsProcessorWithPruning
 
 
 logger = logging.get_logger(__name__)
@@ -69,6 +69,15 @@ def eager_attention_forward(
 
     return attn_output, attn_weights
 
+
+class CTCProcessorDummy:
+    def __init__(self):
+        super().__init__()
+        self.func = None
+    def set_func(self,func):
+        self.func = func
+    def __call__(self, input_ids_orig: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        return self.func(input_ids_orig, scores)
 
 class VoxtralAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
@@ -715,7 +724,7 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
                     self.config.audio_config.ctc_weight > 0.0 and
                     labels is not None and
                     self.training and
-                    audio_token_mask is not None):
+                    audio_token_mask is not None) or hasattr(self, "ctc_rescorer"):
 
                 # Create tensor with shape of input_ids filled with zeros
                 batch_size, seq_len = input_ids.shape
@@ -736,17 +745,35 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
                 ctc_embeds = ctc_embeds[:, first_audio_token:first_audio_token+max_valid_len, :]
 
                 # Get encoder logits for CTC
-                enc_lm_logits = self.get_enc_logits(ctc_embeds)
+                enc_logits = self.get_enc_logits(ctc_embeds)
 
-                # Prepare encoder labels
-                enc_labels = labels.clone()
+                if hasattr(self, "ctc_rescorer"):
+                    rescorer =CTCRescorerLogitsProcessorWithPruning(
+                        enc_logits,
+                        torch.full((enc_logits.shape[0],), fill_value=enc_logits.shape[1],
+                                   device=enc_logits.device),
+                        enc_logits.shape[-1] - 1,
+                        self.generation_config.pad_token_id,
+                        self.generation_config.eos_token_id,
+                        self.generation_config.bos_token_id,
+                        self.tokenizer,
+                        0,
+                        self.generation_config.ctc_weight,
+                        self.generation_config.num_beams,
+                        False,
+                    )
+                    self.ctc_rescorer.set_func(func=rescorer)
 
-                # Replace EOS tokens with ignore index
-                enc_labels[enc_labels == self.config.text_config.eos_token_id] = -100
-                enc_labels = self.right_pad_labels(enc_labels)
+                if labels is not None:
+                    # Prepare encoder labels
+                    enc_labels = labels.clone()
 
-                # Compute CTC loss
-                ctc_loss = self.get_ctc_loss(enc_lm_logits, enc_labels, enc_output_lens)
+                    # Replace EOS tokens with ignore index
+                    enc_labels[enc_labels == self.config.text_config.eos_token_id] = -100
+                    enc_labels = self.right_pad_labels(enc_labels)
+
+                    # Compute CTC loss
+                    ctc_loss = self.get_ctc_loss(enc_logits, enc_labels, enc_output_lens)
 
         outputs: BaseModelOutputWithPast = self.language_model(
             attention_mask=attention_mask,
@@ -785,5 +812,105 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
 
         return model_inputs
 
+
+    def _get_logits_processor(
+        self,
+        generation_config: GenerationConfig,
+        input_ids_seq_length: Optional[int] = None,
+        encoder_input_ids: torch.LongTensor = None,
+        prefix_allowed_tokens_fn: Optional[Callable[[int, torch.Tensor], list[int]]] = None,
+        logits_processor: Optional[LogitsProcessorList] = None,
+        device: Optional[str] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
+        negative_prompt_ids: Optional[torch.Tensor] = None,
+        negative_prompt_attention_mask: Optional[torch.Tensor] = None,
+    ) -> LogitsProcessorList:
+        # pylint: disable=no-member
+        gen_config_copy = copy.deepcopy(generation_config)
+        processors = super()._get_logits_processor(
+            gen_config_copy,
+            input_ids_seq_length,
+            encoder_input_ids,
+            prefix_allowed_tokens_fn,
+            logits_processor,
+            device,
+            model_kwargs,
+            negative_prompt_ids,
+            negative_prompt_attention_mask,
+        )
+        if hasattr(generation_config, "ctc_weight") and generation_config.ctc_weight > 0:
+            self.ctc_rescorer = CTCProcessorDummy
+            processors.append(self.ctc_rescorer)
+        return processors
+
+    @torch.no_grad()
+    def decode_ctc(
+            self,
+            input_ids: torch.LongTensor,
+            input_features: torch.FloatTensor,
+            stno_mask: Optional[torch.Tensor] = None,
+    ) -> tuple[None, torch.LongTensor]:
+        """
+        Performs greedy CTC decoding on the audio input.
+        """
+
+        audio_outputs = self.audio_tower(input_features, stno_mask=stno_mask)
+        audio_hidden_states = audio_outputs.last_hidden_state
+
+        # Project audio features for language model
+        audio_hidden_states_flat = audio_hidden_states.reshape(-1, self.config.audio_config.intermediate_size)
+        audio_embeds_flat = self.multi_modal_projector(audio_hidden_states_flat)
+
+        # Replace text-audio token placeholders with audio embeddings
+        audio_token_mask = input_ids == self.config.audio_token_id
+
+        # Create tensor with shape of input_ids filled with zeros
+        batch_size, seq_len = input_ids.shape
+        hidden_dim = audio_embeds_flat.shape[-1]
+        ctc_embeds = torch.empty(
+            batch_size, seq_len, hidden_dim,
+            device=audio_embeds_flat.device,
+            dtype=audio_embeds_flat.dtype
+        )
+
+        # Fill with audio_embeds at audio_token positions
+        ctc_embeds[audio_token_mask] = audio_embeds_flat
+
+        # Remove values outside maximum valid range using audio_mask
+        enc_output_lens = audio_token_mask.sum(dim=1)
+        max_valid_len = enc_output_lens.max().item()
+        first_audio_token = audio_token_mask.int().argmax(dim=1).min().item()  # First True position per batch
+        ctc_embeds = ctc_embeds[:, first_audio_token:first_audio_token + max_valid_len, :]
+
+        # Get encoder logits for CTC
+        logits = self.get_enc_logits(ctc_embeds)
+
+        # 4. Greedy Decoding
+        predicted_ids = torch.argmax(logits, dim=-1)
+
+        # Blank token is the last index in the vocabulary (vocab_size - 1)
+        # Based on: blank=logits.shape[-1] - 1 in get_ctc_loss
+        blank_id = self.config.text_config.vocab_size - 1
+
+        sequences = []
+
+        for batch_idx in range(batch_size):
+            ids = predicted_ids[batch_idx].cpu().tolist()
+
+            # CTC Collapse:
+            # 1. Merge adjacent duplicates
+            # 2. Remove blank tokens
+            collapsed_ids = []
+            prev_id = -1
+
+            for token_id in ids:
+                if token_id != prev_id:
+                    if token_id != blank_id:
+                        collapsed_ids.append(token_id)
+                    prev_id = token_id
+
+            sequences.append(torch.tensor(collapsed_ids, dtype=torch.long))
+
+        return None, torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True, padding_value=-100).to(input_ids.device)
 
 __all__ = ["DixtralPreTrainedModel", "DixtralEncoder", "DixtralForConditionalGeneration"]

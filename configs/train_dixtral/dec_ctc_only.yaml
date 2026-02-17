@@ -7,14 +7,14 @@ wandb:
 model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
   dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
-  reinit_from: "/mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_no_aug_w_ctc_v3/checkpoint-24000"
+  reinit_from: "/mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_no_aug_w_ctc_v3/checkpoint-23500"
   num_soft_prompts: 0
-  ctc_weight: 0
+  ctc_weight: 0.3
 
 training:
   decode_only: True
   train_dixtral: True
-  per_device_eval_batch_size: 1
+  per_device_eval_batch_size: 4
   dataloader_num_workers: 1
   dataloader_prefetch_factor: 1
   dataloader_pin_memory: False
@@ -24,6 +24,7 @@ training:
   eval_metrics_list: ["cp_wer"]
   predict_with_generate: true
   save_visualizations: true
+  ctc_only_decoding: True
 
 data:
   use_timestamps: false
@@ -35,6 +36,3 @@ data:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   dataset_weights:
     - 1
-
-decoding:
-  decoding_ctc_weight: 0.2

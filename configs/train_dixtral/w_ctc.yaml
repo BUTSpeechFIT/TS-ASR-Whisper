@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_no_aug_lm_frozen_v3
+experiment: dixtral_no_aug_w_ctc_v3_slightly_higher_lr_w_proj
 
 wandb:
   project: dixtral
@@ -8,7 +8,7 @@ model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
   dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
   num_soft_prompts: 0
-  ctc_weight: 0.0
+  ctc_weight: 0.3
 
 training:
   auto_find_batch_size: false
@@ -21,7 +21,7 @@ training:
   dataloader_num_workers: 1
   dataloader_prefetch_factor: 1
   dataloader_pin_memory: False
-  gradient_accumulation_steps: 3
+  gradient_accumulation_steps: 1
   gradient_checkpointing: True
   overall_batch_size: null
   remove_timestamps_from_ctc: true
@@ -34,12 +34,12 @@ training:
   save_strategy: "steps"
   eval_on_start: False
   load_best_model_at_end: True
-  learning_rate: 1e-5
+  learning_rate: 6e-6
   weight_decay: 0.0
   warmup_steps: 5000
   logging_steps: 5
   generation_max_length: 1000
-  early_stopping_patience: 10
+  early_stopping_patience: 5
   max_steps: 25000
   train_metrics_list: ["cp_wer"]
   eval_metrics_list: ["cp_wer"]
@@ -49,7 +49,7 @@ training:
   n_last_dec_layers_to_unfreeze: 0
   params_to_keep_frozen_keywords:
       - language_model
-      - multi_modal_projector
+      #- multi_modal_projector
       - audio_tower.conv1
       - audio_tower.conv2
       - audio_tower.embed_positions
@@ -60,6 +60,7 @@ data:
   train_cutsets:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_train-clean-360_noisy_30s.jsonl.gz
   dev_cutsets:
@@ -69,6 +70,7 @@ data:
   dataset_weights:
     - 5
     - 5
+    - 1
     - 1
     - 1
   train_text_norm: "whisper_nsf"

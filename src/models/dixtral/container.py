@@ -52,11 +52,18 @@ class DixtralContainer:
                     setattr(config.audio_config, key, value)
 
             # Then override specific values
-            config.audio_config.use_dicow_encoder = True
-            # config.audio_config.ctc_weight = 0.0
-            # config.audio_config.additional_layer = False
-            # config.audio_config.additional_self_attention_layer = False
-            # config.audio_config.pre_ctc_sub_sample = False
+            if model_args.ctc_weight == 0:
+                config.audio_config.use_dicow_encoder = True
+                config.audio_config.ctc_weight = 0.0
+                config.audio_config.additional_layer = False
+                config.audio_config.additional_self_attention_layer = False
+                config.audio_config.pre_ctc_sub_sample = False
+            else:
+                config.audio_config.use_dicow_encoder = True
+                config.audio_config.ctc_weight = model_args.ctc_weight
+                config.audio_config.additional_layer = True
+                config.audio_config.additional_self_attention_layer = False
+                config.audio_config.pre_ctc_sub_sample = False
 
 
         self.model = DixtralForConditionalGeneration.from_pretrained(

@@ -56,6 +56,9 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
     soft_prompt_custom_init: Optional[bool] = field(
         default=False, metadata={"help": "Whether to init from existing embedding."}
     )
+    ctc_only_decoding: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to decode only from CTC branch."}
+    )
 
 
 @dataclass

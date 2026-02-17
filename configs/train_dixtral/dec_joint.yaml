@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_new_ctc_dec
+experiment: dixtral_new_joint_dec
 
 wandb:
   project: dixtral_dec
@@ -9,7 +9,7 @@ model:
   dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
   reinit_from: "/mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_no_aug_w_ctc_v3/checkpoint-24000"
   num_soft_prompts: 0
-  ctc_weight: 0
+  ctc_weight: 0.1
 
 training:
   decode_only: True
