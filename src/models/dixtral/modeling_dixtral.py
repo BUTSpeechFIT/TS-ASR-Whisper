@@ -748,7 +748,7 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
                 enc_logits = self.get_enc_logits(ctc_embeds)
 
                 if hasattr(self, "ctc_rescorer"):
-                    rescorer =CTCRescorerLogitsProcessorWithPruning(
+                    rescorer = CTCRescorerLogitsProcessorWithPruning(
                         enc_logits,
                         torch.full((enc_logits.shape[0],), fill_value=enc_logits.shape[1],
                                    device=enc_logits.device),

@@ -2,6 +2,7 @@ from lhotse.cut import Cut
 from transformers.utils import logging
 import torch
 from data.local_datasets import TS_ASR_Dataset, LhotseLongFormDataset, get_cut_recording_id
+import re
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
@@ -32,7 +33,7 @@ class LhotseLongFormDataset_(LhotseLongFormDataset, TS_ASR_Dataset_):
                                                            merged_supervisions) - 1) and last_segment_unfinished)
                  for idx, segment in
                  enumerate(merged_supervisions)])
-            outputs["transcript"] = transcription
+            outputs["transcript"] = re.sub(r'\s+', ' ', transcription).strip()
 
         if self.provide_gt_lang and not is_nested:
             if hasattr(cut, "lang"):

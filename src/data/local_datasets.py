@@ -411,6 +411,7 @@ class TS_ASR_DatasetSuperclass:
         outputs = {"input_features": features, "stno_mask": torch.tensor(stno_mask), "attention_mask": att_mask,
                    "transcript": transcription, "is_long_form": False}
 
+        outputs["transcript"] = re.sub(r'\s+', ' ', transcription).strip()
         if self.use_enrollments and not is_nested:
             other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=True)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)

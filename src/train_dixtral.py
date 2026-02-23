@@ -35,7 +35,8 @@ class ModelTrainer:
         self.container = None
         self.model = None
         self.trainer = None
-        self.text_norm = None
+        self.dev_text_norm = None
+        self.eval_text_norm = None
 
     def _initialize_container(self):
         """Initialize the model container with appropriate configuration."""
@@ -82,14 +83,14 @@ class ModelTrainer:
         """Create development and evaluation datasets."""
         dev_datasets = build_datasets(
             self.data_args.dev_cutsets, self.data_args,
-            self.text_norm, self.container, self.data_args.dev_diar_cutsets,
+            self.dev_text_norm, self.container, self.data_args.dev_diar_cutsets,
             enrollment_cutset=enrollment_cutset, dataset_class=LhotseLongFormDataset,
             use_ids_as_transcripts=False
         )
 
         eval_datasets = build_datasets(
             self.data_args.eval_cutsets, self.data_args,
-            self.text_norm, self.container, self.data_args.eval_diar_cutsets,
+            self.eval_text_norm, self.container, self.data_args.eval_diar_cutsets,
             enrollment_cutset=enrollment_cutset, dataset_class=LhotseLongFormDataset,
             use_ids_as_transcripts=False
         )
@@ -169,7 +170,7 @@ class ModelTrainer:
             output_dir = f'{self.trainer.args.output_dir}/{split}/{step}'
             os.makedirs(output_dir, exist_ok=True)
             return compute_longform_metrics(
-                pred, self.trainer, output_dir, self.text_norm,
+                pred, self.trainer, output_dir, self.eval_text_norm,
                 self.training_args.train_metrics_list if metrics_list is None else metrics_list,
                 dset,
                 save_visualizations=self.training_args.save_visualizations,
@@ -222,7 +223,8 @@ class ModelTrainer:
 
         # Initialize components
         self._initialize_container()
-        self.text_norm = get_text_norm(self.data_args.eval_text_norm)
+        self.dev_text_norm = get_text_norm(self.data_args.dev_text_norm)
+        self.eval_text_norm = get_text_norm(self.data_args.eval_text_norm)
 
         # Load data
         train_cutsets = self._load_training_cutsets()
@@ -230,11 +232,8 @@ class ModelTrainer:
         train_dataset = self._create_train_dataset(train_cutsets, enrollment_cutset)
         dev_datasets, eval_datasets = self._create_eval_datasets(enrollment_cutset)
 
-        first_test = list(eval_datasets.keys())[0]
-
         # Setup model
         self.model = self.container.model
-        create_lower_uppercase_mapping(self.container.tokenizer)
         self._log_model_parameters()
         self._load_model_weights()
         self._setup_fddt_training()

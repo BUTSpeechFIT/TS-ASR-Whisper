@@ -145,6 +145,8 @@ class DataArguments:
 
     train_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for training."})
+    dev_text_norm: Optional[str] = field(default=None, metadata={
+        "help": "Normalisation to use for dev."})
     eval_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for evaluation."})
 
