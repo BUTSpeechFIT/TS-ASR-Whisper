@@ -1,0 +1,14 @@
+{
+  "voxtral_results": "voxtral_output/ami-sdm_cutset_test_voxtral_results.json",
+  "reference_cutset": "/mnt/scratch/tmp/ipoloka/mt_asr_data/manifests/ami/ami-sdm_cutset_test.jsonl.gz",
+  "text_norm": true,
+  "overall_cpWER": 0.4228094575799722,
+  "errors": 38000,
+  "length": 89875,
+  "insertions": 7651,
+  "deletions": 24419,
+  "substitutions": 5930,
+  "missed_speaker": 0,
+  "falarm_speaker": 170,
+  "num_recordings": 16
+}

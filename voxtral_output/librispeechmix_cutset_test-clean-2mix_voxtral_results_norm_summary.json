@@ -1,0 +1,14 @@
+{
+  "voxtral_results": "voxtral_output/librispeechmix_cutset_test-clean-2mix_voxtral_results.json",
+  "reference_cutset": "/mnt/scratch/tmp/ipoloka/mt_asr_data/manifests/librispeechmix/librispeechmix_cutset_test-clean-2mix.jsonl.gz",
+  "text_norm": true,
+  "overall_cpWER": 0.2819583552978387,
+  "errors": 29953,
+  "length": 106232,
+  "insertions": 6137,
+  "deletions": 20270,
+  "substitutions": 3546,
+  "missed_speaker": 1083,
+  "falarm_speaker": 0,
+  "num_recordings": 2620
+}

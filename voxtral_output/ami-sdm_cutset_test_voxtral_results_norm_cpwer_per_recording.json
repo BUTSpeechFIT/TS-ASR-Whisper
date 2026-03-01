@@ -1,0 +1,1142 @@
+{
+  "sdm_ES2004c-6": {
+    "cpWER": 0.3417029036330481,
+    "errors": 2436,
+    "length": 7129,
+    "insertions": 475,
+    "deletions": 1629,
+    "substitutions": 332,
+    "missed_speaker": 0,
+    "falarm_speaker": 6,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FEE013",
+        0
+      ],
+      [
+        "FEE016",
+        2
+      ],
+      [
+        "MEO015",
+        5
+      ],
+      [
+        "MEE014",
+        4
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  },
+  "sdm_IS1009d-11": {
+    "cpWER": 0.3891560996939222,
+    "errors": 1780,
+    "length": 4574,
+    "insertions": 452,
+    "deletions": 1170,
+    "substitutions": 158,
+    "missed_speaker": 0,
+    "falarm_speaker": 16,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FIE088",
+        1
+      ],
+      [
+        "FIO087",
+        6
+      ],
+      [
+        "FIO084",
+        3
+      ],
+      [
+        "FIO089",
+        8
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        18
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        15
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        17
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        19
+      ],
+      [
+        null,
+        9
+      ]
+    ]
+  },
+  "sdm_TS3003a-12": {
+    "cpWER": 0.3928006329113924,
+    "errors": 993,
+    "length": 2528,
+    "insertions": 110,
+    "deletions": 634,
+    "substitutions": 249,
+    "missed_speaker": 0,
+    "falarm_speaker": 7,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "MTD009PM",
+        1
+      ],
+      [
+        "MTD011UID",
+        0
+      ],
+      [
+        "MTD012ME",
+        9
+      ],
+      [
+        "MTD0010ID",
+        10
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_EN2002c-2": {
+    "cpWER": 0.39119030390738063,
+    "errors": 4325,
+    "length": 11056,
+    "insertions": 581,
+    "deletions": 2979,
+    "substitutions": 765,
+    "missed_speaker": 0,
+    "falarm_speaker": 15,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "MEE071",
+        4
+      ],
+      [
+        "MEE073",
+        2
+      ],
+      [
+        "FEO072",
+        3
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        15
+      ],
+      [
+        null,
+        17
+      ]
+    ]
+  },
+  "sdm_ES2004b-5": {
+    "cpWER": 0.2534717146615992,
+    "errors": 1734,
+    "length": 6841,
+    "insertions": 296,
+    "deletions": 1127,
+    "substitutions": 311,
+    "missed_speaker": 0,
+    "falarm_speaker": 7,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FEE013",
+        2
+      ],
+      [
+        "FEE016",
+        5
+      ],
+      [
+        "MEO015",
+        6
+      ],
+      [
+        "MEE014",
+        4
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_ES2004d-7": {
+    "cpWER": 0.692899780081684,
+    "errors": 4411,
+    "length": 6366,
+    "insertions": 1071,
+    "deletions": 2373,
+    "substitutions": 967,
+    "missed_speaker": 0,
+    "falarm_speaker": 16,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FEE013",
+        0
+      ],
+      [
+        "MEO015",
+        6
+      ],
+      [
+        "FEE016",
+        7
+      ],
+      [
+        "MEE014",
+        1
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        19
+      ],
+      [
+        null,
+        17
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        15
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        18
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_TS3003d-15": {
+    "cpWER": 0.5226884374406683,
+    "errors": 2753,
+    "length": 5267,
+    "insertions": 687,
+    "deletions": 1681,
+    "substitutions": 385,
+    "missed_speaker": 0,
+    "falarm_speaker": 16,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "MTD009PM",
+        1
+      ],
+      [
+        "MTD012ME",
+        4
+      ],
+      [
+        "MTD0010ID",
+        3
+      ],
+      [
+        "MTD011UID",
+        5
+      ],
+      [
+        null,
+        18
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        19
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        17
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        15
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        10
+      ]
+    ]
+  },
+  "sdm_EN2002b-1": {
+    "cpWER": 0.47096464565669494,
+    "errors": 2944,
+    "length": 6251,
+    "insertions": 514,
+    "deletions": 1976,
+    "substitutions": 454,
+    "missed_speaker": 0,
+    "falarm_speaker": 11,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FEO072",
+        4
+      ],
+      [
+        "MEE073",
+        2
+      ],
+      [
+        "MEE071",
+        7
+      ],
+      [
+        "FEO070",
+        6
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_IS1009a-8": {
+    "cpWER": 0.35372069317023447,
+    "errors": 694,
+    "length": 1962,
+    "insertions": 150,
+    "deletions": 464,
+    "substitutions": 80,
+    "missed_speaker": 0,
+    "falarm_speaker": 8,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FIE088",
+        1
+      ],
+      [
+        "FIO089",
+        2
+      ],
+      [
+        "FIO084",
+        4
+      ],
+      [
+        "FIO087",
+        3
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        10
+      ]
+    ]
+  },
+  "sdm_TS3003c-14": {
+    "cpWER": 0.4156025075458556,
+    "errors": 1790,
+    "length": 4307,
+    "insertions": 519,
+    "deletions": 1024,
+    "substitutions": 247,
+    "missed_speaker": 0,
+    "falarm_speaker": 11,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "MTD009PM",
+        0
+      ],
+      [
+        "MTD012ME",
+        1
+      ],
+      [
+        "MTD011UID",
+        3
+      ],
+      [
+        "MTD0010ID",
+        4
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_TS3003b-13": {
+    "cpWER": 0.2764054514480409,
+    "errors": 1298,
+    "length": 4696,
+    "insertions": 284,
+    "deletions": 790,
+    "substitutions": 224,
+    "missed_speaker": 0,
+    "falarm_speaker": 6,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "MTD009PM",
+        0
+      ],
+      [
+        "MTD012ME",
+        1
+      ],
+      [
+        "MTD011UID",
+        2
+      ],
+      [
+        "MTD0010ID",
+        5
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_ES2004a-4": {
+    "cpWER": 0.5731254639940608,
+    "errors": 1544,
+    "length": 2694,
+    "insertions": 433,
+    "deletions": 973,
+    "substitutions": 138,
+    "missed_speaker": 0,
+    "falarm_speaker": 11,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "MEO015",
+        4
+      ],
+      [
+        "FEE013",
+        3
+      ],
+      [
+        "FEE016",
+        11
+      ],
+      [
+        "MEE014",
+        7
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        14
+      ]
+    ]
+  },
+  "sdm_IS1009b-9": {
+    "cpWER": 0.26651100733822547,
+    "errors": 1598,
+    "length": 5996,
+    "insertions": 256,
+    "deletions": 1132,
+    "substitutions": 210,
+    "missed_speaker": 0,
+    "falarm_speaker": 10,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FIE088",
+        0
+      ],
+      [
+        "FIO084",
+        3
+      ],
+      [
+        "FIO089",
+        2
+      ],
+      [
+        "FIO087",
+        8
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_EN2002a-0": {
+    "cpWER": 0.512207527975585,
+    "errors": 4028,
+    "length": 7864,
+    "insertions": 604,
+    "deletions": 2597,
+    "substitutions": 827,
+    "missed_speaker": 0,
+    "falarm_speaker": 8,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "MEE071",
+        2
+      ],
+      [
+        "MEE073",
+        3
+      ],
+      [
+        "FEO072",
+        1
+      ],
+      [
+        "FEO070",
+        4
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  },
+  "sdm_EN2002d-3": {
+    "cpWER": 0.54634206623826,
+    "errors": 4421,
+    "length": 8092,
+    "insertions": 935,
+    "deletions": 3023,
+    "substitutions": 463,
+    "missed_speaker": 0,
+    "falarm_speaker": 16,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FEO070",
+        10
+      ],
+      [
+        "FEO072",
+        2
+      ],
+      [
+        "MEE073",
+        3
+      ],
+      [
+        "MEE071",
+        4
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        18
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        15
+      ],
+      [
+        null,
+        17
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        19
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        9
+      ]
+    ]
+  },
+  "sdm_IS1009c-10": {
+    "cpWER": 0.2942144873000941,
+    "errors": 1251,
+    "length": 4252,
+    "insertions": 284,
+    "deletions": 847,
+    "substitutions": 120,
+    "missed_speaker": 0,
+    "falarm_speaker": 6,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "FIE088",
+        0
+      ],
+      [
+        "FIO084",
+        5
+      ],
+      [
+        "FIO089",
+        4
+      ],
+      [
+        "FIO087",
+        2
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  }
+}

@@ -1,0 +1,761 @@
+{
+  "20090930_100211_HRM_120649-7": {
+    "cpWER": 0.17492895484685822,
+    "errors": 554,
+    "length": 3167,
+    "insertions": 80,
+    "deletions": 396,
+    "substitutions": 78,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P183",
+        0
+      ],
+      [
+        "P145",
+        1
+      ]
+    ]
+  },
+  "20090901_154129_HRM_120376-1": {
+    "cpWER": 0.18136769078295342,
+    "errors": 549,
+    "length": 3027,
+    "insertions": 128,
+    "deletions": 372,
+    "substitutions": 49,
+    "missed_speaker": 0,
+    "falarm_speaker": 5,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P187",
+        2
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "20090918_151011_HRM_120242-4": {
+    "cpWER": 0.1646626586506346,
+    "errors": 493,
+    "length": 2994,
+    "insertions": 101,
+    "deletions": 311,
+    "substitutions": 81,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P189",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20091214_160552_HRM_120811-21": {
+    "cpWER": 0.24371667936024372,
+    "errors": 640,
+    "length": 2626,
+    "insertions": 117,
+    "deletions": 446,
+    "substitutions": 77,
+    "missed_speaker": 0,
+    "falarm_speaker": 6,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P171",
+        2
+      ],
+      [
+        "P172",
+        1
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        0
+      ]
+    ]
+  },
+  "20091013_110157_HRM_120633-9": {
+    "cpWER": 0.2738305941845765,
+    "errors": 1083,
+    "length": 3955,
+    "insertions": 109,
+    "deletions": 789,
+    "substitutions": 185,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P183",
+        0
+      ],
+      [
+        "P184",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20090929_132046_HRM_120633-6": {
+    "cpWER": 0.2352074637859072,
+    "errors": 958,
+    "length": 4073,
+    "insertions": 144,
+    "deletions": 609,
+    "substitutions": 205,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P184",
+        0
+      ],
+      [
+        "P183",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20091026_160240_HRM_120721-13": {
+    "cpWER": 0.09930777422790202,
+    "errors": 373,
+    "length": 3756,
+    "insertions": 53,
+    "deletions": 262,
+    "substitutions": 58,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P134",
+        1
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "20091202_172358_HRM_120282-19": {
+    "cpWER": 0.1996487119437939,
+    "errors": 682,
+    "length": 3416,
+    "insertions": 35,
+    "deletions": 570,
+    "substitutions": 77,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P171",
+        0
+      ],
+      [
+        "P180",
+        1
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20090922_181532_HRM_120376-5": {
+    "cpWER": 0.10557083906464924,
+    "errors": 307,
+    "length": 2908,
+    "insertions": 66,
+    "deletions": 177,
+    "substitutions": 64,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        3
+      ],
+      [
+        "P187",
+        1
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20091203_181435_HRM_111138-20": {
+    "cpWER": 0.19047619047619047,
+    "errors": 532,
+    "length": 2793,
+    "insertions": 71,
+    "deletions": 378,
+    "substitutions": 83,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P171",
+        0
+      ],
+      [
+        "P164",
+        2
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "20091123_151241_HRM_120780-18": {
+    "cpWER": 0.21947053800170793,
+    "errors": 514,
+    "length": 2342,
+    "insertions": 62,
+    "deletions": 411,
+    "substitutions": 41,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P171",
+        0
+      ],
+      [
+        "P204",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20090902_091229_HRM_120242-2": {
+    "cpWER": 0.15798045602605862,
+    "errors": 485,
+    "length": 3070,
+    "insertions": 97,
+    "deletions": 307,
+    "substitutions": 81,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P189",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "20091119_150107_HRM_120580-17": {
+    "cpWER": 0.3040808956301914,
+    "errors": 842,
+    "length": 2769,
+    "insertions": 152,
+    "deletions": 595,
+    "substitutions": 95,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P171",
+        0
+      ],
+      [
+        "P128",
+        1
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "20091104_132737_HRM_120772-15": {
+    "cpWER": 0.29179539993134224,
+    "errors": 850,
+    "length": 2913,
+    "insertions": 144,
+    "deletions": 562,
+    "substitutions": 144,
+    "missed_speaker": 0,
+    "falarm_speaker": 7,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P171",
+        1
+      ],
+      [
+        "P195",
+        0
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "20091015_100909_HRM_120649-11": {
+    "cpWER": 0.17376681614349776,
+    "errors": 620,
+    "length": 3568,
+    "insertions": 111,
+    "deletions": 389,
+    "substitutions": 120,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P183",
+        2
+      ],
+      [
+        "P145",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        0
+      ]
+    ]
+  },
+  "20091026_180132_HRM_120832-14": {
+    "cpWER": 0.19045884923525128,
+    "errors": 523,
+    "length": 2746,
+    "insertions": 147,
+    "deletions": 301,
+    "substitutions": 75,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P102",
+        1
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "20090911_140948_HRM_120465-3": {
+    "cpWER": 0.23529411764705882,
+    "errors": 676,
+    "length": 2873,
+    "insertions": 122,
+    "deletions": 468,
+    "substitutions": 86,
+    "missed_speaker": 0,
+    "falarm_speaker": 4,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P130",
+        1
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "20091013_101336_HRM_120649-8": {
+    "cpWER": 0.1854475209272376,
+    "errors": 576,
+    "length": 3106,
+    "insertions": 146,
+    "deletions": 361,
+    "substitutions": 69,
+    "missed_speaker": 0,
+    "falarm_speaker": 9,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P183",
+        4
+      ],
+      [
+        "P145",
+        1
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        0
+      ]
+    ]
+  },
+  "20091014_182539_HRM_120659-10": {
+    "cpWER": 0.1565187478500172,
+    "errors": 455,
+    "length": 2907,
+    "insertions": 69,
+    "deletions": 326,
+    "substitutions": 60,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P107",
+        1
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20090831_100246_HRM_120242-0": {
+    "cpWER": 0.15602094240837697,
+    "errors": 447,
+    "length": 2865,
+    "insertions": 63,
+    "deletions": 313,
+    "substitutions": 71,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P189",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20091105_165246_HRM_120780-16": {
+    "cpWER": 0.19513137557959814,
+    "errors": 505,
+    "length": 2588,
+    "insertions": 27,
+    "deletions": 421,
+    "substitutions": 57,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P171",
+        0
+      ],
+      [
+        "P204",
+        1
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "20091019_121120_HRM_120699-12": {
+    "cpWER": 0.17810650887573964,
+    "errors": 602,
+    "length": 3380,
+    "insertions": 64,
+    "deletions": 425,
+    "substitutions": 113,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P183",
+        0
+      ],
+      [
+        "P135",
+        1
+      ]
+    ]
+  },
+  "20091215_182302_HRM_111138-22": {
+    "cpWER": 0.1484149855907781,
+    "errors": 412,
+    "length": 2776,
+    "insertions": 44,
+    "deletions": 317,
+    "substitutions": 51,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "P152",
+        0
+      ],
+      [
+        "P164",
+        1
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  }
+}

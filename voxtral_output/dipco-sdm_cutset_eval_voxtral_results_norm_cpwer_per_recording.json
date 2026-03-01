@@ -1,0 +1,277 @@
+{
+  "S25-0": {
+    "cpWER": 0.5481202092712009,
+    "errors": 4505,
+    "length": 8219,
+    "insertions": 517,
+    "deletions": 3201,
+    "substitutions": 787,
+    "missed_speaker": 0,
+    "falarm_speaker": 16,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "P59",
+        1
+      ],
+      [
+        "P57",
+        3
+      ],
+      [
+        "P58",
+        5
+      ],
+      [
+        "P60",
+        2
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        19
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        17
+      ],
+      [
+        null,
+        18
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        15
+      ]
+    ]
+  },
+  "S31-3": {
+    "cpWER": 0.49701971572673087,
+    "errors": 2168,
+    "length": 4362,
+    "insertions": 458,
+    "deletions": 1343,
+    "substitutions": 367,
+    "missed_speaker": 0,
+    "falarm_speaker": 16,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "P80",
+        2
+      ],
+      [
+        "P78",
+        1
+      ],
+      [
+        "P79",
+        0
+      ],
+      [
+        "P77",
+        3
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        15
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        19
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        17
+      ],
+      [
+        null,
+        18
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  },
+  "S32-4": {
+    "cpWER": 0.911522633744856,
+    "errors": 2215,
+    "length": 2430,
+    "insertions": 592,
+    "deletions": 1282,
+    "substitutions": 341,
+    "missed_speaker": 0,
+    "falarm_speaker": 15,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "P81",
+        2
+      ],
+      [
+        "P82",
+        1
+      ],
+      [
+        "P83",
+        4
+      ],
+      [
+        "P84",
+        10
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        12
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        13
+      ],
+      [
+        null,
+        16
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        17
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        15
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        18
+      ],
+      [
+        null,
+        0
+      ],
+      [
+        null,
+        14
+      ],
+      [
+        null,
+        11
+      ]
+    ]
+  }
+}

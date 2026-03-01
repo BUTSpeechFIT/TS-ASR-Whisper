@@ -1,0 +1,14 @@
+{
+  "voxtral_results": "voxtral_output/dipco-sdm_cutset_eval_voxtral_results.json",
+  "reference_cutset": "/mnt/scratch/tmp/ipoloka/mt_asr_data/manifests/dipco/dipco-sdm_cutset_eval.jsonl.gz",
+  "text_norm": true,
+  "overall_cpWER": 0.5920991273066418,
+  "errors": 8888,
+  "length": 15011,
+  "insertions": 1567,
+  "deletions": 5826,
+  "substitutions": 1495,
+  "missed_speaker": 0,
+  "falarm_speaker": 47,
+  "num_recordings": 3
+}

@@ -1,0 +1,5638 @@
+{
+  "sdm_MTG_32107_sc_meetup_0-102": {
+    "cpWER": 0.8168551623495075,
+    "errors": 2239,
+    "length": 2741,
+    "insertions": 281,
+    "deletions": 1319,
+    "substitutions": 639,
+    "missed_speaker": 0,
+    "falarm_speaker": 4,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Linda",
+        8
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        "John",
+        3
+      ],
+      [
+        "Donald",
+        6
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  },
+  "sdm_MTG_32257_sc_panacast_0-132": {
+    "cpWER": 0.7697337692666978,
+    "errors": 1648,
+    "length": 2141,
+    "insertions": 154,
+    "deletions": 1060,
+    "substitutions": 434,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Tom",
+        1
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Brad",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32315_sc_plaza_0-147": {
+    "cpWER": 0.5974508762612852,
+    "errors": 1125,
+    "length": 1883,
+    "insertions": 111,
+    "deletions": 869,
+    "substitutions": 145,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Chris",
+        0
+      ],
+      [
+        "Jenny",
+        1
+      ],
+      [
+        "Sally",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32005_sc_meetup_0-6": {
+    "cpWER": 0.3576158940397351,
+    "errors": 540,
+    "length": 1510,
+    "insertions": 56,
+    "deletions": 385,
+    "substitutions": 99,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32256_sc_plaza_0-131": {
+    "cpWER": 0.025727069351230425,
+    "errors": 23,
+    "length": 894,
+    "insertions": 0,
+    "deletions": 12,
+    "substitutions": 11,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Brad",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32029_sc_studio_0-33": {
+    "cpWER": 0.5882753919563736,
+    "errors": 863,
+    "length": 1467,
+    "insertions": 110,
+    "deletions": 573,
+    "substitutions": 180,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Linda",
+        2
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Rachel",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32073_sc_studio_0-69": {
+    "cpWER": 0.4309687261632342,
+    "errors": 565,
+    "length": 1311,
+    "insertions": 81,
+    "deletions": 365,
+    "substitutions": 119,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Beth",
+        0
+      ]
+    ]
+  },
+  "sdm_MTG_32088_sc_rockfall_2-85": {
+    "cpWER": 0.5477463712757831,
+    "errors": 717,
+    "length": 1309,
+    "insertions": 127,
+    "deletions": 455,
+    "substitutions": 135,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32022_sc_plaza_0-21": {
+    "cpWER": 0.5325581395348837,
+    "errors": 687,
+    "length": 1290,
+    "insertions": 95,
+    "deletions": 405,
+    "substitutions": 187,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Linda",
+        null
+      ]
+    ]
+  },
+  "sdm_MTG_32183_sc_plaza_0-117": {
+    "cpWER": 0.5006527415143603,
+    "errors": 767,
+    "length": 1532,
+    "insertions": 67,
+    "deletions": 531,
+    "substitutions": 169,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Beth",
+        5
+      ],
+      [
+        "John",
+        0
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32190_sc_panacast_0-120": {
+    "cpWER": 0.4792691496837667,
+    "errors": 682,
+    "length": 1423,
+    "insertions": 128,
+    "deletions": 443,
+    "substitutions": 111,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        null
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "John",
+        3
+      ],
+      [
+        "Linda",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32185_sc_panacast_0-118": {
+    "cpWER": 0.648960739030023,
+    "errors": 843,
+    "length": 1299,
+    "insertions": 219,
+    "deletions": 463,
+    "substitutions": 161,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Linda",
+        null
+      ],
+      [
+        "John",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32179_sc_rockfall_0-113": {
+    "cpWER": 0.6259842519685039,
+    "errors": 954,
+    "length": 1524,
+    "insertions": 120,
+    "deletions": 542,
+    "substitutions": 292,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        5
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "John",
+        2
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        null,
+        6
+      ]
+    ]
+  },
+  "sdm_MTG_32063_sc_meetup_0-56": {
+    "cpWER": 0.3981008035062089,
+    "errors": 545,
+    "length": 1369,
+    "insertions": 48,
+    "deletions": 417,
+    "substitutions": 80,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32003_sc_meetup_0-2": {
+    "cpWER": 0.4782918149466192,
+    "errors": 672,
+    "length": 1405,
+    "insertions": 126,
+    "deletions": 451,
+    "substitutions": 95,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        "Linda",
+        2
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        0
+      ]
+    ]
+  },
+  "sdm_MTG_32021_sc_rockfall_1-19": {
+    "cpWER": 0.3930769230769231,
+    "errors": 511,
+    "length": 1300,
+    "insertions": 69,
+    "deletions": 389,
+    "substitutions": 53,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32090_sc_rockfall_2-88": {
+    "cpWER": 0.651791751183232,
+    "errors": 964,
+    "length": 1479,
+    "insertions": 142,
+    "deletions": 629,
+    "substitutions": 193,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Sarah",
+        7
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Donald",
+        6
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32255_sc_plaza_0-129": {
+    "cpWER": 0.277602523659306,
+    "errors": 352,
+    "length": 1268,
+    "insertions": 31,
+    "deletions": 272,
+    "substitutions": 49,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Brad",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32182_sc_plaza_0-115": {
+    "cpWER": 0.5210755813953488,
+    "errors": 717,
+    "length": 1376,
+    "insertions": 66,
+    "deletions": 499,
+    "substitutions": 152,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Sarah",
+        6
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        "John",
+        2
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32009_sc_meetup_0-14": {
+    "cpWER": 0.4037828947368421,
+    "errors": 491,
+    "length": 1216,
+    "insertions": 71,
+    "deletions": 321,
+    "substitutions": 99,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Ron",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32313_sc_panacast_0-142": {
+    "cpWER": 0.14285714285714285,
+    "errors": 179,
+    "length": 1253,
+    "insertions": 28,
+    "deletions": 107,
+    "substitutions": 44,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Jenny",
+        0
+      ],
+      [
+        "Sally",
+        2
+      ],
+      [
+        "Donald",
+        1
+      ],
+      [
+        "Chris",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32260_sc_studio_0-135": {
+    "cpWER": 0.3720588235294118,
+    "errors": 506,
+    "length": 1360,
+    "insertions": 59,
+    "deletions": 366,
+    "substitutions": 81,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Tom",
+        1
+      ],
+      [
+        "Brad",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32312_sc_rockfall_1-141": {
+    "cpWER": 0.18664521319388577,
+    "errors": 232,
+    "length": 1243,
+    "insertions": 2,
+    "deletions": 197,
+    "substitutions": 33,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Chris",
+        0
+      ],
+      [
+        "Sally",
+        1
+      ],
+      [
+        "Jenny",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32314_sc_rockfall_2-144": {
+    "cpWER": 0.3261494252873563,
+    "errors": 454,
+    "length": 1392,
+    "insertions": 26,
+    "deletions": 335,
+    "substitutions": 93,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sally",
+        0
+      ],
+      [
+        "Jenny",
+        1
+      ],
+      [
+        "Chris",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32027_sc_studio_0-31": {
+    "cpWER": 0.6971005552128315,
+    "errors": 1130,
+    "length": 1621,
+    "insertions": 167,
+    "deletions": 675,
+    "substitutions": 288,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Linda",
+        null
+      ]
+    ]
+  },
+  "sdm_MTG_32006_sc_rockfall_2-9": {
+    "cpWER": 0.6479807112718505,
+    "errors": 1075,
+    "length": 1659,
+    "insertions": 213,
+    "deletions": 681,
+    "substitutions": 181,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32080_sc_plaza_0-75": {
+    "cpWER": 0.6179867986798679,
+    "errors": 749,
+    "length": 1212,
+    "insertions": 213,
+    "deletions": 442,
+    "substitutions": 94,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Donald",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32108_sc_rockfall_1-105": {
+    "cpWER": 0.6626613262127281,
+    "errors": 1489,
+    "length": 2247,
+    "insertions": 173,
+    "deletions": 1004,
+    "substitutions": 312,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Linda",
+        7
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "John",
+        3
+      ],
+      [
+        "Donald",
+        6
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32080_sc_meetup_0-74": {
+    "cpWER": 0.504950495049505,
+    "errors": 612,
+    "length": 1212,
+    "insertions": 126,
+    "deletions": 350,
+    "substitutions": 136,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Donald",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32007_sc_meetup_0-10": {
+    "cpWER": 0.4906204906204906,
+    "errors": 680,
+    "length": 1386,
+    "insertions": 95,
+    "deletions": 492,
+    "substitutions": 93,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Rachel",
+        5
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32321_sc_panacast_0-150": {
+    "cpWER": 0.2901049475262369,
+    "errors": 387,
+    "length": 1334,
+    "insertions": 69,
+    "deletions": 253,
+    "substitutions": 65,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Jenny",
+        0
+      ],
+      [
+        "Sally",
+        1
+      ],
+      [
+        "Chris",
+        2
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32021_sc_meetup_0-18": {
+    "cpWER": 0.3853846153846154,
+    "errors": 501,
+    "length": 1300,
+    "insertions": 57,
+    "deletions": 379,
+    "substitutions": 65,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32089_sc_meetup_0-86": {
+    "cpWER": 0.7173717371737174,
+    "errors": 797,
+    "length": 1111,
+    "insertions": 235,
+    "deletions": 457,
+    "substitutions": 105,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Donald",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32020_sc_studio_0-17": {
+    "cpWER": 0.35356386732533523,
+    "errors": 501,
+    "length": 1417,
+    "insertions": 35,
+    "deletions": 381,
+    "substitutions": 85,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32256_sc_panacast_0-130": {
+    "cpWER": 0.020134228187919462,
+    "errors": 18,
+    "length": 894,
+    "insertions": 1,
+    "deletions": 7,
+    "substitutions": 10,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Brad",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32068_sc_meetup_0-58": {
+    "cpWER": 0.4172234595397179,
+    "errors": 562,
+    "length": 1347,
+    "insertions": 35,
+    "deletions": 368,
+    "substitutions": 159,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Beth",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32345_sc_panacast_0-156": {
+    "cpWER": 0.18869565217391304,
+    "errors": 217,
+    "length": 1150,
+    "insertions": 31,
+    "deletions": 139,
+    "substitutions": 47,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Brad",
+        0
+      ],
+      [
+        "Sally",
+        2
+      ],
+      [
+        "Jenny",
+        3
+      ],
+      [
+        "Donald",
+        1
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32022_sc_meetup_0-20": {
+    "cpWER": 0.5124031007751938,
+    "errors": 661,
+    "length": 1290,
+    "insertions": 122,
+    "deletions": 432,
+    "substitutions": 107,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Linda",
+        5
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32082_sc_rockfall_1-79": {
+    "cpWER": 0.2984822934232715,
+    "errors": 354,
+    "length": 1186,
+    "insertions": 33,
+    "deletions": 253,
+    "substitutions": 68,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Donald",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32047_sc_rockfall_1-44": {
+    "cpWER": 0.5771217712177121,
+    "errors": 782,
+    "length": 1355,
+    "insertions": 160,
+    "deletions": 495,
+    "substitutions": 127,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32042_sc_studio_0-41": {
+    "cpWER": 0.6470175438596492,
+    "errors": 922,
+    "length": 1425,
+    "insertions": 204,
+    "deletions": 611,
+    "substitutions": 107,
+    "missed_speaker": 2,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Linda",
+        null
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32071_sc_meetup_0-64": {
+    "cpWER": 0.820842255531763,
+    "errors": 1150,
+    "length": 1401,
+    "insertions": 347,
+    "deletions": 679,
+    "substitutions": 124,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Rachel",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32005_sc_rockfall_2-7": {
+    "cpWER": 0.35165562913907283,
+    "errors": 531,
+    "length": 1510,
+    "insertions": 57,
+    "deletions": 374,
+    "substitutions": 100,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32050_sc_studio_0-51": {
+    "cpWER": 0.7413587604290822,
+    "errors": 1244,
+    "length": 1678,
+    "insertions": 74,
+    "deletions": 685,
+    "substitutions": 485,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        "Sarah",
+        5
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32265_sc_plaza_0-139": {
+    "cpWER": 0.5842026825633383,
+    "errors": 784,
+    "length": 1342,
+    "insertions": 173,
+    "deletions": 436,
+    "substitutions": 175,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Tom",
+        1
+      ],
+      [
+        "Brad",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32003_sc_plaza_0-3": {
+    "cpWER": 0.6199288256227758,
+    "errors": 871,
+    "length": 1405,
+    "insertions": 152,
+    "deletions": 514,
+    "substitutions": 205,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32252_sc_rockfall_0-126": {
+    "cpWER": 0.4488559892328398,
+    "errors": 667,
+    "length": 1486,
+    "insertions": 64,
+    "deletions": 460,
+    "substitutions": 143,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Brad",
+        1
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32108_sc_meetup_0-104": {
+    "cpWER": 0.7133956386292835,
+    "errors": 1603,
+    "length": 2247,
+    "insertions": 324,
+    "deletions": 1000,
+    "substitutions": 279,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Linda",
+        7
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Sarah",
+        6
+      ],
+      [
+        "John",
+        3
+      ],
+      [
+        "Donald",
+        8
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32315_sc_panacast_0-146": {
+    "cpWER": 0.544875199150292,
+    "errors": 1026,
+    "length": 1883,
+    "insertions": 68,
+    "deletions": 783,
+    "substitutions": 175,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Chris",
+        0
+      ],
+      [
+        "Jenny",
+        1
+      ],
+      [
+        "Sally",
+        4
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32091_sc_rockfall_0-90": {
+    "cpWER": 0.5263605442176871,
+    "errors": 619,
+    "length": 1176,
+    "insertions": 175,
+    "deletions": 382,
+    "substitutions": 62,
+    "missed_speaker": 0,
+    "falarm_speaker": 4,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Donald",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Ron",
+        7
+      ],
+      [
+        "Rachel",
+        6
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32075_sc_meetup_0-72": {
+    "cpWER": 0.41509433962264153,
+    "errors": 594,
+    "length": 1431,
+    "insertions": 95,
+    "deletions": 398,
+    "substitutions": 101,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Linda",
+        null
+      ],
+      [
+        "Rachel",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32024_sc_rockfall_1-24": {
+    "cpWER": 0.44850948509485095,
+    "errors": 662,
+    "length": 1476,
+    "insertions": 89,
+    "deletions": 444,
+    "substitutions": 129,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Ron",
+        5
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32250_sc_studio_0-125": {
+    "cpWER": 0.4482758620689655,
+    "errors": 611,
+    "length": 1363,
+    "insertions": 100,
+    "deletions": 356,
+    "substitutions": 155,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Brad",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Tom",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32025_sc_studio_0-27": {
+    "cpWER": 0.671358629130967,
+    "errors": 1097,
+    "length": 1634,
+    "insertions": 210,
+    "deletions": 686,
+    "substitutions": 201,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Linda",
+        5
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        6
+      ]
+    ]
+  },
+  "sdm_MTG_32320_sc_rockfall_2-149": {
+    "cpWER": 0.22660944206008585,
+    "errors": 264,
+    "length": 1165,
+    "insertions": 36,
+    "deletions": 189,
+    "substitutions": 39,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sally",
+        0
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        "Jenny",
+        1
+      ],
+      [
+        "Chris",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32082_sc_meetup_0-78": {
+    "cpWER": 0.4350758853288364,
+    "errors": 516,
+    "length": 1186,
+    "insertions": 92,
+    "deletions": 311,
+    "substitutions": 113,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32070_sc_studio_0-63": {
+    "cpWER": 0.4812720848056537,
+    "errors": 681,
+    "length": 1415,
+    "insertions": 77,
+    "deletions": 447,
+    "substitutions": 157,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32023_sc_studio_0-23": {
+    "cpWER": 0.6452680344142951,
+    "errors": 975,
+    "length": 1511,
+    "insertions": 153,
+    "deletions": 584,
+    "substitutions": 238,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        6
+      ]
+    ]
+  },
+  "sdm_MTG_32030_sc_meetup_0-34": {
+    "cpWER": 0.6240554156171285,
+    "errors": 991,
+    "length": 1588,
+    "insertions": 138,
+    "deletions": 691,
+    "substitutions": 162,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32071_sc_plaza_0-65": {
+    "cpWER": 1.172733761598858,
+    "errors": 1643,
+    "length": 1401,
+    "insertions": 593,
+    "deletions": 968,
+    "substitutions": 82,
+    "missed_speaker": 2,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Linda",
+        null
+      ],
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Rachel",
+        null
+      ]
+    ]
+  },
+  "sdm_MTG_32102_sc_meetup_0-96": {
+    "cpWER": 0.8118721461187215,
+    "errors": 1778,
+    "length": 2190,
+    "insertions": 222,
+    "deletions": 932,
+    "substitutions": 624,
+    "missed_speaker": 0,
+    "falarm_speaker": 4,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Ron",
+        6
+      ],
+      [
+        "John",
+        9
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "Rachel",
+        5
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        10
+      ],
+      [
+        null,
+        8
+      ]
+    ]
+  },
+  "sdm_MTG_32025_sc_rockfall_2-26": {
+    "cpWER": 0.686046511627907,
+    "errors": 1121,
+    "length": 1634,
+    "insertions": 177,
+    "deletions": 654,
+    "substitutions": 290,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Linda",
+        null
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32009_sc_plaza_0-15": {
+    "cpWER": 0.4662828947368421,
+    "errors": 567,
+    "length": 1216,
+    "insertions": 101,
+    "deletions": 394,
+    "substitutions": 72,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Linda",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32102_sc_rockfall_2-97": {
+    "cpWER": 0.7607305936073059,
+    "errors": 1666,
+    "length": 2190,
+    "insertions": 341,
+    "deletions": 1010,
+    "substitutions": 315,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        "John",
+        5
+      ],
+      [
+        "Donald",
+        2
+      ],
+      [
+        "Rachel",
+        6
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        8
+      ]
+    ]
+  },
+  "sdm_MTG_32107_sc_plaza_0-103": {
+    "cpWER": 0.8931047063115651,
+    "errors": 2448,
+    "length": 2741,
+    "insertions": 343,
+    "deletions": 1441,
+    "substitutions": 664,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Linda",
+        6
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "John",
+        5
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32109_sc_studio_0-107": {
+    "cpWER": 0.388,
+    "errors": 582,
+    "length": 1500,
+    "insertions": 99,
+    "deletions": 335,
+    "substitutions": 148,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Linda",
+        7
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "John",
+        5
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        6
+      ]
+    ]
+  },
+  "sdm_MTG_32074_sc_studio_0-71": {
+    "cpWER": 0.5996649916247906,
+    "errors": 1074,
+    "length": 1791,
+    "insertions": 91,
+    "deletions": 675,
+    "substitutions": 308,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32092_sc_studio_0-93": {
+    "cpWER": 0.4656222802436902,
+    "errors": 535,
+    "length": 1149,
+    "insertions": 151,
+    "deletions": 325,
+    "substitutions": 59,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32085_sc_studio_0-81": {
+    "cpWER": 0.7086712414223332,
+    "errors": 1136,
+    "length": 1603,
+    "insertions": 58,
+    "deletions": 788,
+    "substitutions": 290,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Donald",
+        2
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32052_sc_studio_0-53": {
+    "cpWER": 0.6197530864197531,
+    "errors": 1004,
+    "length": 1620,
+    "insertions": 226,
+    "deletions": 649,
+    "substitutions": 129,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32075_sc_rockfall_2-73": {
+    "cpWER": 0.45981830887491265,
+    "errors": 658,
+    "length": 1431,
+    "insertions": 123,
+    "deletions": 440,
+    "substitutions": 95,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Linda",
+        2
+      ],
+      [
+        "Rachel",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32029_sc_rockfall_1-32": {
+    "cpWER": 0.547375596455351,
+    "errors": 803,
+    "length": 1467,
+    "insertions": 51,
+    "deletions": 575,
+    "substitutions": 177,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32046_sc_rockfall_2-43": {
+    "cpWER": 0.19027921406411583,
+    "errors": 184,
+    "length": 967,
+    "insertions": 8,
+    "deletions": 159,
+    "substitutions": 17,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Sarah",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32073_sc_plaza_0-68": {
+    "cpWER": 0.49122807017543857,
+    "errors": 644,
+    "length": 1311,
+    "insertions": 106,
+    "deletions": 385,
+    "substitutions": 153,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Beth",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32081_sc_studio_0-77": {
+    "cpWER": 0.7126269956458636,
+    "errors": 982,
+    "length": 1378,
+    "insertions": 205,
+    "deletions": 588,
+    "substitutions": 189,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Rachel",
+        5
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32069_sc_plaza_0-61": {
+    "cpWER": 0.4781319495922906,
+    "errors": 645,
+    "length": 1349,
+    "insertions": 74,
+    "deletions": 471,
+    "substitutions": 100,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Linda",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32052_sc_rockfall_1-52": {
+    "cpWER": 0.678395061728395,
+    "errors": 1099,
+    "length": 1620,
+    "insertions": 221,
+    "deletions": 679,
+    "substitutions": 199,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32069_sc_meetup_0-60": {
+    "cpWER": 0.5292809488510007,
+    "errors": 714,
+    "length": 1349,
+    "insertions": 124,
+    "deletions": 480,
+    "substitutions": 110,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32105_sc_rockfall_0-99": {
+    "cpWER": 0.13572679509632224,
+    "errors": 155,
+    "length": 1142,
+    "insertions": 8,
+    "deletions": 107,
+    "substitutions": 40,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Donald",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Rachel",
+        6
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "John",
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32047_sc_studio_0-45": {
+    "cpWER": 0.5033210332103321,
+    "errors": 682,
+    "length": 1355,
+    "insertions": 106,
+    "deletions": 430,
+    "substitutions": 146,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        0
+      ]
+    ]
+  },
+  "sdm_MTG_32008_sc_meetup_0-12": {
+    "cpWER": 0.6146788990825688,
+    "errors": 1273,
+    "length": 2071,
+    "insertions": 106,
+    "deletions": 806,
+    "substitutions": 361,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32110_sc_studio_0-109": {
+    "cpWER": 0.6993087557603687,
+    "errors": 1821,
+    "length": 2604,
+    "insertions": 258,
+    "deletions": 1328,
+    "substitutions": 235,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "John",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Sarah",
+        5
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "Rachel",
+        7
+      ],
+      [
+        null,
+        6
+      ]
+    ]
+  },
+  "sdm_MTG_32026_sc_meetup_0-28": {
+    "cpWER": 0.48616600790513836,
+    "errors": 615,
+    "length": 1265,
+    "insertions": 101,
+    "deletions": 409,
+    "substitutions": 105,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32105_sc_meetup_0-98": {
+    "cpWER": 0.14273204903677758,
+    "errors": 163,
+    "length": 1142,
+    "insertions": 9,
+    "deletions": 114,
+    "substitutions": 40,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Donald",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Rachel",
+        6
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "John",
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32252_sc_studio_0-127": {
+    "cpWER": 0.43203230148048455,
+    "errors": 642,
+    "length": 1486,
+    "insertions": 73,
+    "deletions": 412,
+    "substitutions": 157,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Brad",
+        1
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32182_sc_panacast_0-114": {
+    "cpWER": 0.48183139534883723,
+    "errors": 663,
+    "length": 1376,
+    "insertions": 42,
+    "deletions": 442,
+    "substitutions": 179,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Rachel",
+        5
+      ],
+      [
+        "John",
+        2
+      ],
+      [
+        null,
+        6
+      ]
+    ]
+  },
+  "sdm_MTG_32312_sc_panacast_0-140": {
+    "cpWER": 0.23652453740949317,
+    "errors": 294,
+    "length": 1243,
+    "insertions": 47,
+    "deletions": 198,
+    "substitutions": 49,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Chris",
+        0
+      ],
+      [
+        "Sally",
+        1
+      ],
+      [
+        "Jenny",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32106_sc_meetup_0-100": {
+    "cpWER": 0.6764570904084443,
+    "errors": 1474,
+    "length": 2179,
+    "insertions": 265,
+    "deletions": 840,
+    "substitutions": 369,
+    "missed_speaker": 0,
+    "falarm_speaker": 5,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "John",
+        0
+      ],
+      [
+        "Beth",
+        10
+      ],
+      [
+        "Rachel",
+        8
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        "Sarah",
+        6
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        11
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  },
+  "sdm_MTG_32321_sc_rockfall_1-151": {
+    "cpWER": 0.2938530734632684,
+    "errors": 392,
+    "length": 1334,
+    "insertions": 55,
+    "deletions": 270,
+    "substitutions": 67,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Jenny",
+        0
+      ],
+      [
+        "Sally",
+        1
+      ],
+      [
+        "Chris",
+        2
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32004_sc_meetup_0-4": {
+    "cpWER": 0.3936742934051144,
+    "errors": 585,
+    "length": 1486,
+    "insertions": 83,
+    "deletions": 410,
+    "substitutions": 92,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32092_sc_rockfall_2-92": {
+    "cpWER": 0.3846823324630113,
+    "errors": 442,
+    "length": 1149,
+    "insertions": 102,
+    "deletions": 289,
+    "substitutions": 51,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32346_sc_panacast_0-158": {
+    "cpWER": 0.625,
+    "errors": 850,
+    "length": 1360,
+    "insertions": 155,
+    "deletions": 502,
+    "substitutions": 193,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sally",
+        0
+      ],
+      [
+        "Brad",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ],
+      [
+        "Jenny",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32055_sc_studio_0-55": {
+    "cpWER": 0.7071220930232558,
+    "errors": 973,
+    "length": 1376,
+    "insertions": 124,
+    "deletions": 641,
+    "substitutions": 208,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        "Beth",
+        6
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32041_sc_studio_0-39": {
+    "cpWER": 0.9824242424242424,
+    "errors": 1621,
+    "length": 1650,
+    "insertions": 342,
+    "deletions": 911,
+    "substitutions": 368,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Ron",
+        5
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32087_sc_meetup_0-82": {
+    "cpWER": 0.7632958801498128,
+    "errors": 1019,
+    "length": 1335,
+    "insertions": 225,
+    "deletions": 502,
+    "substitutions": 292,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        "Donald",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32088_sc_meetup_0-84": {
+    "cpWER": 0.5530939648586708,
+    "errors": 724,
+    "length": 1309,
+    "insertions": 134,
+    "deletions": 464,
+    "substitutions": 126,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32004_sc_plaza_0-5": {
+    "cpWER": 0.3721399730820996,
+    "errors": 553,
+    "length": 1486,
+    "insertions": 19,
+    "deletions": 402,
+    "substitutions": 132,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32346_sc_plaza_0-159": {
+    "cpWER": 0.5889705882352941,
+    "errors": 801,
+    "length": 1360,
+    "insertions": 146,
+    "deletions": 495,
+    "substitutions": 160,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sally",
+        0
+      ],
+      [
+        "Brad",
+        1
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "Jenny",
+        3
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32030_sc_plaza_0-35": {
+    "cpWER": 0.8727959697732998,
+    "errors": 1386,
+    "length": 1588,
+    "insertions": 305,
+    "deletions": 848,
+    "substitutions": 233,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Rachel",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32072_sc_rockfall_0-67": {
+    "cpWER": 0.3563664596273292,
+    "errors": 459,
+    "length": 1288,
+    "insertions": 37,
+    "deletions": 344,
+    "substitutions": 78,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Rachel",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32255_sc_panacast_0-128": {
+    "cpWER": 0.3186119873817035,
+    "errors": 404,
+    "length": 1268,
+    "insertions": 58,
+    "deletions": 285,
+    "substitutions": 61,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Brad",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32072_sc_meetup_0-66": {
+    "cpWER": 0.3610248447204969,
+    "errors": 465,
+    "length": 1288,
+    "insertions": 37,
+    "deletions": 341,
+    "substitutions": 87,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Rachel",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32000_sc_meetup_0-0": {
+    "cpWER": 0.4381551362683438,
+    "errors": 627,
+    "length": 1431,
+    "insertions": 74,
+    "deletions": 469,
+    "substitutions": 84,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32191_sc_rockfall_0-123": {
+    "cpWER": 0.47785714285714287,
+    "errors": 669,
+    "length": 1400,
+    "insertions": 153,
+    "deletions": 424,
+    "substitutions": 92,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "John",
+        1
+      ],
+      [
+        "Linda",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32049_sc_rockfall_1-48": {
+    "cpWER": 0.6843774781919112,
+    "errors": 863,
+    "length": 1261,
+    "insertions": 161,
+    "deletions": 550,
+    "substitutions": 152,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Sarah",
+        0
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32040_sc_rockfall_2-36": {
+    "cpWER": 0.5259593679458239,
+    "errors": 699,
+    "length": 1329,
+    "insertions": 116,
+    "deletions": 458,
+    "substitutions": 125,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        "Linda",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32048_sc_meetup_0-46": {
+    "cpWER": 0.8063291139240506,
+    "errors": 1274,
+    "length": 1580,
+    "insertions": 339,
+    "deletions": 796,
+    "substitutions": 139,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Linda",
+        null
+      ],
+      [
+        "Beth",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32074_sc_rockfall_0-70": {
+    "cpWER": 0.5008375209380235,
+    "errors": 897,
+    "length": 1791,
+    "insertions": 51,
+    "deletions": 639,
+    "substitutions": 207,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32046_sc_meetup_0-42": {
+    "cpWER": 0.28645294725956566,
+    "errors": 277,
+    "length": 967,
+    "insertions": 46,
+    "deletions": 208,
+    "substitutions": 23,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Sarah",
+        null
+      ]
+    ]
+  },
+  "sdm_MTG_32106_sc_plaza_0-101": {
+    "cpWER": 0.6365305185865076,
+    "errors": 1387,
+    "length": 2179,
+    "insertions": 236,
+    "deletions": 855,
+    "substitutions": 296,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "John",
+        0
+      ],
+      [
+        "Beth",
+        8
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Donald",
+        6
+      ],
+      [
+        "Sarah",
+        5
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32179_sc_panacast_0-112": {
+    "cpWER": 0.5485564304461942,
+    "errors": 836,
+    "length": 1524,
+    "insertions": 122,
+    "deletions": 501,
+    "substitutions": 213,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        "Beth",
+        6
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "John",
+        5
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  },
+  "sdm_MTG_32063_sc_rockfall_0-57": {
+    "cpWER": 0.4390065741417093,
+    "errors": 601,
+    "length": 1369,
+    "insertions": 56,
+    "deletions": 440,
+    "substitutions": 105,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Linda",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32185_sc_rockfall_0-119": {
+    "cpWER": 0.2763664357197845,
+    "errors": 359,
+    "length": 1299,
+    "insertions": 32,
+    "deletions": 290,
+    "substitutions": 37,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        "John",
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32070_sc_rockfall_1-62": {
+    "cpWER": 0.5222614840989399,
+    "errors": 739,
+    "length": 1415,
+    "insertions": 120,
+    "deletions": 467,
+    "substitutions": 152,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32050_sc_rockfall_2-50": {
+    "cpWER": 0.7741358760429082,
+    "errors": 1299,
+    "length": 1678,
+    "insertions": 146,
+    "deletions": 785,
+    "substitutions": 368,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Ron",
+        5
+      ],
+      [
+        "Sarah",
+        6
+      ],
+      [
+        "Rachel",
+        7
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32263_sc_panacast_0-136": {
+    "cpWER": 0.45714285714285713,
+    "errors": 656,
+    "length": 1435,
+    "insertions": 117,
+    "deletions": 398,
+    "substitutions": 141,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Brad",
+        4
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32008_sc_rockfall_2-13": {
+    "cpWER": 0.503138580395944,
+    "errors": 1042,
+    "length": 2071,
+    "insertions": 57,
+    "deletions": 781,
+    "substitutions": 204,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32320_sc_panacast_0-148": {
+    "cpWER": 0.271244635193133,
+    "errors": 316,
+    "length": 1165,
+    "insertions": 49,
+    "deletions": 215,
+    "substitutions": 52,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sally",
+        0
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        "Jenny",
+        1
+      ],
+      [
+        "Chris",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32190_sc_rockfall_0-121": {
+    "cpWER": 0.4898102600140548,
+    "errors": 697,
+    "length": 1423,
+    "insertions": 116,
+    "deletions": 455,
+    "substitutions": 126,
+    "missed_speaker": 0,
+    "falarm_speaker": 4,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        7
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "John",
+        3
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        8
+      ],
+      [
+        null,
+        6
+      ]
+    ]
+  },
+  "sdm_MTG_32322_sc_plaza_0-153": {
+    "cpWER": 0.27078734363502577,
+    "errors": 368,
+    "length": 1359,
+    "insertions": 51,
+    "deletions": 280,
+    "substitutions": 37,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Jenny",
+        0
+      ],
+      [
+        "Sally",
+        4
+      ],
+      [
+        "Chris",
+        5
+      ],
+      [
+        "Donald",
+        6
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32322_sc_meetup_0-152": {
+    "cpWER": 0.31125827814569534,
+    "errors": 423,
+    "length": 1359,
+    "insertions": 95,
+    "deletions": 285,
+    "substitutions": 43,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Jenny",
+        0
+      ],
+      [
+        "Sally",
+        3
+      ],
+      [
+        "Chris",
+        4
+      ],
+      [
+        "Donald",
+        6
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        1
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32265_sc_panacast_0-138": {
+    "cpWER": 0.6050670640834576,
+    "errors": 812,
+    "length": 1342,
+    "insertions": 173,
+    "deletions": 462,
+    "substitutions": 177,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Tom",
+        3
+      ],
+      [
+        "Brad",
+        4
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32024_sc_studio_0-25": {
+    "cpWER": 0.4329268292682927,
+    "errors": 639,
+    "length": 1476,
+    "insertions": 101,
+    "deletions": 450,
+    "substitutions": 88,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Beth",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32055_sc_rockfall_2-54": {
+    "cpWER": 0.6482558139534884,
+    "errors": 892,
+    "length": 1376,
+    "insertions": 57,
+    "deletions": 654,
+    "substitutions": 181,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        "Beth",
+        7
+      ],
+      [
+        null,
+        2
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32338_sc_panacast_0-154": {
+    "cpWER": 0.3114241001564945,
+    "errors": 398,
+    "length": 1278,
+    "insertions": 67,
+    "deletions": 260,
+    "substitutions": 71,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Donald",
+        0
+      ],
+      [
+        "Brad",
+        1
+      ],
+      [
+        "Jenny",
+        2
+      ],
+      [
+        "Sally",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32026_sc_rockfall_2-29": {
+    "cpWER": 0.48774703557312254,
+    "errors": 617,
+    "length": 1265,
+    "insertions": 98,
+    "deletions": 420,
+    "substitutions": 99,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Linda",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32027_sc_rockfall_1-30": {
+    "cpWER": 0.770512029611351,
+    "errors": 1249,
+    "length": 1621,
+    "insertions": 255,
+    "deletions": 828,
+    "substitutions": 166,
+    "missed_speaker": 2,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Linda",
+        null
+      ]
+    ]
+  },
+  "sdm_MTG_32313_sc_rockfall_2-143": {
+    "cpWER": 0.13567438148443736,
+    "errors": 170,
+    "length": 1253,
+    "insertions": 14,
+    "deletions": 119,
+    "substitutions": 37,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Jenny",
+        0
+      ],
+      [
+        "Sally",
+        2
+      ],
+      [
+        "Donald",
+        1
+      ],
+      [
+        "Chris",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32000_sc_rockfall_0-1": {
+    "cpWER": 0.35150244584206847,
+    "errors": 503,
+    "length": 1431,
+    "insertions": 13,
+    "deletions": 406,
+    "substitutions": 84,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Ron",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32178_sc_rockfall_2-111": {
+    "cpWER": 0.4538279400157853,
+    "errors": 575,
+    "length": 1267,
+    "insertions": 104,
+    "deletions": 398,
+    "substitutions": 73,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "John",
+        6
+      ],
+      [
+        "Sarah",
+        5
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32101_sc_rockfall_1-95": {
+    "cpWER": 0.7078810759792354,
+    "errors": 1500,
+    "length": 2119,
+    "insertions": 263,
+    "deletions": 933,
+    "substitutions": 304,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        9
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "John",
+        5
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        8
+      ]
+    ]
+  },
+  "sdm_MTG_32049_sc_studio_0-49": {
+    "cpWER": 0.5789056304520223,
+    "errors": 730,
+    "length": 1261,
+    "insertions": 95,
+    "deletions": 406,
+    "substitutions": 229,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Sarah",
+        0
+      ]
+    ]
+  },
+  "sdm_MTG_32090_sc_studio_0-89": {
+    "cpWER": 0.6308316430020284,
+    "errors": 933,
+    "length": 1479,
+    "insertions": 134,
+    "deletions": 615,
+    "substitutions": 184,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        7
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Donald",
+        6
+      ],
+      [
+        null,
+        5
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32314_sc_studio_0-145": {
+    "cpWER": 0.305316091954023,
+    "errors": 425,
+    "length": 1392,
+    "insertions": 14,
+    "deletions": 330,
+    "substitutions": 81,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Sally",
+        0
+      ],
+      [
+        "Jenny",
+        1
+      ],
+      [
+        "Chris",
+        3
+      ],
+      [
+        "Donald",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32020_sc_plaza_0-16": {
+    "cpWER": 0.36203246294989416,
+    "errors": 513,
+    "length": 1417,
+    "insertions": 30,
+    "deletions": 407,
+    "substitutions": 76,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32006_sc_meetup_0-8": {
+    "cpWER": 0.5009041591320073,
+    "errors": 831,
+    "length": 1659,
+    "insertions": 118,
+    "deletions": 524,
+    "substitutions": 189,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Linda",
+        3
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        null,
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32263_sc_plaza_0-137": {
+    "cpWER": 0.5630662020905923,
+    "errors": 808,
+    "length": 1435,
+    "insertions": 165,
+    "deletions": 470,
+    "substitutions": 173,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Tom",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Rachel",
+        4
+      ],
+      [
+        "Brad",
+        2
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32183_sc_panacast_0-116": {
+    "cpWER": 0.7819843342036553,
+    "errors": 1198,
+    "length": 1532,
+    "insertions": 185,
+    "deletions": 776,
+    "substitutions": 237,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Beth",
+        5
+      ],
+      [
+        "John",
+        0
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        "Ron",
+        6
+      ],
+      [
+        "Linda",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32257_sc_rockfall_2-133": {
+    "cpWER": 0.6936011209715086,
+    "errors": 1485,
+    "length": 2141,
+    "insertions": 77,
+    "deletions": 980,
+    "substitutions": 428,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Tom",
+        1
+      ],
+      [
+        "Beth",
+        null
+      ],
+      [
+        "Brad",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32048_sc_rockfall_1-47": {
+    "cpWER": 0.6835443037974683,
+    "errors": 1080,
+    "length": 1580,
+    "insertions": 238,
+    "deletions": 706,
+    "substitutions": 136,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Ron",
+        5
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32091_sc_studio_0-91": {
+    "cpWER": 0.4931972789115646,
+    "errors": 580,
+    "length": 1176,
+    "insertions": 156,
+    "deletions": 360,
+    "substitutions": 64,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Donald",
+        0
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "Rachel",
+        5
+      ],
+      [
+        "Sarah",
+        4
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        7
+      ]
+    ]
+  },
+  "sdm_MTG_32068_sc_plaza_0-59": {
+    "cpWER": 0.5567928730512249,
+    "errors": 750,
+    "length": 1347,
+    "insertions": 161,
+    "deletions": 467,
+    "substitutions": 122,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Linda",
+        2
+      ],
+      [
+        "Beth",
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32085_sc_rockfall_2-80": {
+    "cpWER": 0.735495945102932,
+    "errors": 1179,
+    "length": 1603,
+    "insertions": 133,
+    "deletions": 758,
+    "substitutions": 288,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Sarah",
+        5
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Donald",
+        2
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32023_sc_plaza_0-22": {
+    "cpWER": 0.5817339510258107,
+    "errors": 879,
+    "length": 1511,
+    "insertions": 97,
+    "deletions": 557,
+    "substitutions": 225,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Linda",
+        1
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "Ron",
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32089_sc_rockfall_1-87": {
+    "cpWER": 0.6237623762376238,
+    "errors": 693,
+    "length": 1111,
+    "insertions": 172,
+    "deletions": 420,
+    "substitutions": 101,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Donald",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32260_sc_rockfall_0-134": {
+    "cpWER": 0.4213235294117647,
+    "errors": 573,
+    "length": 1360,
+    "insertions": 53,
+    "deletions": 387,
+    "substitutions": 133,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Tom",
+        1
+      ],
+      [
+        "Brad",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32178_sc_meetup_0-110": {
+    "cpWER": 0.3820047355958958,
+    "errors": 484,
+    "length": 1267,
+    "insertions": 64,
+    "deletions": 343,
+    "substitutions": 77,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "John",
+        6
+      ],
+      [
+        "Sarah",
+        5
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32250_sc_rockfall_0-124": {
+    "cpWER": 0.4189288334556126,
+    "errors": 571,
+    "length": 1363,
+    "insertions": 106,
+    "deletions": 352,
+    "substitutions": 113,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Brad",
+        0
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Tom",
+        2
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32345_sc_plaza_0-157": {
+    "cpWER": 0.1608695652173913,
+    "errors": 185,
+    "length": 1150,
+    "insertions": 26,
+    "deletions": 129,
+    "substitutions": 30,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Brad",
+        0
+      ],
+      [
+        "Sally",
+        2
+      ],
+      [
+        "Jenny",
+        3
+      ],
+      [
+        "Donald",
+        1
+      ],
+      [
+        null,
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32110_sc_rockfall_2-108": {
+    "cpWER": 0.7668970814132104,
+    "errors": 1997,
+    "length": 2604,
+    "insertions": 323,
+    "deletions": 1438,
+    "substitutions": 236,
+    "missed_speaker": 2,
+    "falarm_speaker": 0,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "John",
+        0
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Linda",
+        null
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Donald",
+        1
+      ],
+      [
+        "Rachel",
+        null
+      ]
+    ]
+  },
+  "sdm_MTG_32081_sc_plaza_0-76": {
+    "cpWER": 0.7075471698113207,
+    "errors": 975,
+    "length": 1378,
+    "insertions": 239,
+    "deletions": 565,
+    "substitutions": 171,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Donald",
+        4
+      ]
+    ]
+  },
+  "sdm_MTG_32109_sc_plaza_0-106": {
+    "cpWER": 0.5253333333333333,
+    "errors": 788,
+    "length": 1500,
+    "insertions": 225,
+    "deletions": 474,
+    "substitutions": 89,
+    "missed_speaker": 0,
+    "falarm_speaker": 3,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Linda",
+        6
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Ron",
+        3
+      ],
+      [
+        "Donald",
+        4
+      ],
+      [
+        "John",
+        5
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        8
+      ]
+    ]
+  },
+  "sdm_MTG_32191_sc_panacast_0-122": {
+    "cpWER": 0.5642857142857143,
+    "errors": 790,
+    "length": 1400,
+    "insertions": 208,
+    "deletions": 485,
+    "substitutions": 97,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 6,
+    "assignment": [
+      [
+        "Rachel",
+        0
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Beth",
+        4
+      ],
+      [
+        "Ron",
+        2
+      ],
+      [
+        "John",
+        1
+      ],
+      [
+        "Linda",
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32338_sc_rockfall_2-155": {
+    "cpWER": 0.3082942097026604,
+    "errors": 394,
+    "length": 1278,
+    "insertions": 77,
+    "deletions": 276,
+    "substitutions": 41,
+    "missed_speaker": 0,
+    "falarm_speaker": 1,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Donald",
+        0
+      ],
+      [
+        "Brad",
+        1
+      ],
+      [
+        "Jenny",
+        2
+      ],
+      [
+        "Sally",
+        4
+      ],
+      [
+        null,
+        3
+      ]
+    ]
+  },
+  "sdm_MTG_32087_sc_plaza_0-83": {
+    "cpWER": 0.9842696629213483,
+    "errors": 1314,
+    "length": 1335,
+    "insertions": 441,
+    "deletions": 735,
+    "substitutions": 138,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Beth",
+        3
+      ],
+      [
+        "Ron",
+        4
+      ],
+      [
+        "Rachel",
+        1
+      ],
+      [
+        "Donald",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32007_sc_plaza_0-11": {
+    "cpWER": 0.47835497835497837,
+    "errors": 663,
+    "length": 1386,
+    "insertions": 93,
+    "deletions": 472,
+    "substitutions": 98,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "Linda",
+        0
+      ],
+      [
+        "Sarah",
+        2
+      ],
+      [
+        "Rachel",
+        3
+      ],
+      [
+        "Ron",
+        5
+      ],
+      [
+        null,
+        4
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "sdm_MTG_32041_sc_rockfall_2-38": {
+    "cpWER": 0.9163636363636364,
+    "errors": 1512,
+    "length": 1650,
+    "insertions": 239,
+    "deletions": 776,
+    "substitutions": 497,
+    "missed_speaker": 0,
+    "falarm_speaker": 2,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Sarah",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        "Beth",
+        2
+      ],
+      [
+        "Rachel",
+        6
+      ],
+      [
+        null,
+        3
+      ],
+      [
+        null,
+        5
+      ]
+    ]
+  },
+  "sdm_MTG_32040_sc_studio_0-37": {
+    "cpWER": 0.6282919488337095,
+    "errors": 835,
+    "length": 1329,
+    "insertions": 167,
+    "deletions": 560,
+    "substitutions": 108,
+    "missed_speaker": 1,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Beth",
+        0
+      ],
+      [
+        "Ron",
+        1
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Linda",
+        null
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32042_sc_plaza_0-40": {
+    "cpWER": 0.5466666666666666,
+    "errors": 779,
+    "length": 1425,
+    "insertions": 77,
+    "deletions": 501,
+    "substitutions": 201,
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 5,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Sarah",
+        3
+      ],
+      [
+        "Beth",
+        1
+      ],
+      [
+        "Linda",
+        4
+      ],
+      [
+        "Rachel",
+        2
+      ]
+    ]
+  },
+  "sdm_MTG_32101_sc_meetup_0-94": {
+    "cpWER": 0.730533270410571,
+    "errors": 1548,
+    "length": 2119,
+    "insertions": 266,
+    "deletions": 944,
+    "substitutions": 338,
+    "missed_speaker": 0,
+    "falarm_speaker": 4,
+    "scored_speaker": 7,
+    "assignment": [
+      [
+        "Ron",
+        0
+      ],
+      [
+        "Donald",
+        3
+      ],
+      [
+        "Beth",
+        5
+      ],
+      [
+        "Sarah",
+        1
+      ],
+      [
+        "Linda",
+        8
+      ],
+      [
+        "Rachel",
+        2
+      ],
+      [
+        "John",
+        4
+      ],
+      [
+        null,
+        7
+      ],
+      [
+        null,
+        6
+      ],
+      [
+        null,
+        9
+      ],
+      [
+        null,
+        10
+      ]
+    ]
+  }
+}

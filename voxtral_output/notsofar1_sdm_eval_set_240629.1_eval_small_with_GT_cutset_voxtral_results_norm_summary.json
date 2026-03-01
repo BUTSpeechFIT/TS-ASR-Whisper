@@ -1,0 +1,14 @@
+{
+  "voxtral_results": "voxtral_output/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset_voxtral_results.json",
+  "reference_cutset": "/mnt/scratch/tmp/ipoloka/mt_asr_data/manifests/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz",
+  "text_norm": true,
+  "overall_cpWER": 0.5439111510821887,
+  "errors": 128214,
+  "length": 235726,
+  "insertions": 20422,
+  "deletions": 82420,
+  "substitutions": 25372,
+  "missed_speaker": 29,
+  "falarm_speaker": 131,
+  "num_recordings": 160
+}

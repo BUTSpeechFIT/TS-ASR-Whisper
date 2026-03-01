@@ -1,0 +1,14 @@
+{
+  "voxtral_results": "voxtral_output/mixer6-sdm_cutset_eval_voxtral_results.json",
+  "reference_cutset": "/mnt/scratch/tmp/ipoloka/mt_asr_data/manifests/mixer6/mixer6-sdm_cutset_eval.jsonl.gz",
+  "text_norm": true,
+  "overall_cpWER": 0.19368999405250786,
+  "errors": 13678,
+  "length": 70618,
+  "insertions": 2152,
+  "deletions": 9506,
+  "substitutions": 2020,
+  "missed_speaker": 0,
+  "falarm_speaker": 69,
+  "num_recordings": 23
+}
