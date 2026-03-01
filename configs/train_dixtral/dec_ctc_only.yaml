@@ -7,11 +7,14 @@ wandb:
 model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
   dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
-  reinit_from: "/mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_no_aug_w_ctc_v3/checkpoint-23500"
+  reinit_from: "/mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_v7_replicate_7gpus_lora_w_ctc_best_replicate_proper_saving/checkpoint-3000"
   num_soft_prompts: 0
   ctc_weight: 0.3
 
 training:
+  use_lora: True
+  bf16: false
+  bf16_full_eval: false
   decode_only: True
   train_dixtral: True
   per_device_eval_batch_size: 4
@@ -29,10 +32,11 @@ training:
 data:
   use_timestamps: false
   train_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   dev_cutsets:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
   eval_cutsets:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   dataset_weights:
     - 1
+  train_text_norm: "voxtral"

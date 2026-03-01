@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_new_ctc_dec
+experiment: dixtral_lora_8k_v2_real_diar
 
 wandb:
   project: dixtral_dec
@@ -7,14 +7,15 @@ wandb:
 model:
   dixtral_base_model: "mistralai/Voxtral-Mini-3B-2507"
   dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3
-  reinit_from: "/mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_no_aug_w_ctc_v3/checkpoint-24000"
+  reinit_from: /mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_v7_replicate_7gpus_lora_w_ctc_best_replicate_proper_saving/checkpoint-8000
   num_soft_prompts: 0
   ctc_weight: 0
 
 training:
+  use_lora: True
   decode_only: True
   train_dixtral: True
-  per_device_eval_batch_size: 1
+  per_device_eval_batch_size: 4
   dataloader_num_workers: 1
   dataloader_prefetch_factor: 1
   dataloader_pin_memory: False
@@ -24,17 +25,24 @@ training:
   eval_metrics_list: ["cp_wer"]
   predict_with_generate: true
   save_visualizations: true
+  generation_num_beams: 1
 
 data:
   use_timestamps: false
+  use_diar: true
+  eval_text_norm: "whisper_nsf"
   train_cutsets:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
   dev_cutsets:
-    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
+  dev_diar_cutsets:
+    - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/diar_exp/DiariZen/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset_v2.jsonl.gz
   eval_cutsets:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
+  eval_diar_cutsets:
+    - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/diar_exp/DiariZen/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset_v2.jsonl.gz
   dataset_weights:
     - 1
 
 decoding:
-  decoding_ctc_weight: 0.2
+  decoding_ctc_weight: 0.0
