@@ -23,6 +23,10 @@ logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
 
+def is_ignored_segment(text):
+    return bool(re.match(r"^\s*#ignore=", text or ""))
+
+
 def add_timestamps(transcript, sample_len, sampling_rate=16_000, precision=0.02):
     return {"transcript": f"<|0.00|>{transcript}<|{round_nearest(sample_len / sampling_rate, precision):.2f}|>"}
 
@@ -395,18 +399,209 @@ class TS_ASR_DatasetSuperclass:
                                                                greedy_sample=greedy_sample)
         return other_cut
 
-    def cut_to_sample(self, cut: Cut, speaker_id: str, idx:int, is_nested: bool = False):
+    def get_transcript(self, target_spk_supervisions, last_segment_unfinished):
+        merged_supervisions = self.merge_supervisions(target_spk_supervisions)
+        # Build parts with raw text first, track ST boundary flags
+        parts = []
+        for i, segment in enumerate(merged_supervisions):
+            is_last = (i == len(merged_supervisions) - 1)
+            raw = segment.text_ or ""
+            # Skip ignored segments entirely
+            if is_ignored_segment(raw):
+                continue
+            trailing_st = bool(re.search(r"<ST\s*/>\s*$", raw))
+            leading_st = bool(re.match(r"^\s*<ST\s*/>", raw))
+            # Strip leading and trailing <ST/>, collapse internal consecutive ones
+            raw = re.sub(r"^\s*(<ST\s*/>\s*)+", "", raw)
+            raw = re.sub(r"(\s*<ST\s*/>)+\s*$", "", raw)
+            parts.append({
+                "text": raw,
+                "leading_st": leading_st,
+                "trailing_st": trailing_st,
+                "is_last": is_last,
+                "segment": segment,
+                "skip_end_token": is_last and last_segment_unfinished,
+            })
+        # Now stitch with context-aware joining
+        parts = [p for p in parts if p["text"].strip()]
+        stitched_texts = []
+        for i, part in enumerate(parts):
+            text = part["text"]
+            if not text.strip():
+                continue
+            if i == 0:
+                stitched_texts.append(text)
+            else:
+                prev_trailing = parts[i - 1]["trailing_st"]
+                curr_leading = part["leading_st"]
+                if prev_trailing or curr_leading:
+                    # Continuation: join without sentence break
+                    if stitched_texts:
+                        prev = stitched_texts[-1].rstrip()
+                        if prev and prev[-1] in '.?!;':
+                            # Previous was complete sentence, treat as new sentence
+                            stitched_texts[-1] = prev
+                            text = text[0].upper() + text[1:] if text else text
+                        elif prev and prev[-1] == ',':
+                            # Already has comma, just lowercase continuation
+                            text = text[0].lower() + text[1:] if text else text
+                        else:
+                            # Genuine mid-sentence cut, join with space (not comma)
+                            stitched_texts[-1] = prev
+                            text = text[0].lower() + text[1:] if text else text
+                    stitched_texts.append(text)
+                else:
+                    # Clean sentence boundary
+                    if stitched_texts:
+                        prev = stitched_texts[-1].rstrip()
+                        if prev and prev[-1] not in '.?!;:':
+                            stitched_texts[-1] = prev + "."
+                    text = text[0].upper() + text[1:] if text else text
+                    stitched_texts.append(text)
+        # Ensure final sentence is closed
+        if stitched_texts:
+            prev = stitched_texts[-1].rstrip()
+            if prev and prev[-1] not in '.?!;:':
+                stitched_texts[-1] = prev + "."
+        # Join and apply norm (which no longer needs to handle <ST/>)
+        separator = "" if self.use_timestamps else " "
+        # Re-attach timestamps if needed
+        final_parts = []
+        seg_iter = iter([p for p in parts if p["text"].strip()])
+        for text in stitched_texts:
+            try:
+                part = next(seg_iter)
+                segment = part["segment"]
+                if self.use_timestamps:
+                    start = f"<|{round_nearest(segment.start, 0.02):.2f}|>"
+                    end = f"<|{round_nearest(segment.end_, 0.02):.2f}|>" if not part["skip_end_token"] else ""
+                    text = start + text + end
+            except StopIteration:
+                pass
+            final_parts.append(text)
+        transcription = separator.join(final_parts)
+        transcription = self.text_norm(transcription)
+        return transcription
+
+    def get_transcripts(self):
+        transcripts = []
+        for idx in range(len(self)):
+            cut_index = np.searchsorted(self.to_index_mapping, idx, side='right')
+            cut = self.cset[cut_index]
+            spks = self.get_cut_spks(cut)
+            local_sid = (idx - self.to_index_mapping[cut_index]) % len(spks)
+            speaker_id = spks[local_sid]
+            last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut,
+                                                                                          "per_spk_flags") else False
+            target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
+            transcription = self.get_transcript(target_spk_supervisions, last_segment_unfinished)
+            transcripts.append(transcription)
+        open('train.txt', 'w').write("\n".join(transcripts))
+
+    #
+    # def get_transcript(self,target_spk_supervisions, last_segment_unfinished):
+    #     merged_supervisions = self.merge_supervisions(target_spk_supervisions)
+    #
+    #     # Build parts with raw text first, track ST boundary flags
+    #     parts = []
+    #     for i, segment in enumerate(merged_supervisions):
+    #         is_last = (i == len(merged_supervisions) - 1)
+    #         raw = segment.text_ or ""
+    #
+    #         # Skip ignored segments entirely
+    #         if is_ignored_segment(raw):
+    #             continue
+    #
+    #         trailing_st = bool(re.search(r"<ST\s*/>\s*$", raw))
+    #         leading_st = bool(re.match(r"^\s*<ST\s*/>", raw))
+    #
+    #         # Strip leading and trailing <ST/>, collapse internal consecutive ones
+    #         raw = re.sub(r"^\s*(<ST\s*/>\s*)+", "", raw)
+    #         raw = re.sub(r"(\s*<ST\s*/>)+\s*$", "", raw)
+    #
+    #         parts.append({
+    #             "text": raw,
+    #             "leading_st": leading_st,
+    #             "trailing_st": trailing_st,
+    #             "is_last": is_last,
+    #             "segment": segment,
+    #             "skip_end_token": is_last and last_segment_unfinished,
+    #         })
+    #
+    #     # Now stitch with context-aware joining
+    #     parts = [p for p in parts if p["text"].strip()]
+    #     stitched_texts = []
+    #     for i, part in enumerate(parts):
+    #         text = part["text"]
+    #         if not text.strip():
+    #             continue
+    #
+    #         if i == 0:
+    #             stitched_texts.append(text)
+    #         else:
+    #             prev_trailing = parts[i - 1]["trailing_st"]
+    #             curr_leading = part["leading_st"]
+    #
+    #             if prev_trailing or curr_leading:
+    #                 # Continuation: join without sentence break
+    #                 if stitched_texts:
+    #                     prev = stitched_texts[-1].rstrip()
+    #                     if prev and prev[-1] in '.?!;':
+    #                         # Previous was complete sentence, treat as new sentence
+    #                         stitched_texts[-1] = prev
+    #                         text = text[0].upper() + text[1:] if text else text
+    #                     elif prev and prev[-1] == ',':
+    #                         # Already has comma, just lowercase continuation
+    #                         text = text[0].lower() + text[1:] if text else text
+    #                     else:
+    #                         # Genuine mid-sentence cut, join with space (not comma)
+    #                         stitched_texts[-1] = prev
+    #                         text = text[0].lower() + text[1:] if text else text
+    #                 stitched_texts.append(text)
+    #             else:
+    #                 # Clean sentence boundary
+    #                 if stitched_texts:
+    #                     prev = stitched_texts[-1].rstrip()
+    #                     if prev and prev[-1] not in '.?!;:':
+    #                         stitched_texts[-1] = prev + "."
+    #                 text = text[0].upper() + text[1:] if text else text
+    #                 stitched_texts.append(text)
+    #
+    #     # Ensure final sentence is closed
+    #     if stitched_texts:
+    #         prev = stitched_texts[-1].rstrip()
+    #         if prev and prev[-1] not in '.?!;:':
+    #             stitched_texts[-1] = prev + "."
+    #
+    #     # Join and apply norm (which no longer needs to handle <ST/>)
+    #     separator = "" if self.use_timestamps else " "
+    #
+    #     # Re-attach timestamps if needed
+    #     final_parts = []
+    #     seg_iter = iter([p for p in parts if p["text"].strip()])
+    #     for text in stitched_texts:
+    #         try:
+    #             part = next(seg_iter)
+    #             segment = part["segment"]
+    #             if self.use_timestamps:
+    #                 start = f"<|{round_nearest(segment.start, 0.02):.2f}|>"
+    #                 end = f"<|{round_nearest(segment.end_, 0.02):.2f}|>" if not part["skip_end_token"] else ""
+    #                 text = start + text + end
+    #         except StopIteration:
+    #             pass
+    #         final_parts.append(text)
+    #
+    #     transcription = separator.join(final_parts)
+    #     transcription = self.text_norm(transcription)
+    #     return transcription
+
+    def cut_to_sample(self, cut: Cut, speaker_id: str, idx: int = -1, is_nested: bool = False):
         stno_mask = self.get_stno_mask(cut, speaker_id)
         features, att_mask = self.get_features(cut)
 
         last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut, "per_spk_flags") else False
         target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
-        merged_supervisions = self.merge_supervisions(target_spk_supervisions)
-        transcription = ("" if self.use_timestamps else " ").join(
-            [self.get_segment_text_with_timestamps(segment, self.use_timestamps, self.text_norm,
-                                                   (idx == len(merged_supervisions) - 1) and last_segment_unfinished)
-             for idx, segment in
-             enumerate(merged_supervisions)])
+        transcription = self.get_transcript(target_spk_supervisions, last_segment_unfinished)
 
         outputs = {"input_features": features, "stno_mask": torch.tensor(stno_mask), "attention_mask": att_mask,
                    "transcript": transcription, "is_long_form": False}
@@ -446,6 +641,168 @@ class TS_ASR_Dataset(TS_ASR_DatasetSuperclass, Dataset):
         local_sid = (idx - self.to_index_mapping[cut_index]) % len(spks)
         sid = spks[local_sid]
         return self.cut_to_sample(cut, sid, idx)
+
+    #
+    # def get_transcripts(self):
+    #     transcripts = []
+    #     for idx in range(len(self)):
+    #         cut_index = np.searchsorted(self.to_index_mapping, idx, side='right')
+    #         cut = self.cset[cut_index]
+    #         spks = self.get_cut_spks(cut)
+    #         local_sid = (idx - self.to_index_mapping[cut_index]) % len(spks)
+    #         speaker_id = spks[local_sid]
+    #         last_segment_unfinished = cut.per_spk_flags.get(speaker_id, False) if hasattr(cut,
+    #                                                                                       "per_spk_flags") else False
+    #         target_spk_supervisions = filter(lambda x: x.speaker == speaker_id, cut.supervisions)
+    #         transcription = self.get_transcript(target_spk_supervisions, last_segment_unfinished)
+    #         transcripts.append(transcription)
+    #     open('train.txt', 'w').write("\n".join(transcripts))
+    #     return transcripts
+
+    # def get_transcript(self, target_spk_supervisions, last_segment_unfinished):
+    #     merged_supervisions = self.merge_supervisions(target_spk_supervisions)
+    #
+    #     # Build parts with raw text first, track ST boundary flags
+    #     parts = []
+    #     for i, segment in enumerate(merged_supervisions):
+    #         is_last = (i == len(merged_supervisions) - 1)
+    #         raw = segment.text_ or ""
+    #
+    #         if is_ignored_segment(raw):
+    #             continue
+    #
+    #         trailing_st = bool(re.search(r"<ST\s*/>\s*$", raw))
+    #         leading_st = bool(re.match(r"^\s*<ST\s*/>", raw))
+    #
+    #         raw = re.sub(r"^\s*(<ST\s*/>\s*)+", "", raw)
+    #         raw = re.sub(r"(\s*<ST\s*/>)+\s*$", "", raw)
+    #
+    #         parts.append({
+    #             "text": raw,
+    #             "leading_st": leading_st,
+    #             "trailing_st": trailing_st,
+    #             "is_last": is_last,
+    #             "segment": segment,
+    #             "skip_end_token": is_last and last_segment_unfinished,
+    #         })
+    #
+    #     parts = [p for p in parts if p["text"].strip()]
+    #     stitched_texts = []
+    #     for i, part in enumerate(parts):
+    #         text = part["text"]
+    #         if not text.strip():
+    #             continue
+    #
+    #         if i == 0:
+    #             stitched_texts.append(text)
+    #         else:
+    #             prev_trailing = parts[i - 1]["trailing_st"]
+    #             curr_leading = part["leading_st"]
+    #
+    #             if prev_trailing or curr_leading:
+    #                 if stitched_texts:
+    #                     prev = stitched_texts[-1].rstrip()
+    #                     if prev and prev[-1] in '.?!;':
+    #                         stitched_texts[-1] = prev
+    #                         text = text[0].upper() + text[1:] if text else text
+    #                     elif prev and prev[-1] == ',':
+    #                         text = text[0].lower() + text[1:] if text else text
+    #                     else:
+    #                         stitched_texts[-1] = prev
+    #                         text = text[0].lower() + text[1:] if text else text
+    #                 stitched_texts.append(text)
+    #             else:
+    #                 if stitched_texts:
+    #                     prev = stitched_texts[-1].rstrip()
+    #                     if prev and prev[-1] not in '.?!;:':
+    #                         stitched_texts[-1] = prev + "."
+    #                 text = text[0].upper() + text[1:] if text else text
+    #                 stitched_texts.append(text)
+    #
+    #     if stitched_texts:
+    #         prev = stitched_texts[-1].rstrip()
+    #         if prev and prev[-1] not in '.?!;:':
+    #             stitched_texts[-1] = prev + "."
+    #
+    #     separator = "" if self.use_timestamps else " "
+    #
+    #     earliest_start = merged_supervisions[0].start if merged_supervisions else 0.0
+    #
+    #     final_parts = []
+    #     seg_iter = iter([p for p in parts if p["text"].strip()])
+    #     for text in stitched_texts:
+    #         try:
+    #             part = next(seg_iter)
+    #             segment = part["segment"]
+    #             part_start = segment.start
+    #             if self.use_timestamps:
+    #                 start = f"<|{round_nearest(segment.start, 0.02):.2f}|>"
+    #                 end = f"<|{round_nearest(segment.end_, 0.02):.2f}|>" if not part["skip_end_token"] else ""
+    #                 text = start + text + end
+    #         except StopIteration:
+    #             part_start = earliest_start
+    #         final_parts.append((part_start, text))
+    #
+    #     transcription = separator.join(t for _, t in final_parts)
+    #     transcription = self.text_norm(transcription)
+    #
+    #     return transcription, final_parts, earliest_start
+    #
+    # def get_transcripts(self):
+    #     session_utterance_lines = {}  # cut_index -> list of (start_time, part_text)
+    #     session_speaker_lines = {}  # cut_index -> dict of speaker_id -> {"start": float, "transcription": str}
+    #
+    #     for idx in range(len(self.cset)):
+    #         # cut_index = np.searchsorted(self.to_index_mapping, idx, side='right')
+    #         cut = self.cset[idx]
+    #         spks = self.get_cut_spks(cut)
+    #         for speaker_id in spks:
+    #         # local_sid = (idx - self.to_index_mapping[cut_index]) % len(spks)
+    #         # speaker_id = spks[local_sid]
+    #             last_segment_unfinished = (
+    #                 cut.per_spk_flags.get(speaker_id, False)
+    #                 if hasattr(cut, "per_spk_flags") else False
+    #             )
+    #             target_spk_supervisions = list(filter(lambda x: x.speaker == speaker_id, cut.supervisions))
+    #             transcription, final_parts, earliest_start = self.get_transcript(target_spk_supervisions,
+    #                                                                              last_segment_unfinished)
+    #
+    #             # Accumulate utterance parts per session
+    #             if cut.id not in session_utterance_lines:
+    #                 session_utterance_lines[cut.id] = []
+    #             for part_start, part_text in final_parts:
+    #                 session_utterance_lines[cut.id].append((part_start, part_text))
+    #
+    #             # Accumulate speaker transcriptions per session
+    #             if cut.id not in session_speaker_lines:
+    #                 session_speaker_lines[cut.id] = {}
+    #             spk_map = session_speaker_lines[cut.id]
+    #             if speaker_id not in spk_map:
+    #                 spk_map[speaker_id] = {"start": earliest_start, "transcription": transcription}
+    #             else:
+    #                 spk_map[speaker_id]["start"] = min(spk_map[speaker_id]["start"], earliest_start)
+    #                 spk_map[speaker_id]["transcription"] += " " + transcription
+    #
+    #     # Build one line per session
+    #     utterance_lines = []
+    #     speaker_lines = []
+    #
+    #     for cut_index in sorted(session_utterance_lines.keys()):
+    #         # Sort parts by start time, join into one line
+    #         parts_sorted = sorted(session_utterance_lines[cut_index], key=lambda x: x[0])
+    #         line = " ".join(self.text_norm(t) for _, t in parts_sorted)
+    #         utterance_lines.append(line)
+    #
+    #         # Sort speakers by earliest start, join into one line
+    #         spk_map = session_speaker_lines[cut_index]
+    #         line = " ".join(
+    #             data["transcription"]
+    #             for _, data in sorted(spk_map.items(), key=lambda kv: kv[1]["start"])
+    #         )
+    #         speaker_lines.append(line)
+    #
+    #     open('train_by_utterance.txt', 'w').write("\n".join(utterance_lines))
+    #     open('train_by_speaker.txt', 'w').write("\n".join(speaker_lines))
 
 
 class LhotseLongFormDataset(TS_ASR_Dataset):
@@ -509,7 +866,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
         else:
             return False
 
-    def cut_to_sample(self, cut: Cut, speaker_id, idx, int, is_nested=False):
+    def cut_to_sample(self, cut: Cut, speaker_id, idx: int = -1, is_nested=False):
         stno_mask = self.get_stno_mask(cut, speaker_id)
         features, att_mask = self.get_features(cut)
 
@@ -572,7 +929,8 @@ def load_cutsets(cutset_list, use_enrollments):
 
 
 def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArguments,
-                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True, dataset_class=LhotseLongFormDataset):
+                   text_norm, container, diar_cutset_paths=None, enrollment_cutset=None, use_ids_as_transcripts=True,
+                   dataset_class=LhotseLongFormDataset):
     logger.info('Using LhotseLongFormDataset')
     if cutset_paths is None or len(cutset_paths) == 0:
         raise ValueError("'cutset_paths' is None or empty. Please provide valid 'cutset_paths' for the dataset")
@@ -602,15 +960,15 @@ def build_datasets(cutset_paths: List[Union[str, Path]], data_args: DataArgument
             if "libri" in cutset_path:
                 cutsets[idx].use_enrollment = True
     return {os.path.basename(path).removesuffix(".jsonl.gz"): dataset_class(cutset=cutset, references=ref,
-                                                                                    use_timestamps=data_args.use_timestamps,
-                                                                                    text_norm=text_norm,
-                                                                                    feature_extractor=container.feature_extractor,
-                                                                                    global_lang_id=data_args.global_lang_id,
-                                                                                    provide_gt_lang=data_args.provide_gt_lang,
-                                                                                    load_channel_zero_only=data_args.load_channel_zero_only,
-                                                                                    break_to_characters="break_to_chars" in path,
-                                                                                    use_enrollments=data_args.use_enrollments,
-                                                                                    enrollment_cutset=enrollment_cutset,
-                                                                                    use_ids_as_transcripts=use_ids_as_transcripts
-                                                                                    ) for cutset, ref, path in
+                                                                            use_timestamps=data_args.use_timestamps,
+                                                                            text_norm=text_norm,
+                                                                            feature_extractor=container.feature_extractor,
+                                                                            global_lang_id=data_args.global_lang_id,
+                                                                            provide_gt_lang=data_args.provide_gt_lang,
+                                                                            load_channel_zero_only=data_args.load_channel_zero_only,
+                                                                            break_to_characters="break_to_chars" in path,
+                                                                            use_enrollments=data_args.use_enrollments,
+                                                                            enrollment_cutset=enrollment_cutset,
+                                                                            use_ids_as_transcripts=use_ids_as_transcripts
+                                                                            ) for cutset, ref, path in
             zip(cutsets, refs, cutset_paths)}

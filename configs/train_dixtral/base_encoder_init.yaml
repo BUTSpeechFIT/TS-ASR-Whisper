@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train_dixtral/base
+
+experiment: dixtral_encoder_init
+
+model:
+  dixtral_load_fddt_from: null
+  dixtral_replace_encoder_from: ${oc.env:SRC_ROOT}/dicow_large_v3

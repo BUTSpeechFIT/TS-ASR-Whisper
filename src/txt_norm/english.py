@@ -644,6 +644,8 @@ class EnglishTextNormalizer:
             self.fillers = None
 
     def __call__(self, s: str):
+        if s.startswith("#ignore"):
+            return ""
         s = s.lower()
 
         s = re.sub(r"[<\[][^>\]]*[>\]]", "", s)

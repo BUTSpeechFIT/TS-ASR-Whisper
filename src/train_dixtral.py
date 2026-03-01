@@ -6,7 +6,7 @@ import lhotse
 import torch
 from peft.utils.save_and_load import _insert_adapter_name_into_state_dict
 from safetensors.torch import load_file
-from transformers import EarlyStoppingCallback
+from transformers import EarlyStoppingCallback, TrainerCallback, TrainingArguments, TrainerState, TrainerControl
 from transformers.utils import logging
 
 from data.local_datasets import build_datasets, load_cutsets
@@ -15,13 +15,56 @@ from models.dixtral.container import DixtralContainer
 from models.dixtral.dataset import TS_ASR_Dataset_ as TS_ASR_Dataset, LhotseLongFormDataset_ as LhotseLongFormDataset
 from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
-from utils.general import create_lower_uppercase_mapping, patch_wandb_init_with_config, update_generation_config
+from utils.general import patch_wandb_init_with_config, update_generation_config
 from utils.trainers import CustomTrainer, GradLogger
 from utils.training_args import Cfg
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
+
+class SaveNonPeftParamsCallback(TrainerCallback):
+    """Save only non-PEFT (base model / custom) parameters, ignoring PEFT adapter weights."""
+
+    def on_save(
+            self,
+            args: TrainingArguments,
+            state: TrainerState,
+            control: TrainerControl,
+            **kwargs,
+    ):
+        checkpoint_folder = os.path.join(
+            args.output_dir,
+            f"checkpoint-{state.global_step}",
+        )
+        os.makedirs(checkpoint_folder, exist_ok=True)
+
+        model = kwargs["model"]
+
+        # Unwrap from DeepSpeed / FSDP / DDP if needed
+        if hasattr(model, "module"):
+            model = model.module
+
+        # Get all PEFT parameter names to exclude
+        peft_param_names = set(model.peft_model.state_dict().keys()) if hasattr(model, "peft_model") \
+            else {name for name, _ in model.named_parameters() if "lora_" in name or "adapter_" in name}
+
+        # Strip the "base_model.model." prefix that LoRA adds, to match the
+        # key format expected by _load_model_weights when use_lora=True
+        # (it re-adds that prefix itself before calling load_state_dict)
+        lora_prefix = "base_model.model."
+        non_peft_state_dict = {}
+        for name, param in model.named_parameters():
+            if name not in peft_param_names and param.requires_grad:
+                # Strip LoRA wrapper prefix so keys match the raw model keys
+                save_key = name.removeprefix(lora_prefix)
+                non_peft_state_dict[save_key] = param.detach().cpu().to(torch.float32)
+
+        # Save as .safetensors to match the reload logic in _load_model_weights
+        from safetensors.torch import save_file
+        save_file(non_peft_state_dict, os.path.join(checkpoint_folder, "non_peft_params.safetensors"))
+
+        return control
 
 class ModelTrainer:
     def __init__(self, cfg: Cfg):
@@ -85,14 +128,14 @@ class ModelTrainer:
             self.data_args.dev_cutsets, self.data_args,
             self.dev_text_norm, self.container, self.data_args.dev_diar_cutsets,
             enrollment_cutset=enrollment_cutset, dataset_class=LhotseLongFormDataset,
-            use_ids_as_transcripts=False
+            use_ids_as_transcripts=self.data_args.use_diar
         )
 
         eval_datasets = build_datasets(
             self.data_args.eval_cutsets, self.data_args,
             self.eval_text_norm, self.container, self.data_args.eval_diar_cutsets,
             enrollment_cutset=enrollment_cutset, dataset_class=LhotseLongFormDataset,
-            use_ids_as_transcripts=False
+            use_ids_as_transcripts=self.data_args.use_diar
         )
 
         return dev_datasets, eval_datasets
@@ -119,20 +162,18 @@ class ModelTrainer:
                 if self.training_args.use_lora:
                     prefix = "base_model.model."
                     state_dict = {prefix + k: v for k, v in state_dict.items()}
-                logger.info(self.model.load_state_dict(state_dict, strict=False))
 
                 if self.training_args.use_lora:
                     adapter_state_dict = load_file(f"{path}/adapter_model.safetensors")
                     adapter_state_dict = _insert_adapter_name_into_state_dict(adapter_state_dict, "default", "lora_")
-
-                    logger.info(self.model.load_state_dict(adapter_state_dict, strict=False))
+                    state_dict = state_dict | adapter_state_dict
+                logger.info(self.model.load_state_dict(state_dict, strict=False))
         if self.training_args.soft_prompt_custom_init:
             if hasattr(self.model, "soft_prompt"):
                 with torch.no_grad():
-                    init_embedding = self.model.language_model.base_model.embed_tokens.weight[34] # transcribe token
-                    self.model.soft_prompt.data.copy_(init_embedding.unsqueeze(0).unsqueeze(0).expand(self.model.soft_prompt.shape).clone())
-
-
+                    init_embedding = self.model.language_model.base_model.embed_tokens.weight[34]  # transcribe token
+                    self.model.soft_prompt.data.copy_(
+                        init_embedding.unsqueeze(0).unsqueeze(0).expand(self.model.soft_prompt.shape).clone())
 
     def _load_state_dict(self, path: str) -> Dict[str, Any]:
         """Load state dictionary from file or directory."""
@@ -237,12 +278,15 @@ class ModelTrainer:
         self._log_model_parameters()
         self._load_model_weights()
         self._setup_fddt_training()
-        update_generation_config(self.model, self.training_args, self.decoding_args, predict_timestamps=self.data_args.use_timestamps)
+        update_generation_config(self.model, self.training_args, self.decoding_args,
+                                 predict_timestamps=self.data_args.use_timestamps)
 
         # Create trainer
         self.collator = self._create_data_collator()
-        callbacks = [EarlyStoppingCallback(self.training_args.early_stopping_patience)] if self.training_args.early_stopping_patience > 0 else []
-
+        callbacks = [EarlyStoppingCallback(
+            self.training_args.early_stopping_patience)] if self.training_args.early_stopping_patience > 0 else []
+        if self.training_args.use_lora:
+            callbacks.append(SaveNonPeftParamsCallback())
         self.model.is_parallelizable = True
         self.model.model_parallel = True
         self.trainer = CustomTrainer(

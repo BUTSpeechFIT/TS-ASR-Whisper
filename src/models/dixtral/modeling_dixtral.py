@@ -737,6 +737,11 @@ class DixtralForConditionalGeneration(DixtralPreTrainedModel, GenerationMixin):
 
                 # Fill with audio_embeds at audio_token positions
                 ctc_embeds[audio_token_mask] = audio_embeds_flat
+                ctc_embeds_detached = ctc_embeds.detach()
+
+                # 2. Force it to require gradients so the additional_layer
+                # builds a backward graph for its own weights
+                ctc_embeds_detached.requires_grad_(True)
 
                 # Remove values outside maximum valid range using audio_mask
                 enc_output_lens = audio_token_mask.sum(dim=1)

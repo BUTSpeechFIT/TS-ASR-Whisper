@@ -1,5 +1,5 @@
 # @package _global_
-experiment: dixtral_no_lora
+experiment: dixtral_new_norm_enhanced_bsize
 
 wandb:
   project: dixtral
@@ -14,7 +14,7 @@ training:
   auto_find_batch_size: True
   decode_only: false
   train_dixtral: True
-  use_lora: False
+  use_lora: True
   soft_prompt_custom_init: True
   per_device_train_batch_size: 1
   per_device_eval_batch_size: 2
@@ -22,7 +22,7 @@ training:
   dataloader_num_workers: 1
   dataloader_prefetch_factor: 1
   dataloader_pin_memory: False
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 8
   gradient_checkpointing: True
   overall_batch_size: null
   remove_timestamps_from_ctc: true
@@ -61,11 +61,11 @@ training:
 data:
   use_timestamps: false
   train_cutsets:
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_120s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_120s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_train_30s.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
+  - /mnt/scratch/tmp/ipoloka/mt_asr_data/manifests//notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_120s.jsonl.gz
+  - /mnt/scratch/tmp/ipoloka/mt_asr_data/manifests//notsofar1/notsofar1_sdm_train_set_240825.1_train_cutset_30s.jsonl.gz
+  - /mnt/scratch/tmp/ipoloka/mt_asr_data/manifests//ami/ami-sdm_cutset_train_120s.jsonl.gz
+  - /mnt/scratch/tmp/ipoloka/mt_asr_data/manifests//ami/ami-sdm_cutset_train_30s.jsonl.gz
+  - /mnt/scratch/tmp/ipoloka/mt_asr_data/manifests//librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
   dev_cutsets:
     - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_dev_set_240825.1_dev1_cutset.jsonl.gz
   eval_cutsets:
@@ -82,7 +82,7 @@ data:
 aug:
   do_augment: false
   musan_augment_prob: 0.3
-  musan_root: ${oc.env:MUSAN_ROOT}
+  musan_root: /mnt/matylda2/data/MUSAN/musan
   spec_aug_prob: 0.3
   stno_gaussian_noise_prob: 0.75
   stno_gaussian_noise_var: 0.2

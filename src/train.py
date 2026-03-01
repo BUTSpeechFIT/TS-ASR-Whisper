@@ -230,7 +230,6 @@ class ModelTrainer:
             processing_class=self.container.tokenizer,
             container=self.container,
             callbacks=callbacks,
-            params_to_keep_frozen=self.training_args.params_to_keep_frozen_keywords,
         )
 
         # Setup additional components
