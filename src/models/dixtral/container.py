@@ -73,16 +73,17 @@ class DixtralContainer:
         )
 
 
-        if model_args.dixtral_load_fddt_from:
-            # Copy the weights
-            dicow = DiCoWForConditionalGeneration.from_pretrained(model_args.dixtral_load_fddt_from)
-            copy_fddt_weights(self.model, dicow)
-            del dicow
-        if model_args.dixtral_replace_encoder_from:
-            dicow = DiCoWForConditionalGeneration.from_pretrained(model_args.dixtral_replace_encoder_from)
-            dixtral_encoder = self.model.audio_tower
-            dicow_encoder = dicow.model.encoder
-            logger.info(dixtral_encoder.load_state_dict(dicow_encoder.state_dict(), strict=False))
+        if not model_args.skip_reinit:
+            if model_args.dixtral_load_fddt_from:
+                # Copy the weights
+                dicow = DiCoWForConditionalGeneration.from_pretrained(model_args.dixtral_load_fddt_from)
+                copy_fddt_weights(self.model, dicow)
+                del dicow
+            if model_args.dixtral_replace_encoder_from:
+                dicow = DiCoWForConditionalGeneration.from_pretrained(model_args.dixtral_replace_encoder_from)
+                dixtral_encoder = self.model.audio_tower
+                dicow_encoder = dicow.model.encoder
+                logger.info(dixtral_encoder.load_state_dict(dicow_encoder.state_dict(), strict=False))
 
         self.processor = AutoProcessor.from_pretrained(model_id)
 

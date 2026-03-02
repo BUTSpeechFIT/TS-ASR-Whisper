@@ -79,6 +79,7 @@ class ModelArguments:
                                           metadata={"help": "Model to initialize fddt params from."})
     dixtral_replace_encoder_from: Optional[str] = field(default=None,
                                           metadata={"help": "Model to initialize encoder params from."})
+    skip_reinit: Optional[bool] = field(default=False, metadata={"help": "Whether to skip param reinitialization."})
     reinit_encoder_from: Optional[str] = field(default=False,
                                                metadata={"help": "Path to encoder model to reinit from."})
     reinit_from: Optional[str] = field(default=False, metadata={"help": "Path to model to reinit from."})

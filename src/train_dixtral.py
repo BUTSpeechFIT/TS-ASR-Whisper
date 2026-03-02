@@ -142,6 +142,8 @@ class ModelTrainer:
 
     def _load_model_weights(self):
         """Load pretrained model weights if specified."""
+        if self.model_args.skip_reinit:
+            return
         if self.model_args.reinit_encoder_from:
             enc_state_dict = load_file(self.model_args.reinit_encoder_from)
             enc_state_dict_no_fddt = {k: v for k, v in enc_state_dict.items() if 'fddt' not in k}

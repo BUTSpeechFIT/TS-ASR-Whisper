@@ -61,29 +61,12 @@ class SessionQALoader:
 
     def load_session_qa(self, session_id: str, speaker_name: str,
                         categories: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """
-        Load QA pairs for a specific speaker in a session.
-
-        Returns only questions (no reference answers).
-
-        Args:
-            session_id: Session identifier
-            speaker_name: Speaker name (e.g., "Sophie")
-            categories: Optional list of categories to include ('content', 'paralinguistic')
-
-        Returns:
-            List of QA pairs with 'question', 'type', 'category' keys
-        """
-        import json
-        from pathlib import Path
-
         qa_pairs = []
 
         if categories is None:
-            categories = ['content', 'paralinguistic']
+            categories = ['content', 'paralinguistic', 'tone', 'gender']  # Add tone and gender
 
         try:
-            # Load session file
             session_path = Path(self.session_dir) / f"{session_id}_qa.json"
 
             if not session_path.exists():
@@ -93,17 +76,14 @@ class SessionQALoader:
             with open(session_path, 'r', encoding='utf-8') as f:
                 session_data = json.load(f)
 
-            # Get speaker data
             speaker_qa = session_data.get('speaker_qa', {}).get(speaker_name, {})
 
             if not speaker_qa:
                 logger.debug(f"No QA data found for speaker {speaker_name} in {session_id}")
                 return qa_pairs
 
-            # Collect QA pairs from requested categories
             if 'content' in categories:
-                content_qa = speaker_qa.get('content_qa', [])
-                for qa in content_qa:
+                for qa in speaker_qa.get('content_qa', []):
                     qa_pairs.append({
                         'question': qa.get('question', ''),
                         'type': qa.get('type', 'detail'),
@@ -112,12 +92,29 @@ class SessionQALoader:
                     })
 
             if 'paralinguistic' in categories:
-                paralinguistic_qa = speaker_qa.get('paralinguistic_qa', [])
-                for qa in paralinguistic_qa:
+                for qa in speaker_qa.get('paralinguistic_qa', []):
                     qa_pairs.append({
                         'question': qa.get('question', ''),
                         'type': qa.get('type', 'emotion'),
                         'category': 'paralinguistic',
+                        'answer': qa.get('answer', ''),
+                    })
+
+            if 'tone' in categories:                          # NEW
+                for qa in speaker_qa.get('tone_qa', []):
+                    qa_pairs.append({
+                        'question': qa.get('question', ''),
+                        'type': qa.get('type', 'tone'),
+                        'category': 'paralinguistic',         # keeps category consistent
+                        'answer': qa.get('answer', ''),
+                    })
+
+            if 'gender' in categories:                        # NEW
+                for qa in speaker_qa.get('gender_qa', []):
+                    qa_pairs.append({
+                        'question': qa.get('question', ''),
+                        'type': qa.get('type', 'gender'),
+                        'category': 'paralinguistic',         # keeps category consistent
                         'answer': qa.get('answer', ''),
                     })
 
@@ -288,6 +285,9 @@ class InferenceConfig:
     reasoning_max_new_tokens: int = 128
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     sampling_rate: int = 16000
+    use_lora: bool = False
+    reinit_from: Optional[str] = None
+    replace_encoder_from: Optional[str] = None
 
 
 class TargetSpeakerReasonerWithCollator:
@@ -322,9 +322,9 @@ class TargetSpeakerReasonerWithCollator:
             from utils.training_args import ModelArguments
 
             model_args = ModelArguments(dixtral_base_model="mistralai/Voxtral-Mini-3B-2507",
-                                        reinit_from="/mnt/scratch/tmp/ipoloka/tsasr/exp/dixtral_new_norm_enhanced_bsize_from_encoder/checkpoint-10000",
+                                        reinit_from=self.config.reinit_from,
                                         dixtral_replace_encoder_from="/mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/dicow_large_v3")
-            use_lora = True
+            use_lora = self.config.use_lora
             self.container = DixtralContainer(model_args=model_args, use_lora=use_lora)
             self.model = self.container.model
 
@@ -580,6 +580,7 @@ Examples:
     --cutset_path data/manifests/ami/test.jsonl \\
     --session_dir /path/to/sessions \\
     --batch_size 8 \\
+    --reinit_from /path/to/checkpoint \\
     --output_file results.json
         """
     )
@@ -599,6 +600,12 @@ Examples:
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                         choices=['cuda', 'cpu'],
                         help='Device to use')
+    parser.add_argument('--use_lora', action='store_true', default=False,
+                        help='Use LoRA adapters when loading the model')
+    parser.add_argument('--reinit_from', type=str, default=None,
+                        help='Path to checkpoint (.safetensors file or directory) to reinitialise weights from')
+    parser.add_argument('--replace_encoder_from', type=str, default=None,
+                        help='Path to replace the encoder weights from')
 
     args = parser.parse_args()
 
@@ -610,6 +617,9 @@ Examples:
         batch_size=args.batch_size,
         reasoning_max_new_tokens=args.reasoning_max_new_tokens,
         device=args.device,
+        use_lora=args.use_lora,
+        reinit_from=args.reinit_from,
+        replace_encoder_from=args.replace_encoder_from,
     )
 
     logger.info("=" * 80)
