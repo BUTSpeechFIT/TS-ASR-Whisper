@@ -150,6 +150,10 @@ class DataCollator:
 
         if not in_longform:
             inputs = list(filter(lambda item: len(self.tokenizer(item["transcript"])['input_ids']) < 440, inputs))
+
+        if len(inputs) == 0:
+            return None
+
         labels = self.tokenizer([sample["transcript"] for sample in inputs],
                                 padding="longest", max_length=self.max_length, return_tensors="pt")
         feats = pad_sequence([sample['input_features'].T for sample in inputs], batch_first=True)
@@ -177,6 +181,7 @@ class DataCollator:
             else:
                 # we are in training modify labels with lang
                 labels['input_ids'][:, 1] = torch.tensor(langs)
+            batch['is_embed'] = torch.tensor([sample == 'en' for sample in languages])
         elif any(languages):
             raise ValueError(
                 f"Some inputs have language and some not. Please unify it if you want to condition by language.")

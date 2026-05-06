@@ -577,8 +577,8 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                  enumerate(merged_supervisions)])
             outputs["transcript"] = transcription
 
-        outputs["language"] = speaker_id.split("_")[-1]
-
+        if self.provide_gt_lang:
+            outputs["language"] = speaker_id.split("_")[-1]
         if self.use_enrollments and not is_nested:
             other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=True)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
