@@ -119,6 +119,9 @@ class CustomTrainer(Seq2SeqTrainer):
         inputs: dict[str, Union[torch.Tensor, Any]],
         num_items_in_batch: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
+        if inputs is None or len(inputs) == 0:
+            dummy_loss = sum(p.sum() for p in model.parameters() if p.requires_grad) * 0.0
+            return dummy_loss
         if self.warmup_phase and self.state.epoch >= self.args.use_fddt_only_n_epochs and self.state.global_step >= self.args.use_fddt_only_n_steps:
             for name, param in self.model.named_parameters():
                 if "lora_" in name:

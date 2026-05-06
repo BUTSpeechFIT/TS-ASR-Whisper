@@ -282,13 +282,16 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
         save_session_outputs(processed_sessions, output_dir, text_norm, references_cs)
 
         # Calculate WER
-        wer_dfs = calculate_tcp_wer(processed_sessions, output_dir, collar=5,
-                                    save_visualizations=save_visualizations, metrics_list=metrics_list)
+        if len(metrics_list) > 0:
+            wer_dfs = calculate_tcp_wer(processed_sessions, output_dir, collar=5,
+                                        save_visualizations=save_visualizations, metrics_list=metrics_list)
 
-        # Save the WER results and calculate the average
-        all_session_wer_df = pd.concat(wer_dfs, ignore_index=True)
-        all_session_wer_df.to_csv(output_dir + '/all_session_wer.csv')
-        metrics = aggregate_wer_metrics(all_session_wer_df, metrics_list)
+            # Save the WER results and calculate the average
+            all_session_wer_df = pd.concat(wer_dfs, ignore_index=True)
+            all_session_wer_df.to_csv(output_dir + '/all_session_wer.csv')
+            metrics = aggregate_wer_metrics(all_session_wer_df, metrics_list)
+        else:
+            metrics = {}
 
     metrics = broadcast_object_list([metrics], from_process=0)
     return metrics[0]

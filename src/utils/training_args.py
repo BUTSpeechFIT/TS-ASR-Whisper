@@ -19,6 +19,7 @@ class GeneralTrainingArguments(Seq2SeqTrainingArguments):
     restart_from: Optional[str] = field(
         default="", metadata={"help": "Path to checkpoint used to restart the training."}
     )
+    train_with_diar: Optional[bool] = field(default=False, metadata={"help": "Whether to train jointly with diarization."})
 
     """Arguments changing behavior of the training."""
     early_stopping_patience: Optional[int] = field(default=-1, metadata={"help": "Patience for early stopping."})
