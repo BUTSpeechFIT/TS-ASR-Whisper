@@ -107,13 +107,44 @@ if __name__ == "__main__":
     # 1. Load your data
     # (Note: Use the actual full JSON string in practice)
     # 2. Run conversion
-    # train = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open("/mnt/scratch/tmp/ipoloka/xtts/train/diar/manifest.json")])
-    # val = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open("/mnt/scratch/tmp/ipoloka/xtts/test1/diar/manifest.json")])
-    test = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open("/mnt/scratch/tmp/ipoloka/cs-fleurs/diar/manifest_v4.json")])
 
-    # train = train.filter(lambda cut: cut.duration < 30.0)
+    input_prefix = "/data/user_data/byan/file_transfer/lang_diar"
+
+    train_xtts = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/cs-fleurs/xtts/train/diar/manifest.json")])
+    train_mucs_ben = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/mucs/ben-eng/train/diar/manifest3.jsonl/manifest.json")])
+    train_mucs_hin = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/mucs/hin-eng/train/diar/manifest3.jsonl/manifest.json")])
+    train_seame = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/seame/train/diar/manifest3.jsonl/manifest.json")])
+    train_arzen = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/arzen/train/diar/manifest3.jsonl/manifest.json")])
+
+    val_xtts = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/cs-fleurs/xtts/test1/diar/manifest.json")])
+    
+    test_mucs_ben = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/mucs/ben-eng/test/diar/manifest3.jsonl/manifest.json")])
+    test_mucs_hin = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/mucs/hin-eng/test/diar/manifest3.jsonl/manifest.json")])
+    test_seame_ma = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/seame/devman/diar/manifest3.jsonl/manifest.json")])
+    test_seame_sge = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/seame/devsge/diar/manifest3.jsonl/manifest.json")])
+    test_arzen = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/arzen/test/diar/manifest3.jsonl/manifest.json")])
+    test_csfl = jsonl_with_timestamps_to_lhotse([json.loads(line) for line in open(f"{input_prefix}/data/cs-fleurs/read/test/diar/manifest4.jsonl/manifest.json")])
+
+    train_xtts = train_xtts.filter(lambda cut: cut.duration < 30.0)
+    train_mucs_ben = train_mucs_ben.filter(lambda cut: cut.duration < 30.0)
+    train_mucs_hin = train_mucs_hin.filter(lambda cut: cut.duration < 30.0)
+    train_seame = train_seame.filter(lambda cut: cut.duration < 30.0)
+    train_arzen = train_arzen.filter(lambda cut: cut.duration < 30.0)
 
     # 3. Save
-    # train.to_file("cuts_with_lang_speakers_train.jsonl.gz")
-    # val.to_file("cuts_with_lang_speakers_val.jsonl.gz")
-    test.to_file("cuts_with_lang_speakers_test_v4.jsonl.gz")
+    train_xtts.to_file("xtts_cuts_with_lang_speakers_train.jsonl.gz")
+    train_mucs_ben.to_file("musc_ben_cuts_with_lang_speakers_train.jsonl.gz")
+    train_mucs_hin.to_file("musc_hin_cuts_with_lang_speakers_train.jsonl.gz")
+    train_seame.to_file("seame_cuts_with_lang_speakers_train.jsonl.gz")
+    train_arzen.to_file("arzen_cuts_with_lang_speakers_train.jsonl.gz")
+    
+    val_xtts.to_file("xtts_cuts_with_lang_speakers_val.jsonl.gz")
+    
+    test_csfl.to_file("csfl_cuts_with_lang_speakers_test_v4.jsonl.gz")
+    test_mucs_ben.to_file("musc_ben_cuts_with_lang_speakers_test_v4.jsonl.gz")
+    test_mucs_hin.to_file("musc_hin_cuts_with_lang_speakers_test_v4.jsonl.gz")
+    test_arzen.to_file("arzen_cuts_with_lang_speakers_test_v4.jsonl.gz")
+    test_seame_ma.to_file("seame_ma_cuts_with_lang_speakers_test_v4.jsonl.gz")
+    test_seame_sge.to_file("seame_sge_cuts_with_lang_speakers_test_v4.jsonl.gz")
+    test_csfl.to_file("csfl_cuts_with_lang_speakers_test_v4.jsonl.gz")
+
