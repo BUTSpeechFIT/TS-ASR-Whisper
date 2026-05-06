@@ -1,0 +1,42 @@
+# @package _global_
+defaults:
+  - /train/cs_cont
+
+experiment: cs_whisper_ft_v2_compound
+
+model:
+  reinit_from: null
+  reinit_encoder_from: null
+  params_to_keep_frozen_keywords: null
+  ctc_weight: 0.0
+
+data:
+  train_cutsets:
+    - /home/apolok/CS-ASR/whisper_ft_data/xtts_cuts_with_lang_speakers_train_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/musc_ben_cuts_with_lang_speakers_train_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/musc_hin_cuts_with_lang_speakers_train_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/arzen_cuts_with_lang_speakers_train_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/seame_cuts_with_lang_speakers_train_sl.jsonl.gz
+  dev_cutsets:
+    - /home/apolok/CS-ASR/whisper_ft_data/xtts_cuts_with_lang_speakers_val_sl.jsonl.gz
+  eval_cutsets:
+    - /home/apolok/CS-ASR/whisper_ft_data/csfl_cuts_with_lang_speakers_test_v4_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/musc_ben_cuts_with_lang_speakers_test_v4_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/musc_hin_cuts_with_lang_speakers_test_v4_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/arzen_cuts_with_lang_speakers_test_v4_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/seame_ma_cuts_with_lang_speakers_test_v4_sl.jsonl.gz
+    - /home/apolok/CS-ASR/whisper_ft_data/seame_sge_cuts_with_lang_speakers_test_v4_sl.jsonl.gz
+  dataset_weights:
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+  train_text_norm: null
+  eval_text_norm: null
+
+training:
+  metric_for_best_model: "eval_xtts_cuts_with_lang_speakers_val_sl_tcp_wer"
+  use_fddt: false
+  use_fddt_only_n_steps: 0
+  overall_batch_size: 96

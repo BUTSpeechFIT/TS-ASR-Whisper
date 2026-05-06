@@ -6,4 +6,4 @@ experiment: cs_from_rand_v2
 
 model:
   reinit_from: null
-
+  reinit_encoder_from: null
