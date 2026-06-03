@@ -200,6 +200,7 @@ class DecodingArguments:
 class CustomTrainingArguments(GeneralTrainingArguments):
     pretrain_encoder: Optional[bool] = field(default=False, metadata={"help": "Pretrain encoder."})
     train_dixtral: Optional[bool] = field(default=False, metadata={"help": "Train LLM based model."})
+    train_for_qa: Optional[bool] = field(default=False, metadata={"help": "Train LLM based model."})
     decode_only: Optional[bool] = field(default=False, metadata={"help": "Only decode."})
     use_custom_optimizer: Optional[bool] = field(default=False, metadata={"help": "Use custom optimizer."})
     use_fddt_only_n_epochs: Optional[int] = field(default=0,

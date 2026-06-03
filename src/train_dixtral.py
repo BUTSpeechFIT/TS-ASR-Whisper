@@ -10,9 +10,9 @@ from transformers import EarlyStoppingCallback, TrainerCallback, TrainingArgumen
 from transformers.utils import logging
 
 from data.local_datasets import build_datasets, load_cutsets
-from models.dixtral.collator import DataCollator
+from models.dixtral.collator import DataCollator, DataCollatorQA
 from models.dixtral.container import DixtralContainer
-from models.dixtral.dataset import TS_ASR_Dataset_ as TS_ASR_Dataset, LhotseLongFormDataset_ as LhotseLongFormDataset
+from models.dixtral.dataset import TS_ASR_Dataset_ as TS_ASR_Dataset, LhotseLongFormDataset_ as LhotseLongFormDataset, TS_QA_Dataset
 from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
 from utils.general import patch_wandb_init_with_config, update_generation_config
@@ -105,7 +105,8 @@ class ModelTrainer:
 
     def _create_train_dataset(self, train_cutsets, enrollment_cutset):
         """Create training dataset."""
-        train_dataset = TS_ASR_Dataset(
+        dataset_class = TS_QA_Dataset if self.training_args.train_for_qa else TS_ASR_Dataset
+        train_dataset = dataset_class(
             train_cutsets,
             do_augment=self.aug_args.do_augment,
             dataset_weights=self.data_args.dataset_weights,
@@ -124,6 +125,22 @@ class ModelTrainer:
 
     def _create_eval_datasets(self, enrollment_cutset):
         """Create development and evaluation datasets."""
+        if self.training_args.train_for_qa:
+            dev = {"qa_dev": TS_QA_Dataset(
+                load_cutsets(self.data_args.dev_cutsets, False),
+                text_norm=get_text_norm(self.data_args.dev_text_norm),
+                feature_extractor=self.container.feature_extractor,
+                global_lang_id=self.data_args.global_lang_id,
+            )}
+
+            eval = {"qa_eval": TS_QA_Dataset(
+                load_cutsets(self.data_args.eval_cutsets, False),
+                text_norm=get_text_norm(self.data_args.eval_text_norm),
+                feature_extractor=self.container.feature_extractor,
+                global_lang_id=self.data_args.global_lang_id,
+            )}
+            return  dev, eval
+
         dev_datasets = build_datasets(
             self.data_args.dev_cutsets, self.data_args,
             self.dev_text_norm, self.container, self.data_args.dev_diar_cutsets,
@@ -196,8 +213,8 @@ class ModelTrainer:
 
     def _create_data_collator(self):
         """Create appropriate data collator."""
-
-        return DataCollator(
+        collator_class = DataCollatorQA if self.training_args.train_for_qa else DataCollator
+        return collator_class(
             processor=self.container.processor,
             max_length=self.training_args.generation_max_length,
             model_id=self.model_args.dixtral_base_model,
