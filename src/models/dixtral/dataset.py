@@ -3,6 +3,9 @@ from transformers.utils import logging
 import torch
 from data.local_datasets import TS_ASR_Dataset, LhotseLongFormDataset, get_cut_recording_id
 import re
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
+from  typing import  Dict
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
@@ -49,3 +52,54 @@ class LhotseLongFormDataset_(LhotseLongFormDataset, TS_ASR_Dataset_):
             other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=True)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
         return outputs
+
+
+class TS_QA_Dataset(TS_ASR_Dataset):
+    @staticmethod
+    def get_number_of_questions_from_monocut(cut):
+        number_of_questions = 0
+        for spk in cut.custom["speakers"]:
+            number_of_questions += len(cut.custom["speakers"][spk])
+        return number_of_questions
+
+    def prepare_cuts(self):
+        self.to_index_mapping = []
+        for cutset in self.cutsets:
+            with ThreadPoolExecutor() as executor:
+                qa_per_cut = list(executor.map(self.get_number_of_questions_from_monocut, cutset.cuts))
+            qa_per_cut = np.array(qa_per_cut)
+            self.to_index_mapping.append(qa_per_cut)
+        self.to_index_mapping = np.cumsum(np.concatenate(self.to_index_mapping))
+
+
+    def cut_to_sample(self, cut: Cut, speaker_id: str, qa: Dict[str, str], idx: int = -1, is_nested: bool = False):
+        stno_mask = self.get_stno_mask(cut, speaker_id)
+        features, att_mask = self.get_features(cut)
+
+        outputs = {"input_features": features, "stno_mask": torch.tensor(stno_mask), "attention_mask": att_mask,
+                   "is_long_form": False}
+
+        outputs["prompt"] = qa["prompt"]
+        outputs["gt_answer"] = qa["gt_answer"]
+
+        return outputs
+
+    def __getitem__(self, idx):
+        if idx > len(self):
+            raise 'Out of range'
+
+        cut_index = np.searchsorted(self.to_index_mapping, idx, side='right')
+        cut = self.cset[cut_index]
+        questions = []
+        for speaker in cut.custom["speakers"]:
+            questions.extend(cut.custom["speakers"][speaker])
+
+        local_sid = (idx - self.to_index_mapping[cut_index]) % len(questions)
+        question = questions[local_sid]
+        spk = question["speaker"]
+        return self.cut_to_sample(cut, spk, question, idx)
+
+    def get_features(self, cut: Cut):
+        samples, sr = cut.load_audio().squeeze(), cut.sampling_rate
+
+        return samples, None
