@@ -1,25 +1,54 @@
-import os
-
-import numpy as np
-import torch
 import gradio as gr
+import numpy as np
+import os
 import plotly.graph_objects as go
+import soundfile as sf
+import torch
 from librosa import load as libr_load
 
-from pipeline import DixtralDemoProcessor
+from pipeline import DixtralDemoProcessor, speakers_by_arrival
 
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 processor = DixtralDemoProcessor(device=device)
 
-SPEAKER_COLORS = [
-    "#4C72B0", "#DD8452", "#55A868", "#C44E52",
-    "#8172B2", "#937860", "#DA8BC3", "#8C8C8C",
-    "#CCB974", "#64B5CD",
+# Palette shared by the diarization plot and the speaker selector. Each color is
+# paired with the closest circle emoji so a speaker's selector swatch matches its
+# lane color in the plot. Both wrap with modulo, so any number of speakers works.
+SPEAKER_PALETTE = [
+    ("🔵", "#4C72B0"),
+    ("🟠", "#DD8452"),
+    ("🟢", "#55A868"),
+    ("🔴", "#C44E52"),
+    ("🟣", "#8172B2"),
+    ("🟤", "#937860"),
+    ("🟡", "#CCB974"),
+    ("⚪", "#8C8C8C"),
 ]
+SPEAKER_SWATCHES = [e for e, _ in SPEAKER_PALETTE]
+SPEAKER_COLORS = [c for _, c in SPEAKER_PALETTE]
 
 # Vertical placement of the waveform band drawn beneath the speaker lanes.
 WAVE_YC = -1.3
 WAVE_H = 0.5
+
+
+def _speaker_choices(speakers):
+    """Radio (label, value) pairs whose swatch matches the speaker's plot color."""
+    return [
+        (f"{SPEAKER_SWATCHES[i % len(SPEAKER_SWATCHES)]} {spk}", spk)
+        for i, spk in enumerate(speakers)
+    ]
+
+
+def validate_audio_file_length(filepath):
+    if not filepath:
+        return  # Skip validation if empty
+
+    duration = sf.info(filepath).duration
+    if duration > 600:
+        raise gr.Error("Audio is too long! Max limit is 600 seconds.")
+    if duration < 1:
+        raise gr.Error("Audio is too short! Min limit is 1 second.")
 
 
 def _load_audio(audio_path):
@@ -68,23 +97,46 @@ def segments_to_figure(segments, audio=None, highlight=None):
     if not segments and audio is None:
         return go.Figure()
 
-    speakers = sorted({s["speaker"] for s in segments})
+    speakers = speakers_by_arrival(segments)
     color_map = {spk: SPEAKER_COLORS[i % len(SPEAKER_COLORS)] for i, spk in enumerate(speakers)}
 
     seg_dur = max((s["end"] for s in segments), default=0.0)
     audio_dur = (len(audio) / 16_000) if audio is not None else 0.0
     duration = max(seg_dur, audio_dur, 0.01)
 
+    n_spk = len(speakers)
+    # Earliest-arriving speaker (index 0) on the top lane, matching the selector,
+    # which lists speakers top-to-bottom in arrival order.
+    lane = {spk: n_spk - 1 - i for i, spk in enumerate(speakers)}
+
     fig = go.Figure()
 
-    # One invisible scatter trace per speaker for the legend
+    # One horizontal-bar trace per speaker holds ALL that speaker's segments.
+    # Using base/width bars (one trace per speaker, <=8 traces total) instead of
+    # one fig.add_shape rectangle per segment: shapes are layout objects that
+    # Plotly serializes and renders one-by-one, which is O(thousands) and was the
+    # bottleneck on long files. Bars are a single vectorized trace each.
+    by_spk = {spk: {"base": [], "width": [], "y": []} for spk in speakers}
+    for seg in segments:
+        spk = seg["speaker"]
+        d = by_spk[spk]
+        d["base"].append(seg["start"])
+        d["width"].append(seg["end"] - seg["start"])
+        d["y"].append(lane[spk])
+
     for spk in speakers:
-        fig.add_trace(go.Scatter(
-            x=[None], y=[None],
-            mode="markers",
-            marker=dict(size=12, color=color_map[spk], symbol="square"),
+        d = by_spk[spk]
+        fig.add_trace(go.Bar(
+            x=d["width"],
+            base=d["base"],
+            y=d["y"],
+            orientation="h",
+            width=0.8,
+            marker=dict(color=color_map[spk], line_width=0),
+            opacity=0.85,
             name=spk,
             showlegend=True,
+            hovertemplate="%{base:.1f}–%{x:.1f}s<extra>" + spk + "</extra>",
         ))
 
     # Waveform envelope beneath the lanes, so segment edges can be eyeballed.
@@ -93,25 +145,11 @@ def segments_to_figure(segments, audio=None, highlight=None):
         if wf is not None:
             fig.add_trace(wf)
 
-    # Filled rectangles for each segment
-    for seg in segments:
-        spk = seg["speaker"]
-        y = speakers.index(spk)
-        fig.add_shape(
-            type="rect",
-            x0=seg["start"], x1=seg["end"],
-            y0=y - 0.4,     y1=y + 0.4,
-            fillcolor=color_map[spk],
-            line_width=0,
-            opacity=0.85,
-            layer="below",
-        )
-
-    n_spk = len(speakers)
     y_bottom = WAVE_YC - WAVE_H - 0.2
     y_top = n_spk - 0.4
 
     # Highlight the time span currently being replayed, full plot height.
+    # Kept as a single shape (there is only ever one), which is cheap.
     if highlight is not None:
         hs, he = highlight
         if he > hs:
@@ -124,12 +162,16 @@ def segments_to_figure(segments, audio=None, highlight=None):
                 layer="above",
             )
 
+    # Lanes run high-y (top) -> low-y (bottom), so tick labels are reversed to
+    # keep each label next to its lane.
     tickvals = list(range(n_spk)) + [WAVE_YC]
-    ticktext = speakers + ["audio"]
+    ticktext = list(reversed(speakers)) + ["audio"]
 
     fig.update_layout(
         height=max(190, 120 + 70 * n_spk),
         margin=dict(l=0, r=0, t=10, b=10),
+        barmode="overlay",
+        bargap=0,
         xaxis=dict(
             title="Time (s)",
             range=[0, duration * 1.01],
@@ -156,9 +198,6 @@ def segments_to_figure(segments, audio=None, highlight=None):
 # Segment <-> table conversion
 # ----------------------------------------------------------------------
 
-DF_COLUMNS = ["start", "end", "speaker"]
-
-
 def _segments_to_df(segments):
     """List of {start,end,speaker} -> list-of-lists rows for the (type='array') table.
 
@@ -166,10 +205,6 @@ def _segments_to_df(segments):
     coerces the speaker column to numbers.
     """
     return [[s["start"], s["end"], str(s["speaker"])] for s in segments]
-
-
-def _empty_df():
-    return []
 
 
 def _clean_speaker(spk):
@@ -209,38 +244,32 @@ def _df_to_segments(df):
     return segs
 
 
-def run_diarization(audio_path):
-    if audio_path is None:
-        return [], go.Figure(), _empty_df(), gr.update(choices=[], value=None), None
-
-    segments = processor.run_diarization(audio_path)
+def _rebuild_diar_state(segments, audio_path, current_speaker=None):
+    """Rebuild plot, table, and speaker selector from segments."""
     audio = _load_audio(audio_path)
     fig = segments_to_figure(segments, audio)
-    speakers = sorted({s["speaker"] for s in segments})
-    first = speakers[0] if speakers else None
+    speakers = speakers_by_arrival(segments)
+    selected = current_speaker if current_speaker in speakers else (speakers[0] if speakers else None)
     return (
         segments,
         fig,
         _segments_to_df(segments),
-        gr.update(choices=speakers, value=first),
-        first,
+        gr.update(choices=_speaker_choices(speakers), value=selected),
+        selected,
     )
+
+
+def run_diarization(audio_path):
+    if audio_path is None:
+        return [], go.Figure(), [], gr.update(choices=[], value=None), None
+    segments = processor.run_diarization(audio_path)
+    return _rebuild_diar_state(segments, audio_path)
 
 
 def apply_corrections(df_data, audio_path, current_speaker):
     """Re-derive state/plot/speaker list from the user-edited segment table."""
     segments = _df_to_segments(df_data)
-    audio = _load_audio(audio_path)
-    fig = segments_to_figure(segments, audio)
-    speakers = sorted({s["speaker"] for s in segments})
-    selected = current_speaker if current_speaker in speakers else (speakers[0] if speakers else None)
-    return (
-        segments,
-        fig,
-        _segments_to_df(segments),  # reflect normalization (sorted, invalid rows dropped)
-        gr.update(choices=speakers, value=selected),
-        selected,
-    )
+    return _rebuild_diar_state(segments, audio_path, current_speaker)
 
 
 # ----------------------------------------------------------------------
@@ -260,7 +289,7 @@ def _segments_to_rttm(segments, file_id="audio"):
 
 def export_rttm(segments):
     """Write current segments to an .rttm file and hand it to the download button."""
-    out = os.path.join(os.environ["GRADIO_TEMP_DIR"], "diarization.rttm")
+    out = "diarization.rttm"
     with open(out, "w") as f:
         f.write(_segments_to_rttm(segments or []))
     return out
@@ -291,17 +320,7 @@ def import_rttm(file, audio_path, current_speaker):
         return gr.skip(), gr.skip(), gr.skip(), gr.skip(), gr.skip()
     path = file.name if hasattr(file, "name") else file
     segments = _parse_rttm(path)
-    audio = _load_audio(audio_path)
-    fig = segments_to_figure(segments, audio)
-    speakers = sorted({s["speaker"] for s in segments})
-    selected = current_speaker if current_speaker in speakers else (speakers[0] if speakers else None)
-    return (
-        segments,
-        fig,
-        _segments_to_df(segments),
-        gr.update(choices=speakers, value=selected),
-        selected,
-    )
+    return _rebuild_diar_state(segments, audio_path, current_speaker)
 
 
 # ----------------------------------------------------------------------
@@ -357,10 +376,10 @@ def update_segment_range(audio_path, segments, row_idx, start, end, current_spea
 
     def _refresh(highlight=None, sel=row_idx, clip=gr.skip()):
         fig = segments_to_figure(segments, audio, highlight=highlight)
-        speakers = sorted({s["speaker"] for s in segments})
+        speakers = speakers_by_arrival(segments)
         selected = current_speaker if current_speaker in speakers else (speakers[0] if speakers else None)
         return (segments, fig, _segments_to_df(segments),
-                gr.update(choices=speakers, value=selected), selected, sel, clip)
+                gr.update(choices=_speaker_choices(speakers), value=selected), selected, sel, clip)
 
     if row_idx is None or row_idx < 0 or row_idx >= len(segments):
         return _refresh()  # nothing selected — leave segments untouched
@@ -403,7 +422,8 @@ def transcribe_all(audio_path, segments):
     if audio_path is None:
         return "No audio provided."
 
-    all_speakers = sorted({s["speaker"] for s in segments})
+    all_speakers = speakers_by_arrival(segments)
+
     result = processor.process(
         audio_path=audio_path,
         segments=segments,
@@ -486,10 +506,17 @@ with gr.Blocks(theme=gr.themes.Ocean(), title="Dixtral Demo") as demo:
     with gr.Row():
         run_btn = gr.Button("Run", variant="primary")
         transcribe_all_btn = gr.Button("Transcribe All", variant="secondary")
-    output_box = gr.Textbox(label="Output", lines=15)
+
+    output_box = gr.Markdown(
+        label="Output",
+        container=True,
+        line_breaks=True,  # keep single newlines (speaker / text separation)
+        min_height=200,
+    )
 
     diarize_btn.click(
         fn=run_diarization,
+        validator=validate_audio_file_length,
         inputs=[audio_input],
         outputs=[segments_state, diar_plot, seg_table, speaker_radio, speaker_state],
     )
@@ -562,4 +589,5 @@ with gr.Blocks(theme=gr.themes.Ocean(), title="Dixtral Demo") as demo:
     )
 
 if __name__ == "__main__":
+    demo.queue(default_concurrency_limit=2, max_size=20)
     demo.launch(server_name="127.0.0.1", server_port=7860, root_path="/dixtral")

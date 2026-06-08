@@ -1,5 +1,6 @@
 import io
 import base64
+import math
 import os
 import sys
 import tempfile
@@ -26,12 +27,34 @@ DIXTRAL_BASE_MODEL = "mistralai/Voxtral-Mini-3B-2507"
 FRAMES_PER_SECOND = 50
 CHUNK_FRAMES = 1500  # frames per 30s chunk
 
+# Number of target speakers transcribed per forward pass when transcribing
+# several at once. The audio (and therefore the prompt / mel features) is shared
+# across the batch; only the per-speaker STNO mask differs, so we can stack them.
+TRANSCRIBE_BATCH_SIZE = 4
+
+CPU = torch.device("cpu")
+
 
 def _numpy_to_base64_wav(audio: np.ndarray, sr: int = 16_000) -> str:
     buf = io.BytesIO()
     sf.write(buf, audio, sr, format="WAV")
     buf.seek(0)
     return base64.b64encode(buf.read()).decode("utf-8")
+
+
+def speakers_by_arrival(segments: List[Dict]) -> List[str]:
+    """Speaker ids ordered by arrival: speaker 0 is the one whose earliest
+    segment starts first.
+
+    Shared source of truth for speaker ordering so the diarization plot, the
+    speaker selector, and the model output all agree on order (and colors).
+    """
+    first_start: Dict[str, float] = {}
+    for s in segments:
+        spk = s["speaker"]
+        if spk not in first_start or s["start"] < first_start[spk]:
+            first_start[spk] = s["start"]
+    return sorted(first_start, key=first_start.get)
 
 
 class DixtralDemoProcessor:
@@ -41,6 +64,8 @@ class DixtralDemoProcessor:
         )
         self._load_diarization()
         self._load_model()
+        self.diar_pipeline.to(self.device)
+        self.model.to(self.device)
 
     # ------------------------------------------------------------------
     # Model loading
@@ -49,7 +74,9 @@ class DixtralDemoProcessor:
     def _load_diarization(self):
         from diarizen.pipelines.inference import DiariZenPipeline
 
-        self.diar_pipeline = DiariZenPipeline.from_pretrained(DIARIZATION_MODEL).to(self.device)
+        # Loaded on CPU; moved to the GPU on demand via _use_diarization() so the
+        # diarization and Dixtral models never occupy VRAM at the same time.
+        self.diar_pipeline = DiariZenPipeline.from_pretrained(DIARIZATION_MODEL)
         self.diar_pipeline.embedding_batch_size = 16
         self.diar_pipeline.segmentation_batch_size = 16
 
@@ -62,12 +89,7 @@ class DixtralDemoProcessor:
         self.model.set_tokenizer(self.processor.tokenizer)
         self.model.config.forced_decoder_ids = None
 
-        self.model.to(self.device, dtype=torch.bfloat16)
         self.model.eval()
-
-    # ------------------------------------------------------------------
-    # Diarization
-    # ------------------------------------------------------------------
 
     def run_diarization(self, audio_path: str) -> List[Dict]:
         """Return sorted list of {start, end, speaker} dicts."""
@@ -79,7 +101,6 @@ class DixtralDemoProcessor:
             diar = self.diar_pipeline(tmp)
         finally:
             os.unlink(tmp)
-
         segments = []
         for spk in diar.labels():
             for seg in diar.label_timeline(spk):
@@ -87,6 +108,13 @@ class DixtralDemoProcessor:
                     {"start": round(seg.start, 3), "end": round(seg.end, 3), "speaker": spk}
                 )
         segments.sort(key=lambda x: x["start"])
+
+        # Relabel the diarizer's opaque ids (e.g. SPEAKER_02) to arrival order so
+        # the name matches the speaker's position/color everywhere downstream:
+        # "Speaker 1" is the earliest-arriving speaker.
+        rename = {old: f"Speaker {i + 1}" for i, old in enumerate(speakers_by_arrival(segments))}
+        for s in segments:
+            s["speaker"] = rename[s["speaker"]]
         return segments
 
     # ------------------------------------------------------------------
@@ -97,7 +125,7 @@ class DixtralDemoProcessor:
         self, segments: List[Dict], total_frames: int
     ) -> Tuple[List[str], torch.Tensor]:
         """Build binary [num_speakers, total_frames] diarization mask."""
-        speakers = sorted({s["speaker"] for s in segments})
+        speakers = speakers_by_arrival(segments)
         spk2idx = {s: i for i, s in enumerate(speakers)}
         mask = torch.zeros(len(speakers), total_frames)
         for seg in segments:
@@ -121,7 +149,6 @@ class DixtralDemoProcessor:
 
     def _n_chunks(self, audio: np.ndarray) -> int:
         """Number of 30s encoder chunks for this audio."""
-        import math
         return max(1, math.ceil(len(audio) / (16_000 * 30)))
 
     def _stno_chunks(
@@ -142,36 +169,25 @@ class DixtralDemoProcessor:
     # Transcription
     # ------------------------------------------------------------------
 
-    def transcribe_speaker(
-        self, audio: np.ndarray, segments: List[Dict], speaker: str
-    ) -> str:
-        """Transcribe target speaker using STNO-conditioned Dixtral."""
-        prompt = self.processor.apply_transcription_request(
-            language="en",
-            sampling_rate=16_000,
-            audio=[audio],
-            model_id=DIXTRAL_BASE_MODEL,
-            format=["WAV"],
-        )
-        n_chunks = prompt["input_features"].shape[0]
-        total_frames = len(audio) // (16_000 // FRAMES_PER_SECOND)
+    def _generate_transcriptions(
+        self, prompt: Dict, stno_batch: torch.Tensor, batch_size: int
+    ) -> List[str]:
+        """Run batched generation for `batch_size` speakers sharing one audio prompt.
 
-        speakers, diar_mask = self._build_diar_mask(segments, total_frames)
-        if speaker not in speakers:
-            return f"[Speaker '{speaker}' not found in diarization output]"
-
-        spk_idx = speakers.index(speaker)
-        stno = self._stno_from_diar(diar_mask, spk_idx)
-        stno_batch = self._stno_chunks(stno, n_chunks).to(
-            self.device, dtype=torch.bfloat16
-        )
-
-        batch = {
-            k: v.to(self.device, dtype=torch.bfloat16)
-            if isinstance(v, torch.Tensor) and v.is_floating_point()
-            else (v.to(self.device) if isinstance(v, torch.Tensor) else v)
-            for k, v in prompt.items()
-        }
+        The prompt (input_ids / input_features / ...) is identical for every
+        speaker, so each tensor is tiled `batch_size` times along the batch dim;
+        only `stno_batch` carries the per-speaker conditioning.
+        """
+        batch = {}
+        for k, v in prompt.items():
+            if isinstance(v, torch.Tensor):
+                v = v.repeat(batch_size, *([1] * (v.dim() - 1)))
+                v = (
+                    v.to(self.device, dtype=torch.bfloat16)
+                    if v.is_floating_point()
+                    else v.to(self.device)
+                )
+            batch[k] = v
 
         with torch.no_grad(), torch.autocast(self.device.type, dtype=torch.bfloat16):
             generated = self.model.generate(
@@ -181,9 +197,61 @@ class DixtralDemoProcessor:
             )
 
         input_len = prompt["input_ids"].shape[1]
-        return self.processor.tokenizer.decode(
-            generated[0, input_len:], skip_special_tokens=True
-        ).strip()
+        return [
+            self.processor.tokenizer.decode(
+                generated[i, input_len:], skip_special_tokens=True
+            ).strip()
+            for i in range(batch_size)
+        ]
+
+    def transcribe_speakers(
+        self, audio: np.ndarray, segments: List[Dict], speakers: List[str]
+    ) -> List[str]:
+        """Transcribe several target speakers, batching them in groups of
+        TRANSCRIBE_BATCH_SIZE.
+
+        Returns one transcript per speaker, in the same order as `speakers`.
+        """
+        prompt = self.processor.apply_transcription_request(
+            language="en",
+            sampling_rate=16_000,
+            audio=[audio],
+            model_id=DIXTRAL_BASE_MODEL,
+            format=["WAV"],
+        )
+        n_chunks = prompt["input_features"].shape[0]
+        total_frames = len(audio) // (16_000 // FRAMES_PER_SECOND)
+        all_speakers, diar_mask = self._build_diar_mask(segments, total_frames)
+
+        results: Dict[str, str] = {}
+        for start in range(0, len(speakers), TRANSCRIBE_BATCH_SIZE):
+            group = speakers[start:start + TRANSCRIBE_BATCH_SIZE]
+            present = [spk for spk in group if spk in all_speakers]
+            for spk in group:
+                if spk not in all_speakers:
+                    results[spk] = f"[Speaker '{spk}' not found in diarization output]"
+            if not present:
+                continue
+
+            # Stack each speaker's [n_chunks, 4, CHUNK_FRAMES] mask along the batch
+            # (chunk) dim, in the same block order as the tiled audio chunks, so
+            # mask block i lines up with the audio of batch row i.
+            stno_batch = torch.cat(
+                [
+                    self._stno_chunks(
+                        self._stno_from_diar(diar_mask, all_speakers.index(spk)),
+                        n_chunks,
+                    )
+                    for spk in present
+                ],
+                dim=0,
+            ).to(self.device, dtype=torch.bfloat16)
+
+            texts = self._generate_transcriptions(prompt, stno_batch, len(present))
+            results.update(dict(zip(present, texts)))
+            torch.cuda.empty_cache()
+
+        return [results[spk] for spk in speakers]
 
     # ------------------------------------------------------------------
     # Query / reasoning
@@ -226,20 +294,6 @@ class DixtralDemoProcessor:
         )
         return self._chat_generate(audio, question, stno_batch)
 
-    def query_all_speakers(
-        self, audio: np.ndarray, segments: List[Dict], question: str
-    ) -> str:
-        """Answer a question about the full conversation — OR of all speaker masks as stno."""
-        total_frames = len(audio) // (16_000 // FRAMES_PER_SECOND)
-        _, diar_mask = self._build_diar_mask(segments, total_frames)
-        # OR all speaker masks → single "combined target" row, then treat as spk_idx=0
-        combined = diar_mask.max(dim=0).values.unsqueeze(0)  # [1, T]
-        stno = self._stno_from_diar(combined, 0)
-        stno_batch = self._stno_chunks(stno, self._n_chunks(audio)).to(
-            self.device, dtype=torch.bfloat16
-        )
-        return self._chat_generate(audio, question, stno_batch)
-
     # ------------------------------------------------------------------
     # Main entry point
     # ------------------------------------------------------------------
@@ -251,23 +305,22 @@ class DixtralDemoProcessor:
         target_speakers: List[str],
         query: str,
     ) -> str:
-        audio, _ = libr_load(audio_path, sr=16_000, mono=True)
-        all_speakers = sorted({s["speaker"] for s in segments})
-        speakers = target_speakers if target_speakers else all_speakers
-        is_transcribe = query.strip().lower() in ("", "transcribe")
-        is_all = set(speakers) == set(all_speakers) and len(speakers) > 1
+        try:
+            audio, _ = libr_load(audio_path, sr=16_000, mono=True)
+            speakers = target_speakers if target_speakers else speakers_by_arrival(segments)
+            is_transcribe = query.strip().lower() in ("", "transcribe")
 
-        # All-speakers non-transcribe: pass full audio with the question
-        if is_all and not is_transcribe:
-            return self.query_all_speakers(audio, segments, query)
-
-        results = []
-        for spk in speakers:
+            # Transcription: batch speakers (groups of TRANSCRIBE_BATCH_SIZE) since
+            # they share the same audio and differ only in their STNO mask.
             if is_transcribe:
-                text = self.transcribe_speaker(audio, segments, spk)
-            else:
-                text = self.query_speaker(audio, segments, spk, query)
-            results.append(f"**{spk}:**\n{text}")
-            torch.cuda.empty_cache()
+                texts = self.transcribe_speakers(audio, segments, speakers)
+                return "\n\n".join(f"**{spk}:**\n{text}" for spk, text in zip(speakers, texts))
 
-        return "\n\n".join(results)
+            # Free-form QA targets a single speaker (the selected one).
+            spk = speakers[0]
+            text = self.query_speaker(audio, segments, spk, query)
+            return f"**{spk}:**\n{text}"
+        finally:
+            if self.device.type == "cuda":
+                torch.cuda.empty_cache()
+
