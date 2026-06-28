@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train_lang_enc/pretrain_lang_diar
+
+# No subsampling: encoder output kept at full 1500 frames (50 fps, 20 ms resolution)
+experiment: pretrain_lang_diar_sub1
+
+model:
+  lang_diar_subsample_factor: 1

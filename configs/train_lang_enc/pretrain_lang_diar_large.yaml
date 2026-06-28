@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - /train_lang_enc/pretrain_lang_diar
+
+experiment: pretrain_lang_diar_large
+
+model:
+  whisper_model: openai/whisper-large-v3
+
+

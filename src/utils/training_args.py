@@ -1,7 +1,7 @@
 import os
 import re
 from dataclasses import dataclass, field, fields
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from omegaconf import DictConfig
 from torch.cuda import device_count
@@ -91,6 +91,16 @@ class ModelArguments:
         "help": "List of key words specifying layers to keep frozen."})
     scb_layers: Optional[int] = field(default=None, metadata={
         "help": "Number of SCB layers."
+    })
+    lang_diar_subsample_factor: Optional[int] = field(default=10, metadata={
+        "help": "Conv stride used for language diarization pretraining (1500 / factor = output frames)."
+    })
+    lang_diar_collar: Optional[float] = field(default=0.0, metadata={
+        "help": "Collar in seconds around supervision boundaries; those frames are ignored in the loss."
+    })
+    lang_diar_lang2id: Optional[Dict[str, int]] = field(default=None, metadata={
+        "help": "Explicit language-to-index mapping (0 reserved for silence). "
+                "If None, built dynamically from train cutsets."
     })
 
 
@@ -187,6 +197,7 @@ class DecodingArguments:
 @dataclass
 class CustomTrainingArguments(GeneralTrainingArguments):
     pretrain_encoder: Optional[bool] = field(default=False, metadata={"help": "Pretrain encoder."})
+    pretrain_lang_diar: Optional[bool] = field(default=False, metadata={"help": "Pretrain encoder for language diarization."})
     decode_only: Optional[bool] = field(default=False, metadata={"help": "Only decode."})
     use_custom_optimizer: Optional[bool] = field(default=False, metadata={"help": "Use custom optimizer."})
     use_fddt_only_n_epochs: Optional[int] = field(default=0,

@@ -1,0 +1,8 @@
+q# @package _global_
+defaults:
+  - /train_lang_enc/pretrain_lang_diar
+
+experiment: pretrain_lang_diar_collar
+
+model:
+  lang_diar_collar: 0.2

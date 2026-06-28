@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /train_lang_enc/pretrain_lang_diar
+
+# 4x subsampling: 1500 → 100 frames
+experiment: pretrain_lang_diar_sub15
+
+model:
+  lang_diar_subsample_factor: 15

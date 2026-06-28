@@ -1,0 +1,91 @@
+# @package _global_
+experiment: pretrain_lang_diar_baseline
+
+exp_dir: lang_diar_exp
+
+model:
+  whisper_model: openai/whisper-small
+  lang_diar_subsample_factor: 10
+  lang_diar_lang2id:
+    ar: 1
+    bn: 2
+    cs: 3
+    de: 4
+    en: 5
+    es: 6
+    fr: 7
+    hi: 8
+    hu: 9
+    it: 10
+    ja: 11
+    ko: 12
+    nl: 13
+    pl: 14
+    pt: 15
+    ru: 16
+    sk: 17
+    te: 18
+    tr: 19
+    zh: 20
+
+data:
+  train_cutsets:
+    - ${oc.env:MANIFEST_DIR}/train/xtts_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/musc_ben_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/musc_hin_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/arzen_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/seame_cuts_with_lang_speakers_train.jsonl.gz
+  dev_cutsets: null
+  eval_cutsets:
+    - ${oc.env:MANIFEST_DIR}/test/arzen_cuts_with_lang_speakers_test_v4.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/test/musc_ben_cuts_with_lang_speakers_test_v4.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/test/musc_hin_cuts_with_lang_speakers_test_v4.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/test/seame_ma_cuts_with_lang_speakers_test_v4.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/test/seame_sge_cuts_with_lang_speakers_test_v4.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/test/csfl_cuts_with_lang_speakers_test_v4_filtered.jsonl.gz
+  use_timestamps: false
+  train_text_norm: null
+  eval_text_norm: null
+  dataset_weights: null
+
+training:
+  pretrain_lang_diar: true
+  predict_with_generate: false
+  bf16: true
+  bf16_full_eval: true
+  use_flash_attention: false
+  use_lora: false
+  use_fddt: false
+  use_fddt_only_n_epochs: 0
+  use_fddt_only_n_steps: 0
+  use_custom_optimizer: false
+  decode_only: false
+  overall_batch_size: 64
+  per_device_eval_batch_size: 16
+  dataloader_num_workers: 4
+  dataloader_prefetch_factor: 2
+  dataloader_pin_memory: false
+  max_steps: 30000
+  learning_rate: 1e-4
+  warmup_steps: 1000
+  weight_decay: 0.01
+  lr_scheduler_type: cosine
+  eval_strategy: steps
+  save_strategy: steps
+  eval_steps: 500
+  save_steps: 500
+  save_total_limit: 2
+  metric_for_best_model: mean_jer
+  greater_is_better: false
+  early_stopping_patience: 5
+  load_best_model_at_end: true
+  logging_steps: 10
+  ddp_find_unused_parameters: false
+  generation_max_length: 1
+  output_dir: ${oc.env:EXPERIMENT_PATH}/${exp_dir}/${experiment}
+  run_name: ${experiment}
+  remove_unused_columns: false
+  report_to: wandb
+
+wandb:
+  project: codeswitching_lang_diar

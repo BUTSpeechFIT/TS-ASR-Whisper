@@ -89,9 +89,16 @@ def get_optimizer(model, training_args, prefixes_with_higher_lr=None):
     if prefixes_with_higher_lr is None:
         prefixes_with_higher_lr = []
     if training_args.use_custom_optimizer:
+        # Only hand trainable params to AdamW, so no optimizer state (exp_avg / exp_avg_sq) is ever
+        # allocated on the GPU for permanently-frozen params (e.g. the keyword-frozen decoder).
+        # Params that are only *temporarily* frozen for the FDDT-only warmup are still trainable at
+        # this point (freeze_except runs later), so they stay in the optimizer and get picked up
+        # once unfrozen.
         original_whisper_params = [param for name, param in model.named_parameters() if
+                                   param.requires_grad and
                                    not any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
         new_params = [param for name, param in model.named_parameters() if
+                      param.requires_grad and
                       any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
         return torch.optim.AdamW([{'params': original_whisper_params},
                                   {'params': new_params,

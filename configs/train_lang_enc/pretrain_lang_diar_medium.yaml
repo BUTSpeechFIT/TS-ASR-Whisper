@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /train_lang_enc/pretrain_lang_diar
+
+experiment: pretrain_lang_diar_medium
+
+model:
+  whisper_model: openai/whisper-medium
