@@ -9,7 +9,8 @@ from transformers.modeling_outputs import Seq2SeqLMOutput, Seq2SeqModelOutput
 from transformers.models.whisper.modeling_whisper import (
     WhisperForConditionalGeneration,
     shift_tokens_right,
-    WhisperModel
+    WhisperModel,
+    WhisperEncoder
 )
 from transformers.utils import logging
 from .config import DiCoWConfig
@@ -168,7 +169,7 @@ class DiCoW(WhisperModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
             cache_position: Optional[torch.LongTensor] = None,
-            enrollments=None
+            is_embed: Optional[torch.LongTensor] = None,
     ) -> Union[tuple[torch.Tensor], Seq2SeqModelOutput]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -187,7 +188,7 @@ class DiCoW(WhisperModel):
                 head_mask=head_mask,
                 return_dict=return_dict,
                 stno_mask=stno_mask,
-                enrollments=enrollments
+                is_embed=is_embed
             )
 
         decoder_outputs = self.decoder(
@@ -249,7 +250,6 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             self,
             input_features: Optional[torch.FloatTensor] = None,
             attention_mask: Optional[torch.LongTensor] = None,
-            stno_mask: Optional[torch.FloatTensor] = None,
             decoder_input_ids: Optional[torch.LongTensor] = None,
             decoder_attention_mask: Optional[torch.LongTensor] = None,
             head_mask: Optional[torch.Tensor] = None,
@@ -267,10 +267,10 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             return_dict: Optional[bool] = None,
             cache_position: Optional[torch.LongTensor] = None,
             forced_decoder_ids: Optional[torch.LongTensor] = None,
-            enrollments=None,
+            stno_mask: Optional[torch.FloatTensor] = None,
             is_embed: Optional[torch.LongTensor] = None,
     ) -> Union[tuple[torch.Tensor], Seq2SeqLMOutput]:
-
+        self.model.current_training_step = self.current_training_step
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
@@ -296,8 +296,8 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             cache_position=cache_position,
-            stno_mask=stno_mask,
-            enrollments=enrollments,
+            is_embed=is_embed,
+            stno_mask=stno_mask
         )
 
         dec_lm_logits = self.proj_out(outputs.last_hidden_state)

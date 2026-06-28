@@ -5,6 +5,7 @@ from transformers.utils import logging
 
 from pretrain_encoder import main as pretrain_encoder
 from train import main as train
+from train_with_internal_diar import main as train_w_diar
 from utils.training_args import Cfg, instantiate_arg_classes, process_config
 
 OmegaConf.register_new_resolver("eval", eval)
@@ -23,6 +24,8 @@ def main(cfg: DictConfig) -> None:
 
     if cfg.training.pretrain_encoder:
         pretrain_encoder(cfg)
+    elif cfg.training.train_with_diar:
+        train_w_diar(cfg)
     else:
         train(cfg)
 

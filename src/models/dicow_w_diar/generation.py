@@ -112,6 +112,9 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         if attention_mask is not None:
             attention_mask = attention_mask[batch_idx_map]
 
+        if "is_embed" in kwargs:
+            kwargs["is_embed"] = kwargs["is_embed"][batch_idx_map]
+
         if "labels" in kwargs:
             kwargs['labels'] = kwargs["labels"][batch_idx_map]
             kwargs['upp_labels'] = kwargs["upp_labels"][batch_idx_map]
@@ -203,6 +206,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         with torch.no_grad():
 
             """<DiCoW CODE>"""
+            print("running lang detection")
             if hasattr(self, "enrollments"):
                 inputs["enrollments"] = self.enrollments
 
