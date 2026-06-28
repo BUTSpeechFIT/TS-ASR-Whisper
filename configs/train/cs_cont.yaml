@@ -14,16 +14,16 @@ model:
 
 data:
   train_cutsets:
-    - /home/apolok/CS-ASR/xtts_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/musc_ben_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/musc_hin_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/arzen_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/seame_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/xtts_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/musc_ben_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/musc_hin_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/arzen_cuts_with_lang_speakers_train.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/train/seame_cuts_with_lang_speakers_train.jsonl.gz
 
   dev_cutsets:
-    - /home/apolok/CS-ASR/xtts_cuts_with_lang_speakers_val.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/dev/xtts_cuts_with_lang_speakers_val.jsonl.gz
   eval_cutsets:
-    - /home/apolok/CS-ASR/csfl_cuts_with_lang_speakers_test_v4.jsonl.gz
+    - ${oc.env:MANIFEST_DIR}/test/csfl_cuts_with_lang_speakers_test_v4.jsonl.gz
   dataset_weights:
     - 1
     - 1

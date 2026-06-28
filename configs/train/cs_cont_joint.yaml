@@ -1,66 +1,17 @@
 # @package _global_
-experiment: joint_fixed_with_small_v2
+defaults:
+  - /train/cs_cont
 
-exp_dir: cs_exp
+experiment: joint_fixed_with_small_v2
 
 model:
   whisper_model: openai/whisper-small
-  reinit_encoder_from: null
-  reinit_from: null
-  params_to_keep_frozen_keywords:
-    - "decoder"
-  non_target_fddt_value: 0.25
-  ctc_weight: 0
   prefixes_to_preheat: [ 'model.encoder.lang_encoder', 'model.encoder.lang_proj', 'model.encoder.fddts', 'model.encoder.initial_fddt' ]
-
-
-data:
-  train_cutsets:
-    - /home/apolok/CS-ASR/xtts_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/musc_ben_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/musc_hin_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/arzen_cuts_with_lang_speakers_train.jsonl.gz
-    - /home/apolok/CS-ASR/seame_cuts_with_lang_speakers_train.jsonl.gz
-
-  dev_cutsets:
-    - /home/apolok/CS-ASR/xtts_cuts_with_lang_speakers_val.jsonl.gz
-  eval_cutsets:
-    - /home/apolok/CS-ASR/csfl_cuts_with_lang_speakers_test_v4.jsonl.gz
-  dataset_weights:
-    - 1
-    - 1
-    - 1
-    - 1
-    - 1
-  train_text_norm: null
-  eval_text_norm: null
 
 training:
   train_with_diar: true
-  remove_timestamps_from_ctc: true
-  eval_strategy: steps
-  save_strategy: steps
-  eval_steps: 1000
-  save_steps: 1000
-  eval_on_start: false
   overall_batch_size: 32
   learning_rate: 2e-4
   per_device_eval_batch_size: 8
   dataloader_num_workers: 4
-  dataloader_prefetch_factor: 2
-  dataloader_pin_memory: true
-  use_fddt_only_n_epochs: 0
-  use_fddt: true
-  metric_for_best_model: eval_xtts_cuts_with_lang_speakers_val_tcp_wer
-  watch_grads: false
-  max_steps: 20000
-  lr_scheduler_type: cosine
   use_fddt_only_n_steps: 0
-  train_metrics_list: ["tcp_wer"]
-  eval_metrics_list: ["tcp_wer"]
-  early_stopping_patience: 4
-  warmup_steps: 2000
-
-
-wandb:
-  project: "codeswitching_v2"

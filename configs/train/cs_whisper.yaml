@@ -5,21 +5,17 @@ defaults:
 experiment: cs_whisper_ft_v2
 
 model:
-  reinit_from: null
-  reinit_encoder_from: null
   params_to_keep_frozen_keywords: null
 
 data:
   train_cutsets:
-  - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cuts_with_lang_speakers_train_sl.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/train/cuts_with_lang_speakers_train_sl.jsonl.gz
   dev_cutsets:
-  - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cuts_with_lang_speakers_val_sl.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/dev/cuts_with_lang_speakers_val_sl.jsonl.gz
   eval_cutsets:
-  - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cuts_with_lang_speakers_test_v4_sl.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/test/cuts_with_lang_speakers_test_v4_sl.jsonl.gz
   dataset_weights:
     - 1
-  train_text_norm: null
-  eval_text_norm: null
 
 training:
   metric_for_best_model: "eval_cuts_with_lang_speakers_val_sl_tcp_wer"
@@ -28,4 +24,3 @@ training:
   overall_batch_size: null
   per_device_train_batch_size: 1
   gradient_accumulation_steps: 6
-

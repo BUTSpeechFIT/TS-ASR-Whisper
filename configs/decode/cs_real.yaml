@@ -1,54 +1,29 @@
 # @package _global_
+defaults:
+  - /train/cs_cont
+
 experiment: FT_real_diar
 
-exp_dir: cs_exp
-
 model:
-  whisper_model: openai/whisper-large-v3-turbo
-  reinit_encoder_from: null
   reinit_from: /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cs_exp/cs_from_pretrained/checkpoint-5500
+  params_to_keep_frozen_keywords: null
 
 data:
   train_cutsets:
-  - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cuts_with_lang_speakers_train.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/train/cuts_with_lang_speakers_train.jsonl.gz
   dev_cutsets:
-  - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cuts_with_lang_speakers_val.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/dev/cuts_with_lang_speakers_val.jsonl.gz
   eval_cutsets:
-  - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cuts_with_lang_speakers_test_v4_real.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/test/cuts_with_lang_speakers_test_v4_real.jsonl.gz
   dataset_weights:
     - 1
-  train_text_norm: null
-  eval_text_norm: null
 
 training:
   decode_only: true
-  remove_timestamps_from_ctc: true
-  eval_strategy: steps
-  save_strategy: steps
   eval_steps: 500
   save_steps: 500
-  eval_on_start: false
-  overall_batch_size: 96
-  learning_rate: 2e-6
-  per_device_eval_batch_size: 16
-  dataloader_num_workers: 1
-  dataloader_prefetch_factor: 2
-  dataloader_pin_memory: true
-  use_fddt_only_n_epochs: 0
-  use_fddt: true
-  metric_for_best_model: eval_cuts_with_lang_speakers_val_tcp_wer
-  watch_grads: false
   max_steps: 10000
-  lr_scheduler_type: cosine
-  use_fddt_only_n_steps: 1000
-  train_metrics_list: ["tcp_wer"]
-  eval_metrics_list: ["tcp_wer"]
-  early_stopping_patience: 4
-  warmup_steps: 2000
+  metric_for_best_model: eval_cuts_with_lang_speakers_val_tcp_wer
   bf16: false
   bf16_full_eval: false
   use_flash_attention: false
-
-
-wandb:
-  project: "codeswitching_v2"

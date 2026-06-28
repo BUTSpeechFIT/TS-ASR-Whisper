@@ -6,4 +6,4 @@ experiment: cs_cont_cmn_only
 
 data:
   train_cutsets:
-  - /mnt/matylda5/ipoloka/projects/TS-ASR-Whisper/cuts_with_lang_speakers_train_cmn_only.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/train/cuts_with_lang_speakers_train_cmn_only.jsonl.gz
