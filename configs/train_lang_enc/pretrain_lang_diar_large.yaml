@@ -7,4 +7,5 @@ experiment: pretrain_lang_diar_large
 model:
   whisper_model: openai/whisper-large-v3
 
-
+training:
+  learning_rate: 2e-6

@@ -120,7 +120,7 @@ class TS_ASR_DatasetSuperclass:
     def get_segment_text_with_timestamps(self, segment, use_timestamps, text_norm, skip_end_token):
         start = f"<|{round_nearest(segment.start, 0.02):.2f}|>"
         end = f"<|{round_nearest(segment.end_, 0.02):.2f}|>"
-        text = text_norm(segment.text_)
+        text = text_norm(segment.normalized_text)
         if not text:
             return ""
         if skip_end_token:

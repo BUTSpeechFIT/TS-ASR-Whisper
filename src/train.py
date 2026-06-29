@@ -106,6 +106,19 @@ class ModelTrainer:
             enc_state_dict_no_fddt = {k: v for k, v in enc_state_dict.items() if 'fddt' not in k}
             logger.info(self.model.get_encoder().load_state_dict(enc_state_dict_no_fddt, strict=False))
 
+        if self.model_args.reinit_lang_encoder_from:
+            raw = load_file(self.model_args.reinit_lang_encoder_from)
+            lang_enc_dict = {}
+            for k, v in raw.items():
+                if k.startswith("encoder."):
+                    # encoder.X -> lang_encoder.X
+                    lang_enc_dict["lang_encoder." + k[len("encoder."):]] = v
+                elif k.startswith("subsample_conv.") or k.startswith("norm."):
+                    # subsample_conv.* and norm.* load directly
+                    lang_enc_dict[k] = v
+            info = self.model.get_encoder().load_state_dict(lang_enc_dict, strict=False)
+            logger.info(f"Loaded lang_encoder from {self.model_args.reinit_lang_encoder_from}: {info}")
+
         if self.model_args.reinit_from:
             state_dict = self._load_state_dict(self.model_args.reinit_from)
             state_dict['proj_out.weight'] = state_dict['model.decoder.embed_tokens.weight']

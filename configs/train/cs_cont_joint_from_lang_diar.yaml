@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+  - /train/cs_cont_joint
+
+experiment: joint_from_lang_diar_v2
+
+model:
+  reinit_lang_encoder_from: /mnt/scratch/tmp/ipoloka/csasr/lang_diar_exp/pretrain_lang_diar_sub15/checkpoint-30000/model.safetensors
+  lang_diar_subsample_factor: 15
+  non_target_fddt_value: 1.0
+  # Preheat lang_encoder + subsampler + upsample + lang_proj + FDDTs
+  prefixes_to_preheat:
+    - model.encoder.lang_encoder
+    - model.encoder.subsample_conv
+    - model.encoder.norm
+    - model.encoder.lang_upsample
+    - model.encoder.lang_proj
+    - model.encoder.fddts
+    - model.encoder.initial_fddt
+
+training:
+  use_fddt_only_n_steps: 1000

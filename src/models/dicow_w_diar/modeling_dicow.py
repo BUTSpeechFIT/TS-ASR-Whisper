@@ -1,7 +1,5 @@
 from typing import Optional, Union
-import re
 import torch
-import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch.nn import CrossEntropyLoss
 from transformers import Cache
@@ -21,128 +19,6 @@ logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
 
-class SoftLabelCreator(torch.nn.Module):
-    """
-    Handles label smoothing for timestamps and the dual-loss logic (Upper vs Lower case).
-    """
-
-    def __init__(self, tokenizer, timestamp_sigma=0.08):
-        super().__init__()
-        self.tokenizer = tokenizer
-        self.timestamp_sigma = timestamp_sigma
-        # Pre-compute the Gaussian smoothing matrix
-        self.register_buffer('ts_smoothing_matrix', self._build_smoothing_matrix())
-
-    def _build_smoothing_matrix(self):
-        # FIX: Use get_vocab() instead of .decoder.items()
-        vocab = self.tokenizer.get_vocab()
-        vocab_size = len(vocab)
-
-        timestamp_pattern = re.compile(r'<\|(\d+\.\d+)\|>')
-
-        # 1. Map Token IDs to Time Values
-        id_to_time = {}
-        for token_str, token_id in vocab.items():
-            match = timestamp_pattern.match(token_str)
-            if match:
-                id_to_time[token_id] = float(match.group(1))
-
-        if not id_to_time:
-            return None
-
-        # Sorted list for fast lookups
-        sorted_ids = sorted(id_to_time.keys())
-        self.sorted_ts_ids = torch.tensor(sorted_ids)
-        times = torch.tensor([id_to_time[i] for i in sorted_ids])
-
-        # 2. Create the Smoothing Matrix (Num_Timestamps x Vocab_Size)
-        num_ts = len(sorted_ids)
-        smoothing_matrix = torch.zeros(num_ts, vocab_size)
-
-        # Vectorized Gaussian computation
-        diff_sq = (times.unsqueeze(1) - times.unsqueeze(0)) ** 2
-        weights = torch.exp(-diff_sq / (2 * self.timestamp_sigma ** 2))
-
-        # Normalize
-        weights = weights / weights.sum(dim=1, keepdim=True)
-
-        # Scatter rows back to vocab size
-        for i, ts_id in enumerate(sorted_ids):
-            smoothing_matrix[i, self.sorted_ts_ids] = weights[i]
-
-        return smoothing_matrix
-
-    def _get_soft_distribution(self, labels, vocab_size):
-        """Internal helper to convert hard labels -> soft timestamp labels"""
-        device = labels.device
-
-        # Start with One-Hot (clamp -100 to 0 temporarily)
-        labels_clamped = labels.clamp(min=0)
-        soft_labels = F.one_hot(labels_clamped, num_classes=vocab_size).float()
-
-        # Apply Timestamp Smoothing if matrix exists
-        if hasattr(self, 'ts_smoothing_matrix') and self.ts_smoothing_matrix is not None:
-            sorted_ts_ids = self.sorted_ts_ids.to(device)
-            smoothing_matrix = self.ts_smoothing_matrix.to(device)
-
-            is_timestamp = torch.isin(labels, sorted_ts_ids)
-
-            if is_timestamp.any():
-                ts_indices = torch.searchsorted(sorted_ts_ids, labels[is_timestamp])
-                soft_labels[is_timestamp] = smoothing_matrix[ts_indices]
-
-        return soft_labels
-
-    def compute_loss(self, logits, labels, upp_labels):
-        """
-        Computes the enhanced SOT loss:
-        1. Generates soft labels (timestamp smoothed) for both 'labels' and 'upp_labels'.
-        2. Computes KL Divergence (via CrossEntropy) for both.
-        3. Takes the minimum loss per token (case invariance).
-        4. Applies padding mask.
-        """
-        vocab_size = logits.size(-1)
-        device = logits.device
-
-        # Ensure labels are on correct device
-        labels = labels.to(device)
-        if upp_labels is not None:
-            upp_labels = upp_labels.to(device)
-
-        # Flatten inputs
-        flat_logits = logits.view(-1, vocab_size)
-        flat_labels = labels.reshape(-1)
-
-        # 1. Generate Soft Targets for Lowercase
-        soft_lower = self._get_soft_distribution(flat_labels, vocab_size)
-
-        # 2. Generate Soft Targets for Uppercase (if provided)
-        if upp_labels is not None:
-            flat_upp = upp_labels.reshape(-1)
-            soft_upper = self._get_soft_distribution(flat_upp, vocab_size)
-        else:
-            # Fallback if no upper labels provided (shouldn't happen in this pipeline)
-            soft_upper = soft_lower
-
-        # 3. Compute Cross Entropy (Soft Target Mode)
-        # Note: CE with soft targets = -sum(target * log_prob)
-        loss_fct = CrossEntropyLoss(reduction='none')
-
-        loss_lower = loss_fct(flat_logits, soft_lower)
-        loss_upper = loss_fct(flat_logits, soft_upper)
-
-        # 4. Mask Padding (ignore_index = -100)
-        # Soft-target CE doesn't support ignore_index automatically
-        mask = (flat_labels != -100).float()
-
-        loss_lower = loss_lower * mask
-        loss_upper = loss_upper * mask
-
-        # 5. Take Min (Case Invariance) and Normalize
-        combined_min = torch.min(loss_lower, loss_upper)
-
-        # Sum and divide by number of non-padding tokens
-        return combined_min.sum() / mask.sum().clamp(min=1)
 
 class DiCoW(WhisperModel):
     def __init__(self, config: DiCoWConfig):
@@ -232,13 +108,10 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
         self.tokenizer = None
         self.stno_mask = None
         self.stno_mask_seek = None
-        self.soft_label_creator = None
         self.post_init()
 
     def set_tokenizer(self, tokenizer):
         self.tokenizer = tokenizer
-        # Initialize the helper class
-        self.soft_label_creator = SoftLabelCreator(tokenizer)
 
     def get_enc_logits(self, hidden_states):
         encoder = self.model.get_encoder()
@@ -304,25 +177,16 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
         loss = None
 
         if labels is not None:
-            # --- UPDATED LOSS CALCULATION ---
-            if self.soft_label_creator is not None:
-                # Delegate all soft label creation, flattening, and min-loss logic to the helper
-                dec_loss = self.soft_label_creator.compute_loss(dec_lm_logits, labels, upp_labels)
+            loss_fct = CrossEntropyLoss(reduction='none')
+            labels = labels.to(dec_lm_logits.device)
+            flat_logits = dec_lm_logits.view(-1, self.config.vocab_size)
+            dec_loss1 = loss_fct(flat_logits, labels.reshape(-1))
+            if upp_labels is not None:
+                upp_labels = upp_labels.to(dec_lm_logits.device)
+                dec_loss2 = loss_fct(flat_logits, upp_labels.reshape(-1))
+                dec_loss = torch.hstack((dec_loss1[..., None], dec_loss2[..., None])).min(dim=-1).values.mean()
             else:
-                # Fallback to original hard label implementation if tokenizer/helper not ready
-                loss_fct = CrossEntropyLoss(reduction='none')
-                labels = labels.to(dec_lm_logits.device)
-
-                flat_logits = dec_lm_logits.view(-1, self.config.vocab_size)
-                dec_loss1 = loss_fct(flat_logits, labels.reshape(-1))
-
-                if upp_labels is not None:
-                    upp_labels = upp_labels.to(dec_lm_logits.device)
-                    dec_loss2 = loss_fct(flat_logits, upp_labels.reshape(-1))
-                    dec_loss = torch.hstack((dec_loss1[..., None], dec_loss2[..., None])).min(dim=-1).values.mean()
-                else:
-                    dec_loss = dec_loss1.mean()
-            # --------------------------------
+                dec_loss = dec_loss1.mean()
 
             if self.config.ctc_weight > 0.0:
                 enc_lm_logits = self.get_enc_logits(outputs.encoder_last_hidden_state)

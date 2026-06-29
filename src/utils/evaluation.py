@@ -147,36 +147,44 @@ def parse_string_to_objects(s):
     return objects
 
 
-def process_session(session_preds, tokenizer, spk_id, cut: DataCut, break_to_characters=False, overflow_margin=5.0):
+def process_session(session_preds, tokenizer, spk_id, cut: DataCut, break_to_characters=False,
+                    overflow_margin=5.0, use_timestamps=True):
     session_preds[session_preds == -100] = tokenizer.pad_token_id
+    cut_duration = cut.end - cut.start
+
+    if not use_timestamps:
+        transcript = tokenizer.decode(session_preds, decode_with_timestamps=False,
+                                      skip_special_tokens=True).strip()
+        if transcript:
+            if break_to_characters:
+                transcript = LhotseLongFormDataset.add_space_between_chars(transcript)
+            yield {
+                'session_id': get_cut_recording_id(cut),
+                'start_time': Decimal(str(cut.start)).quantize(Decimal("0.00")),
+                'end_time': Decimal(str(cut.end)).quantize(Decimal("0.00")),
+                'text': truncate_at_repeating_ngram(transcript),
+                'speaker_id': spk_id,
+                'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
+            }
+        return
+
     transcript = tokenizer.decode(session_preds, decode_with_timestamps=True,
                                   skip_special_tokens=True)
     segments = parse_string_to_objects(transcript)
-    cut_duration = cut.end - cut.start
     for segment in segments:
         if segment["end"] <= segment["start"]:
             segment["end"] = segment["start"] + 0.2
 
         if break_to_characters:
             segment['text'] = LhotseLongFormDataset.add_space_between_chars(segment['text'])
-        if segment['end'] <= cut_duration + overflow_margin:
-            yield {
-                'session_id': get_cut_recording_id(cut),
-                'start_time': Decimal(segment['start'] + cut.start).quantize(Decimal("0.00")),
-                'end_time': Decimal(segment['end'] + cut.start).quantize(Decimal("0.00")),
-                'text': truncate_at_repeating_ngram(segment['text']),
-                'speaker_id': spk_id,
-                'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
-            }
-        else:
-            logger.warning(f"""Detected segment out of bounds of cut. {str({
-                'session_id': get_cut_recording_id(cut),
-                'start_time': segment['start'] + cut.start,
-                'end_time': segment['end'] + cut.start,
-                'text': truncate_at_repeating_ngram(segment['text']),
-                'speaker_id': spk_id,
-                'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
-            })}""")
+        yield {
+            'session_id': get_cut_recording_id(cut),
+            'start_time': Decimal(segment['start'] + cut.start).quantize(Decimal("0.00")),
+            'end_time': Decimal(segment['end'] + cut.start).quantize(Decimal("0.00")),
+            'text': truncate_at_repeating_ngram(segment['text']),
+            'speaker_id': spk_id,
+            'wav_file_name': "in_mem" if isinstance(cut, MixedCut) else cut.recording.sources[0].source,
+        }
 
 
 
@@ -274,7 +282,8 @@ def compute_longform_metrics(pred, trainer, output_dir, text_norm, metrics_list=
                 processed_sessions[get_cut_recording_id(cut)] = []
             processed_sessions[get_cut_recording_id(cut)].extend(
                 process_session(session_preds, trainer.processing_class, spk_id, cut,
-                                break_to_characters=dataset.break_to_characters if dataset is not None else False)
+                                break_to_characters=dataset.break_to_characters if dataset is not None else False,
+                                use_timestamps=dataset.use_timestamps if dataset is not None else True)
             )
             processed_sessions_ids.add((cut_id, spk_id))
 

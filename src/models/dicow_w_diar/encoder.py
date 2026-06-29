@@ -14,6 +14,12 @@ class DiCoWEncoder(WhisperEncoder):
         super().__init__(config)
         self.ctc_weight = config.ctc_weight
         self.lang_encoder = WhisperEncoder(config)
+        if config.lang_diar_subsample_factor > 1:
+            factor = config.lang_diar_subsample_factor
+            self.subsample_conv = nn.Conv1d(config.d_model, config.d_model,
+                                            kernel_size=factor, stride=factor)
+            self.norm = nn.LayerNorm(config.d_model)
+            self.lang_upsample = nn.ConvTranspose1d(3, 3, kernel_size=factor, stride=factor)
         self.lang_proj = torch.nn.Linear(config.d_model, 3)  # Projects to 3 classes: silence, matrix, embed
         if config.additional_layer and self.ctc_weight > 0.0:
             self.additional_layer = WhisperEncoderLayer(config)
@@ -73,8 +79,6 @@ class DiCoWEncoder(WhisperEncoder):
                     use_overlap=config.fddt_use_overlap,
                     use_non_target=config.fddt_use_non_target,
                 )
-        if config.use_enrollments and config.scb_layers is not None:
-            self.ca_enrolls = nn.ModuleList([SpeakerCommunicationBlock(config) for _ in range(config.scb_layers)])
         self.first_task_token = self.config.vocab_size - 30 * 50 - 1 - 6  # 30 seconds of 50 Hz timestamps -1 to get to 0.0 and -6 number of tasks
         self.post_init()
 
@@ -149,7 +153,6 @@ class DiCoWEncoder(WhisperEncoder):
             return_dict=None,
             stno_mask=None,
             return_logits=False,
-            enrollments=None,
             is_embed=None
     ):
 
@@ -160,7 +163,17 @@ class DiCoWEncoder(WhisperEncoder):
             head_mask=head_mask,
             return_dict=return_dict,
         )
-        sme = torch.nn.functional.softmax(self.lang_proj(lang_encoder_out.last_hidden_state), dim=-1)
+        lang_hidden = lang_encoder_out.last_hidden_state          # [B, T, D]
+        if hasattr(self, 'subsample_conv'):
+            x = torch.nn.functional.gelu(
+                self.subsample_conv(lang_hidden.transpose(1, 2))  # [B, D, T/factor]
+            )
+            x = self.norm(x.transpose(1, 2))                      # [B, T/factor, D]
+            logits = self.lang_proj(x).transpose(1, 2)            # [B, 3, T/factor]
+            logits = self.lang_upsample(logits)                   # [B, 3, T]
+            sme = torch.nn.functional.softmax(logits.transpose(1, 2), dim=-1)  # [B, T, 3]
+        else:
+            sme = torch.nn.functional.softmax(self.lang_proj(lang_hidden), dim=-1)
 
         # Get the Batch and Time dimensions
         B, T, _ = sme.shape
@@ -184,28 +197,7 @@ class DiCoWEncoder(WhisperEncoder):
         # O is always zero
         stno = stno.transpose(1, 2)  # B, 4, T
 
-        if stno_mask is not None and self.training:
-            current_step = getattr(self, "current_training_step", 0)
-            max_steps = 2000  # Safe fallback
-            progress = min(1.0, current_step / max_steps)
-
-            # Decay alpha from 1.0 (all Ground Truth) down to 0.0 (all Prediction)
-            alpha = 1.0 - progress
-
-            # Calculate what we want the model to actually use in the forward pass
-            forward_mask = (alpha * stno_mask) + ((1.0 - alpha) * stno)
-
-            # --- THE STRAIGHT-THROUGH ESTIMATOR TRICK ---
-            # Forward pass: uses the mixed `forward_mask`.
-            # Backward pass: `stno - stno.detach()` cancels to 0, routing 100% of
-            # the gradient safely into the predicted `stno` tensor.
-            stno_mask = forward_mask.detach() + stno - stno.detach()
-        else:
-            stno_mask = stno
-
-        if enrollments is not None:
-            input_features = torch.stack((input_features, enrollments['input_features']), dim=1).flatten(0,1)
-            stno_mask = torch.stack((stno_mask, enrollments['stno_mask']),dim=1).flatten(0,1)
+        stno_mask = stno
 
         expected_seq_length = self.config.max_source_positions * self.conv1.stride[0] * self.conv2.stride[0]
         if input_features.shape[-1] != expected_seq_length:
@@ -259,12 +251,6 @@ class DiCoWEncoder(WhisperEncoder):
                 if self.config.use_fddt and idx < len(self.fddts):
                     hidden_states = self.fddts[idx](hidden_states, stno_mask)
 
-                if self.config.use_enrollments and idx < self.config.scb_layers:
-                    hidden_states = self.ca_enrolls[idx](hidden_states)
-                    if idx == self.config.scb_layers -1:
-                        # enrollment representations are not longer needed
-                        hidden_states = hidden_states[::2]
-                        stno_mask = stno_mask[::2]
                 """</DiCoW CODE>"""
 
                 layer_outputs = encoder_layer(

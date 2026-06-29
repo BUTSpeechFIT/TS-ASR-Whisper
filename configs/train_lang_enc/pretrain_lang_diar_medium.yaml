@@ -6,3 +6,6 @@ experiment: pretrain_lang_diar_medium
 
 model:
   whisper_model: openai/whisper-medium
+
+training:
+  learning_rate: 2e-5

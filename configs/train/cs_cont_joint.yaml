@@ -2,16 +2,10 @@
 defaults:
   - /train/cs_cont
 
-experiment: joint_fixed_with_small_v2
+experiment: joint_fixed_v3
 
 model:
-  whisper_model: openai/whisper-small
   prefixes_to_preheat: [ 'model.encoder.lang_encoder', 'model.encoder.lang_proj', 'model.encoder.fddts', 'model.encoder.initial_fddt' ]
 
 training:
   train_with_diar: true
-  overall_batch_size: 32
-  learning_rate: 2e-4
-  per_device_eval_batch_size: 8
-  dataloader_num_workers: 4
-  use_fddt_only_n_steps: 0

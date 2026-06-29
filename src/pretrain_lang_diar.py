@@ -18,28 +18,33 @@ logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
 
 
-def compute_jer(predictions: np.ndarray, labels: np.ndarray, num_langs: int) -> Dict[str, float]:
-    """JER = 1 - (1/|L|) * sum_{ℓ ∈ L} |R_ℓ ∩ P_ℓ| / |R_ℓ ∪ P_ℓ|
+def compute_metrics(predictions: np.ndarray, labels: np.ndarray, num_langs: int) -> Dict[str, float]:
+    """Frame-level accuracy and JER.
 
+    JER = 1 - (1/|L|) * sum_{ℓ ∈ L} |R_ℓ ∩ P_ℓ| / |R_ℓ ∪ P_ℓ|
     L = languages with non-zero reference duration (silence=0 excluded).
-    Languages that are missed entirely (pred_l all-zero) are included with IoU=0,
-    correctly contributing 1.0 to the per-language JER.
     """
     valid = labels != -100
+    # Frame accuracy (over all valid frames including silence)
+    acc = float((predictions[valid] == labels[valid]).mean()) if valid.any() else 0.0
+
+    # JER
     iou_per_lang = []
     for lang_id in range(1, num_langs):
         ref_l = (labels == lang_id) & valid
         if not ref_l.any():
-            continue  # ℓ ∉ L
+            continue
         pred_l = (predictions == lang_id) & valid
         intersection = int((ref_l & pred_l).sum())
         union = int((ref_l | pred_l).sum())
         iou_per_lang.append(intersection / union)
-    return {"jer": 1.0 - float(np.mean(iou_per_lang)) if iou_per_lang else 1.0}
+    jer = 1.0 - float(np.mean(iou_per_lang)) if iou_per_lang else 1.0
+
+    return {"jer": jer, "frame_acc": acc}
 
 
 class LangDiarTrainer(Trainer):
-    """Trainer that adds eval_mean_jer averaged across all per-cutset JER values."""
+    """Trainer that adds mean_jer and mean_frame_acc averaged across per-cutset values."""
 
     def evaluate(
         self,
@@ -48,12 +53,14 @@ class LangDiarTrainer(Trainer):
         metric_key_prefix: str = "eval",
     ) -> Dict[str, float]:
         metrics = super().evaluate(eval_dataset, ignore_keys, metric_key_prefix)
-        jer_values = [v for k, v in metrics.items() if k.endswith("_jer")]
-        if len(jer_values) > 1:
-            mean_jer = float(np.mean(jer_values))
-            key = f"{metric_key_prefix}_mean_jer"
-            metrics[key] = mean_jer
-            self.log({key: mean_jer})
+        for suffix in ("_jer", "_frame_acc"):
+            values = [v for k, v in metrics.items()
+                      if k.endswith(suffix) and not k.endswith(f"_mean{suffix}")]
+            if len(values) > 1:
+                key = f"{metric_key_prefix}_mean{suffix}"
+                mean_val = float(np.mean(values))
+                metrics[key] = mean_val
+                self.log({key: mean_val})
         return metrics
 
 
@@ -133,10 +140,10 @@ def main(cfg: Cfg) -> None:
     logger.info("Classifier rows warm-started from Whisper decoder language embeddings (frozen)")
 
     def _make_metrics(n_langs: int):
-        def compute_metrics(eval_pred):
+        def _compute_metrics(eval_pred):
             preds, labels = eval_pred
-            return compute_jer(preds, labels, n_langs)
-        return compute_metrics
+            return compute_metrics(preds, labels, n_langs)
+        return _compute_metrics
 
     trainer = LangDiarTrainer(
         model=model,

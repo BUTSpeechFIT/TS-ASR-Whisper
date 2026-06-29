@@ -30,6 +30,7 @@ class WhisperContainer:
             "additional_layer": model_args.additional_layer,
             "additional_self_attention_layer": model_args.additional_self_attention_layer,
             "scb_layers": model_args.scb_layers,
+            "lang_diar_subsample_factor": model_args.lang_diar_subsample_factor,
         }
         clean_kwargs = {k: v for k, v in overwrite_args.items() if v is not None}
         self.model = DiCoWForConditionalGeneration.from_pretrained(

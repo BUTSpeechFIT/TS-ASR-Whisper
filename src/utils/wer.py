@@ -97,6 +97,43 @@ def calc_session_cp_wer(ref, hyp):
             .rename(columns={'cp_error_rate': 'cp_wer'}))
 
 
+def calc_session_cp_wer_lang_split(ref, hyp):
+    """Compute cpWER separately for English (_en) and non-English speakers."""
+    session_id = ref.segments[0]['session_id']
+    result_dfs = []
+
+    for lang_suffix in ('en', 'non_en'):
+        if lang_suffix == 'en':
+            ref_lang = ref.filter(lambda seg: seg['speaker'].endswith('_en'))
+            hyp_lang = hyp.filter(lambda seg: seg['speaker'].endswith('_en'))
+        else:
+            ref_lang = ref.filter(lambda seg: not seg['speaker'].endswith('_en'))
+            hyp_lang = hyp.filter(lambda seg: not seg['speaker'].endswith('_en'))
+
+        if len(ref_lang.segments) == 0:
+            continue
+        if len(hyp_lang.segments) == 0:
+            hyp_lang = create_dummy_seg_list(session_id)
+
+        res = meeteval.wer.cpwer(reference=ref_lang, hypothesis=hyp_lang)
+        res_df = pd.DataFrame.from_dict(res, orient='index').reset_index(names='session_id')
+        keys = ['error_rate', 'errors', 'length', 'insertions', 'deletions', 'substitutions',
+                'missed_speaker', 'falarm_speaker', 'scored_speaker', 'assignment']
+        existing_keys = [k for k in keys if k in res_df.columns]
+        prefix = f'cp_{lang_suffix}'
+        df = (res_df[['session_id'] + existing_keys]
+              .rename(columns={k: f'{prefix}_{k}' for k in existing_keys})
+              .rename(columns={f'{prefix}_error_rate': f'{prefix}_wer'}))
+        result_dfs.append(df)
+
+    if not result_dfs:
+        return pd.DataFrame()
+    merged = result_dfs[0]
+    for df in result_dfs[1:]:
+        merged = merged.merge(df, on='session_id', how='outer')
+    return merged
+
+
 def calc_session_orc_wer(ref, hyp, group_duration=15, time_step=0.1):
     res = meeteval.wer.orcwer(reference=ref, hypothesis=hyp)
     res_df = pd.DataFrame.from_dict(res, orient='index').reset_index(names='session_id')
@@ -162,7 +199,7 @@ def calc_wer(out_dir: Path,
         save_wer_visualization(ref_seglst, tcp_hyp_seglst, out_dir)
 
     wers_to_concat = []
-    if "cp_wer" in metrics_list:
+    if "cp_wer" in metrics_list or "cp_cer" in metrics_list:
         cp_wer_res = calc_session_cp_wer(ref_seglst, tcp_hyp_seglst)
         wers_to_concat.append(cp_wer_res.drop(columns='session_id'))
 

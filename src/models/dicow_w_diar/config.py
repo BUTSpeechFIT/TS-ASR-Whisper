@@ -32,6 +32,7 @@ class DiCoWConfig(WhisperConfig):
             use_enrollments: bool = False,
             scb_layers: Optional[int] = None,
             use_pre_pos_fddt: bool = False,
+            lang_diar_subsample_factor: int = 1,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -57,6 +58,7 @@ class DiCoWConfig(WhisperConfig):
         self.use_enrollments = use_enrollments
         self.scb_layers = scb_layers
         self.use_pre_pos_fddt = use_pre_pos_fddt
+        self.lang_diar_subsample_factor = lang_diar_subsample_factor
 
 
 

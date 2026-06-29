@@ -67,6 +67,10 @@ class ModelArguments:
     reinit_encoder_from: Optional[str] = field(default=False,
                                                metadata={"help": "Path to encoder model to reinit from."})
     reinit_from: Optional[str] = field(default=False, metadata={"help": "Path to model to reinit from."})
+    reinit_lang_encoder_from: Optional[str] = field(default=None, metadata={
+        "help": "Path to a LangDiarModel checkpoint (.safetensors). "
+                "Keys under 'encoder.*' are loaded into DiCoWEncoder.lang_encoder."
+    })
 
     # FDDT params
     fddt_is_diagonal: Optional[bool] = field(default=True, metadata={"help": "FDDT is diagonal."})

@@ -170,7 +170,7 @@ def aggregate_wer_metrics(wer_df: pd.DataFrame, metrics_list: List[str]) -> Dict
 
     for metric in metrics_list:
         mprefix, _ = metric.split("_", maxsplit=1)
-        metrics[mprefix + "_wer"] = metrics[mprefix + "_errors"] / metrics[mprefix + "_length"]
+        metrics[metric] = metrics[mprefix + "_errors"] / metrics[mprefix + "_length"]
         for k in ['missed_speaker', 'falarm_speaker', 'scored_speaker']:
             # compute mean for this keys
             key = f"{mprefix}_{k}"
