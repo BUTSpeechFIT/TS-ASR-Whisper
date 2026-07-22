@@ -437,6 +437,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         token_timestamps = seek_outputs[idx]["token_timestamps"] if return_token_timestamps else []
         idx_offset = decoder_input_ids.shape[-1]
         device = seek_sequence.device
+        timestamps = seek_sequence[timestamp_tokens.nonzero().flatten()]
 
         # If whisper predicted a "end of segment" via a timestep token, let's go ever each
         # "end of segment" prediction and slice the decoding into segments accordingly
@@ -490,7 +491,6 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         else:
             # If whisper does not predict any "end of segment" token, then
             # the whole decoding is considered a segment and we add it to the list of segments
-            timestamps = seek_sequence[timestamp_tokens.nonzero().flatten()]
             start_timestamp_pos = 0.0
             last_timestamp_pos = seek_num_frames[prev_idx] // 2
             skip = False
