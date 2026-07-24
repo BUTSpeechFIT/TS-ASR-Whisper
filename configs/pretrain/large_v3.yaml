@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /pretrain/base
+
+model:
+  whisper_model: openai/whisper-large-v3
+
+experiment: whisper_large_v3_pretrain
