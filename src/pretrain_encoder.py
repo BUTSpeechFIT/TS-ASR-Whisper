@@ -26,7 +26,6 @@ def main(cfg: Cfg):
     container = WhisperContainer(
         model_args=model_args,
         data_args=data_args,
-        use_flash_attention=training_args.use_flash_attention,
         remove_timestamps_from_ctc=training_args.remove_timestamps_from_ctc,
         use_fddt=training_args.use_fddt,
         params_to_keep_frozen_keywords=model_args.params_to_keep_frozen_keywords,
@@ -59,6 +58,11 @@ def main(cfg: Cfg):
         text_norm=get_text_norm(data_args.train_text_norm),
         feature_extractor=container.feature_extractor,
         global_lang_id=data_args.global_lang_id,
+        # Encoder pretraining runs on LibriSpeech, where every cut has exactly one
+        # speaker -- skip the full-corpus per-cut speaker-count scan in prepare_cuts(),
+        # which otherwise dominates dataset construction time (and is redone on every
+        # DDP rank independently).
+        assume_single_speaker_per_cut=True,
     )
 
     dev_datasets = build_datasets(
@@ -98,5 +102,5 @@ def main(cfg: Cfg):
                                )
 
     trainer_enc.compute_metrics = _compute_metrics
-    trainer_enc.train()
+    trainer_enc.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
     trainer_enc.evaluate(eval_datasets)

@@ -10,14 +10,16 @@ more-itertools==10.2.0
 ninja==1.11.1.2
 numpy==1.26.4
 pandas==2.2.2
+peft==0.19.1
 pyloudnorm==0.1.1
 PyYAML==6.0.2
 safetensors
 scipy==1.14.1
 simplejson==3.20.1
 soundfile==0.12.1
-torch==2.7.0
-torchaudio==2.7.0
+--extra-index-url https://download.pytorch.org/whl/cu130
+torch==2.13.0
+torchaudio==2.11.0+cu130
 tqdm==4.66.5
 transformers==4.55.0
-wandb==0.19.0
+wandb==0.28.1

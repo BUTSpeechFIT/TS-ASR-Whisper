@@ -5,25 +5,13 @@ from transformers.models.whisper import WhisperFeatureExtractor, WhisperTokenize
 from models.dicow.modeling_dicow import DiCoWForConditionalGeneration
 
 
-def supports_flash_attention():
-    """Check if a GPU supports FlashAttention."""
-    major, minor = torch.cuda.get_device_capability()
-
-    # Check if the GPU architecture is Ampere (SM 8.x) or newer (SM 9.0)
-    is_sm8x = major == 8 and minor >= 0
-    is_sm90 = major == 9 and minor == 0
-
-    return is_sm8x or is_sm90
-
-
 class WhisperContainer:
-    def __init__(self, use_flash_attention=False, params_to_keep_frozen_keywords=None, remove_timestamps_from_ctc=False,
+    def __init__(self, params_to_keep_frozen_keywords=None, remove_timestamps_from_ctc=False,
                  model_args=None, data_args=None, use_fddt=False, use_lora=False):
         self.model_type = model_args.whisper_model
         predict_timestamps = data_args.use_timestamps
         global_lang_id = data_args.global_lang_id
         overwrite_args = {
-            "attn_implementation": "flash_attention_2" if torch.cuda.is_available() and supports_flash_attention() and use_flash_attention else None,
             "ctc_weight": model_args.ctc_weight,
             "fddt_is_diagonal": model_args.fddt_is_diagonal,
             "fddt_bias_only": model_args.fddt_bias_only,
@@ -50,6 +38,7 @@ class WhisperContainer:
         )
 
         self.model.post_init()
+        self._init_ctc_head_from_decoder_embeddings()
 
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(self.model_type)
         self.tokenizer = WhisperTokenizerFast.from_pretrained(self.model_type, predict_timestamps=predict_timestamps)
@@ -89,6 +78,21 @@ class WhisperContainer:
                 else:
                     param.requires_grad = True
 
+    def _init_ctc_head_from_decoder_embeddings(self):
+        """Initialize the CTC head (encoder.lm_head) from the decoder's output token
+        embeddings instead of leaving it randomly initialized: both operate over the
+        same vocabulary, so this gives CTC (pre)training a much better starting point
+        than random noise. The CTC head has one extra output -- the blank token,
+        appended as the last index (see encoder.py's `blank=logits.shape[-1] - 1`) --
+        which has no decoder counterpart and is left at its random init."""
+        encoder = self.model.get_encoder()
+        if not hasattr(encoder, "lm_head"):
+            return
+        decoder_embed = self.model.get_output_embeddings().weight
+        vocab_size = decoder_embed.shape[0]
+        with torch.no_grad():
+            encoder.lm_head.weight[:vocab_size].copy_(decoder_embed)
+
     def freeze_except(self, prefixes_to_preheat):
         for name, param in self.model.named_parameters():
             param.requires_grad = False
@@ -102,9 +106,9 @@ def get_optimizer(model, training_args, prefixes_with_higher_lr=None):
         prefixes_with_higher_lr = []
     if training_args.use_custom_optimizer:
         original_whisper_params = [param for name, param in model.named_parameters() if
-                                   not any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
+                                   param.requires_grad and not any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
         new_params = [param for name, param in model.named_parameters() if
-                      any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
+                      param.requires_grad and any([name.startswith(prefix) for prefix in prefixes_with_higher_lr])]
         return torch.optim.AdamW([{'params': original_whisper_params},
                                   {'params': new_params,
                                    'lr': training_args.fddt_lr_multiplier * training_args.learning_rate,

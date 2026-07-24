@@ -232,7 +232,7 @@ class DataCollatorForPretraining(DataCollator):
         feats = pad_sequence([
             sample['input_features'].squeeze().T for sample in inputs]).permute(1, 2, 0)
         masks = pad_sequence([
-            sample['attention_mask'].T for sample in inputs]).squeeze().T
+            sample['attention_mask'] for sample in inputs]).squeeze().mT
 
         batch = BatchFeature({'input_features': feats, 'attention_mask': masks})
 

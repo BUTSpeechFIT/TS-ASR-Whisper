@@ -39,7 +39,6 @@ class ModelTrainer:
         self.container = WhisperContainer(
             model_args=self.model_args,
             data_args=self.data_args,
-            use_flash_attention=self.training_args.use_flash_attention,
             remove_timestamps_from_ctc=self.training_args.remove_timestamps_from_ctc,
             use_fddt=self.training_args.use_fddt,
             use_lora=self.training_args.use_lora,

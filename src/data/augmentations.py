@@ -4,8 +4,8 @@ import pathlib
 import random
 from typing import Optional, Sequence, Union
 
+import soundfile as sf
 import torch
-import torchaudio
 import torchaudio.functional as F
 
 
@@ -395,8 +395,10 @@ class RandomBackgroundNoise:
     def __call__(self, audio_data):
         random_noise_file = random.choice(self.noise_files_list)
 
-        # Load noise file
-        noise, orig_sample_rate = torchaudio.load(str(random_noise_file))
+        # Load noise file (soundfile instead of torchaudio.load: newer torchaudio
+        # versions require torchcodec for audio I/O).
+        noise_np, orig_sample_rate = sf.read(str(random_noise_file), dtype="float32", always_2d=True)
+        noise = torch.from_numpy(noise_np.T)  # (samples, channels) -> (channels, samples)
 
         # Convert to mono if stereo
         if noise.shape[0] > 1:
@@ -438,11 +440,10 @@ class RandomSpeedChange:
         if speed_factor == 1.0:  # no change
             return audio_data
 
-        # change speed and resample to original rate:
-        sox_effects = [
-            ["speed", str(speed_factor)],
-            ["rate", str(self.sample_rate)],
-        ]
-        transformed_audio, _ = torchaudio.sox_effects.apply_effects_tensor(
-            audio_data, self.sample_rate, sox_effects)
+        # Change speed while keeping the sample rate label fixed: resampling to
+        # sample_rate/speed_factor and reporting it as sample_rate shifts pitch and
+        # duration together, same net effect as sox's removed "speed"+"rate" chain
+        # (torchaudio.sox_effects was removed in newer torchaudio versions).
+        new_freq = int(self.sample_rate / speed_factor)
+        transformed_audio = F.resample(audio_data, self.sample_rate, new_freq)
         return transformed_audio

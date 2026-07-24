@@ -50,10 +50,19 @@ class TS_ASR_DatasetSuperclass:
                  num_other_speakers=0,
                  min_overlap_ratio=0,
                  max_overlap_ratio=1,
+                 assume_single_speaker_per_cut=False,
                  *args,
                  **kwargs):
 
-        self.cutsets = cutsets
+        filtered_cutsets = []
+        for cutset in cutsets:
+            kept = cutset.filter(lambda c: c.duration >= 0.1)
+            n_dropped = len(cutset) - len(kept)
+            if n_dropped > 0:
+                logger.warning(f"Dropped {n_dropped} cut(s) with duration < 0.1s "
+                               f"(would crash the feature extractor's STFT)")
+            filtered_cutsets.append(kept)
+        self.cutsets = filtered_cutsets
 
         self.dataset_weights = dataset_weights
         if dataset_weights is None:
@@ -96,6 +105,7 @@ class TS_ASR_DatasetSuperclass:
         self.feature_extractor = feature_extractor
         self.model_features_subsample_factor = model_features_subsample_factor
         self.global_lang_id = global_lang_id
+        self.assume_single_speaker_per_cut = assume_single_speaker_per_cut
         self.prepare_cuts()
         self.load_channel_zero_only = load_channel_zero_only
         self.load_signal_sum = load_signal_sum
@@ -153,9 +163,17 @@ class TS_ASR_DatasetSuperclass:
     def prepare_cuts(self):
         self.to_index_mapping = []
         for cutset, weight in zip(self.cutsets, self.dataset_weights):
-            with ThreadPoolExecutor() as executor:
-                spk_per_cut = list(executor.map(self.get_number_of_speakers_from_monocut, cutset.cuts))
-            spk_per_cut = np.array(spk_per_cut) * weight
+            if self.assume_single_speaker_per_cut:
+                # Skip the per-cut supervision scan (get_number_of_speakers_from_monocut
+                # over every cut) when the caller already knows each cut has exactly one
+                # speaker (e.g. LibriSpeech CTC pretraining) -- the scan's result would
+                # always be 1 per cut anyway, so this avoids an O(corpus size) pass that
+                # dominates dataset construction time for large corpora.
+                spk_per_cut = np.full(len(cutset), weight, dtype=np.int64)
+            else:
+                with ThreadPoolExecutor() as executor:
+                    spk_per_cut = list(executor.map(self.get_number_of_speakers_from_monocut, cutset.cuts))
+                spk_per_cut = np.array(spk_per_cut) * weight
             self.to_index_mapping.append(spk_per_cut)
         self.to_index_mapping = np.cumsum(np.concatenate(self.to_index_mapping))
 
