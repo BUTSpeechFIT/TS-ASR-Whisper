@@ -541,9 +541,6 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
             assistant_model: Optional["PreTrainedModel"] = None,
             **kwargs,
     ):
-        if condition_on_prev_tokens:
-            raise NotImplementedError("Current version does not support conditioning")
-
         gen_c, _ = self._prepare_generation_config(generation_config, **kwargs)
         gen_mode = gen_c.get_generation_mode(assistant_model)
 
@@ -555,7 +552,11 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         if "stno_mask" in kwargs:
             self.stno_mask = kwargs["stno_mask"]
 
-        output = super().generate(**kwargs, return_segments=True)
+        # Rolling conditioning on the target speaker's own previously decoded text. When None,
+        # the value falls back to generation_config.condition_on_prev_tokens (set from the
+        # `decoding.condition_on_prev` argument via update_generation_config).
+        output = super().generate(**kwargs, condition_on_prev_tokens=condition_on_prev_tokens,
+                                  return_segments=True)
 
         self.encoder_logits = None
 

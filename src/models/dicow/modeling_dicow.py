@@ -272,6 +272,10 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
+        # A caller-provided decoder_input_ids (with labels) means a <|startofprev|> prompt was
+        # prepended by the collator, so the label rows carry a leading -100 prompt region.
+        prompted = labels is not None and decoder_input_ids is not None and decoder_inputs_embeds is None
+
         if labels is not None:
             if decoder_input_ids is None and decoder_inputs_embeds is None:
                 decoder_input_ids = shift_tokens_right(
@@ -326,11 +330,23 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             if self.config.ctc_weight > 0.0:
                 enc_lm_logits = self.get_enc_logits(outputs.encoder_last_hidden_state)
                 # Prepare CTC labels
-                enc_labels = labels.clone().to(dec_lm_logits.device)
-                for token in self.tokenizer.prefix_tokens:
-                    if (enc_labels[:, 0] == token).all():
-                        enc_labels = enc_labels[:, 1:]
-                enc_labels[enc_labels == self.config.eos_token_id] = -100
+                if prompted:
+                    # Prompt rows have a leading -100 region, so the uniform column-strip below
+                    # cannot locate the special prefix. Rebuild each row as the left-aligned
+                    # text(+timestamp) target -- drop the masked prompt (-100), the special
+                    # prefix tokens (sot/lang/task) and eos -- so get_loss's "trailing -100"
+                    # padding assumption holds. Content matches the non-prompt branch.
+                    drop_ids = torch.tensor(list(self.tokenizer.prefix_tokens) + [self.config.eos_token_id],
+                                            device=labels.device)
+                    kept_rows = [row[(row >= 0) & ~torch.isin(row, drop_ids)] for row in labels]
+                    enc_labels = torch.nn.utils.rnn.pad_sequence(
+                        kept_rows, batch_first=True, padding_value=-100).to(dec_lm_logits.device)
+                else:
+                    enc_labels = labels.clone().to(dec_lm_logits.device)
+                    for token in self.tokenizer.prefix_tokens:
+                        if (enc_labels[:, 0] == token).all():
+                            enc_labels = enc_labels[:, 1:]
+                    enc_labels[enc_labels == self.config.eos_token_id] = -100
 
                 ctc_loss = self.get_encoder().get_loss(enc_lm_logits, enc_labels)
                 loss = (1 - self.config.ctc_weight) * dec_loss + self.config.ctc_weight * ctc_loss

@@ -20,8 +20,17 @@ def update_generation_config(model, training_args, decoding_args, predict_timest
     """
     Update the generation kwargs of the model with the training and decoding args
     """
+    max_new_tokens = training_args.generation_max_length
+    if decoding_args.condition_on_prev:
+        max_target = getattr(model.config, "max_target_positions", 448)
+        safe_new = max_target - (max_target // 2 - 1) - 8
+        if max_new_tokens > safe_new:
+            logger.warning(f"condition_on_prev=True: capping max_new_tokens {max_new_tokens} -> {safe_new} "
+                           f"to fit within max_target_positions={max_target} together with the prompt.")
+            max_new_tokens = safe_new
+
     gen_kwargs = {
-        "max_new_tokens": training_args.generation_max_length,
+        "max_new_tokens": max_new_tokens,
         "num_beams": training_args.generation_num_beams,
         "begin_suppress_tokens": None,
         "length_penalty": decoding_args.length_penalty,
@@ -35,6 +44,8 @@ def update_generation_config(model, training_args, decoding_args, predict_timest
     # print gen_kwargs that were not used
     for k, v in not_used_args.items():
         logger.warning(f"{k}={v} was not used in the generation config")
+
+    model.generation_config.condition_on_prev_tokens = decoding_args.condition_on_prev
 
 
 

@@ -1,6 +1,7 @@
 import os
 import random
 import re
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from pathlib import Path
@@ -15,9 +16,23 @@ from lhotse.utils import fastcopy
 from torch.utils.data import Dataset
 from transformers.utils import logging
 
+from transformers.models.whisper.tokenization_whisper import TO_LANGUAGE_CODE
+
 from data.augmentations import RandomBackgroundNoise
 from utils.general import round_nearest, get_cut_recording_id
 from utils.training_args import DataArguments
+
+
+def normalize_language(language):
+    """Map a supervision language (e.g. 'Chinese', 'English') to a Whisper code ('zh', 'en').
+
+    Accepts either a full language name or an already-normalised code; returns None for a
+    missing value so callers can fall back to other language sources.
+    """
+    if not language:
+        return None
+    lowered = language.lower()
+    return TO_LANGUAGE_CODE.get(lowered, lowered)
 
 logging.set_verbosity_debug()
 logger = logging.get_logger("transformers")
@@ -46,11 +61,13 @@ class TS_ASR_DatasetSuperclass:
                  musan_augment_prob=0.0,
                  musan_root=None,
                  use_enrollments=False,
+                 use_prev_prompt=False,
                  enrollment_cutset=None,
                  num_other_speakers=0,
                  min_overlap_ratio=0,
                  max_overlap_ratio=1,
                  assume_single_speaker_per_cut=False,
+                 cache_per_cut_inputs=0,
                  *args,
                  **kwargs):
 
@@ -61,6 +78,8 @@ class TS_ASR_DatasetSuperclass:
             if n_dropped > 0:
                 logger.warning(f"Dropped {n_dropped} cut(s) with duration < 0.1s "
                                f"(would crash the feature extractor's STFT)")
+            if hasattr(cutset, "parent_cutset"):
+                kept.parent_cutset = cutset.parent_cutset
             filtered_cutsets.append(kept)
         self.cutsets = filtered_cutsets
 
@@ -70,15 +89,15 @@ class TS_ASR_DatasetSuperclass:
 
         assert len(self.cutsets) == len(self.dataset_weights), "cutsets and dataset_weights must have the same length"
 
-        if use_enrollments:
+        self.parent_csets = None
+        self.parent_recording_to_id = {}
+        if use_enrollments or use_prev_prompt:
             parent_csets = [cutset.parent_cutset for cutset in self.cutsets if
                             hasattr(cutset, "parent_cutset")]
             if len(parent_csets) > 0:
                 self.parent_csets = reduce(lambda a, b: a + b, parent_csets)
                 self.parent_recording_to_id = {get_cut_recording_id(cut): idx for idx, cut in
                                                enumerate(self.parent_csets)}
-            else:
-                self.parent_csets = None
 
         self.cset = reduce(lambda a, b: a + b, self.cutsets)
 
@@ -101,6 +120,7 @@ class TS_ASR_DatasetSuperclass:
                     self.per_speaker_enrollments[speaker] = CutSet.from_cuts(self.per_speaker_enrollments[speaker])
         self.max_timestamp_pause = max_timestamp_pause
         self.use_timestamps = use_timestamps
+        self.use_prev_prompt = use_prev_prompt
         self.text_norm = text_norm
         self.feature_extractor = feature_extractor
         self.model_features_subsample_factor = model_features_subsample_factor
@@ -112,6 +132,9 @@ class TS_ASR_DatasetSuperclass:
         self.musan_augment_prob = musan_augment_prob
         if self.musan_augment_prob > 0.0:
             self.musan_augment = RandomBackgroundNoise(sample_rate=16_000, noise_dir=musan_root)
+
+        self._cut_cache_size = cache_per_cut_inputs if self.musan_augment_prob == 0.0 else 0
+        self._cut_cache = OrderedDict()
 
     @staticmethod
     def get_number_of_speakers_from_monocut(cut):
@@ -177,7 +200,32 @@ class TS_ASR_DatasetSuperclass:
             self.to_index_mapping.append(spk_per_cut)
         self.to_index_mapping = np.cumsum(np.concatenate(self.to_index_mapping))
 
-    def get_stno_mask(self, cut: Cut, speaker_id: str):
+    def _cached_per_cut(self, kind, cut: Cut, compute):
+        """Memoise a speaker-independent, per-cut computation (features / speaker activity mask).
+
+        A dataset emits one example per (recording, speaker) pair and `__getitem__` walks the
+        speakers of a recording consecutively, so a couple of cached recordings remove nearly all
+        of the redundant work: a NOTSOFAR dev recording is otherwise decoded, turned into log-mels
+        and scanned for speaker activity once per speaker (~5.6x on average). The intermediate
+        allocations are large enough for that to matter -- see `get_stno_mask`.
+
+        Disabled (`cache_per_cut_inputs=0`) by default; long-form eval datasets opt in.
+        """
+        if self._cut_cache_size <= 0:
+            return compute()
+        entry = self._cut_cache.get(cut.id)
+        if entry is None:
+            entry = self._cut_cache[cut.id] = {}
+            while len(self._cut_cache) > self._cut_cache_size:
+                self._cut_cache.popitem(last=False)
+        else:
+            self._cut_cache.move_to_end(cut.id)
+        if kind not in entry:
+            entry[kind] = compute()
+        return entry[kind]
+
+    def _compute_speaker_frame_mask(self, cut: Cut):
+        """Frame-level per-speaker activity, the speaker-independent half of `get_stno_mask`."""
         speakers = list(sorted(CutSet.from_cuts([cut]).speakers))
         speakers_to_idx = {spk: idx for idx, spk in enumerate(speakers)}
         spk_mask = cut.speakers_audio_mask(speaker_to_idx_map=speakers_to_idx)
@@ -190,6 +238,11 @@ class TS_ASR_DatasetSuperclass:
         spk_mask = spk_mask.astype(np.float32).reshape(spk_mask.shape[0], -1,
                                                        self.model_features_subsample_factor * self.feature_extractor.hop_length).mean(
             axis=-1)
+        return spk_mask, speakers_to_idx
+
+    def get_stno_mask(self, cut: Cut, speaker_id: str):
+        spk_mask, speakers_to_idx = self._cached_per_cut(
+            "speaker_frame_mask", cut, lambda: self._compute_speaker_frame_mask(cut))
 
         if speaker_id == "-1":
             speaker_index = -1
@@ -212,6 +265,9 @@ class TS_ASR_DatasetSuperclass:
         return stno_mask
 
     def get_features(self, cut: Cut):
+        return self._cached_per_cut("features", cut, lambda: self._compute_features(cut))
+
+    def _compute_features(self, cut: Cut):
         if self.load_channel_zero_only:
             samples, sr = cut.recording.load_audio(channels=[0], offset=cut.start,
                                                    duration=cut.duration), cut.sampling_rate
@@ -467,6 +523,26 @@ class TS_ASR_DatasetSuperclass:
                                                                greedy_sample=greedy_sample)
         return other_cut
 
+    def get_prev_transcript(self, cut: Union[Cut, MixedCut], speaker_id: str) -> str:
+        """Return the target speaker's ground-truth text spoken *before* the current window.
+
+        Used to build the Whisper `<|startofprev|>` prompt during training. The text is drawn
+        from the parent (full-recording) cut so we can see beyond the current window; if no
+        parent recording is available (or the cut has no absolute start), we cannot recover
+        anything preceding the window and return an empty string (the prompt becomes a no-op).
+        The returned text is normalised and timestamp-free, matching Whisper's prompt format.
+        """
+        parent = self.get_potentionally_parent_recording(cut)
+        window_start = getattr(cut, "start", None)
+        if parent is cut or window_start is None:
+            return ""
+
+        prev_supervisions = [s for s in parent.supervisions
+                             if s.speaker == speaker_id and s.end <= window_start]
+        prev_supervisions.sort(key=lambda s: s.start)
+        texts = [t for t in (self.text_norm(s.text) for s in prev_supervisions) if t]
+        return " ".join(texts)
+
     def cut_to_sample(self, cut: Cut, speaker_id: str, is_nested: bool = False):
         stno_mask = self.get_stno_mask(cut, speaker_id)
         features, att_mask = self.get_features(cut)
@@ -483,12 +559,19 @@ class TS_ASR_DatasetSuperclass:
         outputs = {"input_features": features, "stno_mask": torch.tensor(stno_mask), "attention_mask": att_mask,
                    "transcript": transcription, "is_long_form": False}
 
+        if self.use_prev_prompt and not is_nested:
+            outputs["prev_transcript"] = self.get_prev_transcript(cut, speaker_id)
+
         if self.use_enrollments and not is_nested:
             other_cut = self.get_conditioning_cut(cut, speaker_id, greedy_sample=False)
             outputs["enrollment"] = self.cut_to_sample(other_cut, speaker_id, is_nested=True)
 
+        supervision_lang = normalize_language(
+            next((s.language for s in cut.supervisions if s.speaker == speaker_id and s.language), None))
         if hasattr(cut, "lang"):
             outputs["language"] = cut.lang
+        elif supervision_lang:
+            outputs["language"] = supervision_lang
         elif self.global_lang_id:
             outputs["language"] = self.global_lang_id
         else:
@@ -533,6 +616,7 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
                     lambda supervision: supervision.transform_text(self.add_space_between_chars)))
 
         self._references = references
+        kwargs.setdefault("cache_per_cut_inputs", 4)
         super().__init__(cutsets=[cutset], **kwargs)
 
         if self._references is not None:
@@ -616,7 +700,28 @@ class LhotseLongFormDataset(TS_ASR_Dataset):
         return outputs
 
 
-def load_cutsets(cutset_list, use_enrollments):
+def resolve_break_to_chars_path(cut_path):
+    """Path to actually load a cutset from, ignoring the 'break_to_chars' marker if needed.
+
+    'break_to_chars' in a cutset path only requests character-level scoring (tcpCER instead of
+    tcpWER, see `build_datasets`); it does not describe the manifest's contents. So a dedicated
+    manifest/symlink under that name is optional -- when it is missing, fall back to the same
+    cutset without the marker.
+    """
+    if "break_to_chars" not in cut_path or Path(cut_path).exists():
+        return cut_path
+
+    for marker in ("_break_to_chars", "break_to_chars"):
+        fallback = cut_path.replace(marker, "")
+        if fallback != cut_path and Path(fallback).exists():
+            logger.info(f"'{cut_path}' not found, loading '{fallback}' instead "
+                        f"(references and hypotheses are still split into characters).")
+            return fallback
+
+    return cut_path
+
+
+def load_cutsets(cutset_list, use_enrollments, use_prev_prompt=False):
     def assign_external_usage(cut):
         cut.use_external_enrollment = True
         return cut
@@ -627,15 +732,14 @@ def load_cutsets(cutset_list, use_enrollments):
         if use_enrollments and "external_enrollment" in cut_path:
             cut_path = cut_path.replace("_external_enrollment", "")
             should_use_external = True
+        cut_path = resolve_break_to_chars_path(cut_path)
         cutset = lhotse.load_manifest(cut_path)
 
-        if use_enrollments:
-            if should_use_external:
-                cutset = cutset.map(assign_external_usage)
-            elif "30s" in cut_path:
-                cut_path = cut_path.replace("_30s", "")
-                parent_cutset = lhotse.load_manifest(cut_path)
-                cutset.parent_cutset = parent_cutset
+        if use_enrollments and should_use_external:
+            cutset = cutset.map(assign_external_usage)
+        elif (use_enrollments or use_prev_prompt) and "30s" in cut_path:
+            parent_cutset = lhotse.load_manifest(resolve_break_to_chars_path(cut_path.replace("_30s", "")))
+            cutset.parent_cutset = parent_cutset
 
         cutsets.append(cutset)
 

@@ -129,6 +129,9 @@ class DataArguments:
     eval_cutsets: Optional[List[str]] = field(default=None, metadata={"help": "Paths to eval cutsets."})
     merge_eval_cutsets: Optional[bool] = field(default=False, metadata={"help": "Whether to merge dev/eval cutsets."})
     use_timestamps: Optional[bool] = field(default=False, metadata={"help": "Use timestamps."})
+    use_prev_prompt: Optional[bool] = field(default=False, metadata={
+        "help": "Condition the decoder on the target speaker's previously-spoken (ground-truth) text via a "
+                "<|startofprev|> prompt during training. At decoding time use decoding.condition_on_prev instead."})
 
     train_text_norm: Optional[str] = field(default=None, metadata={
         "help": "Normalisation to use for training."})

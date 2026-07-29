@@ -6,7 +6,6 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from transformers import Seq2SeqTrainer, Trainer, TrainingArguments, TrainerCallback, TrainerState, TrainerControl
-from transformers.trainer_pt_utils import get_model_param_count
 from transformers.trainer_utils import EvalLoopOutput
 from transformers.utils import logging
 
@@ -109,34 +108,8 @@ class CustomTrainer(Seq2SeqTrainer):
         self.forward_w_cast = None
         self.forward_wo_cast = None
         self.container = container
-        self.warmup_phase = True
         self.params_to_keep_frozen = params_to_keep_frozen
         self.metric_key_prefix = ""
-
-    def training_step(
-        self,
-        model: nn.Module,
-        inputs: dict[str, Union[torch.Tensor, Any]],
-        num_items_in_batch: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        if self.warmup_phase and self.state.epoch >= self.args.use_fddt_only_n_epochs and self.state.global_step >= self.args.use_fddt_only_n_steps:
-            for name, param in self.model.named_parameters():
-                if "lora_" in name:
-                    param.requires_grad = True
-                    continue
-                for keyword in self.params_to_keep_frozen:
-                    if keyword in name:
-                        param.requires_grad = False
-                        break
-                else:
-                    param.requires_grad = True
-            logger.info(f"***** Unfreezing params except {self.params_to_keep_frozen}*****")
-            logger.info(f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}")
-            self.create_optimizer_and_scheduler(num_training_steps=self.state.max_steps)
-
-            self.warmup_phase = False
-        output = super().training_step(model, inputs, num_items_in_batch)
-        return output
 
     def _inner_training_loop(
             self, batch_size=None, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None

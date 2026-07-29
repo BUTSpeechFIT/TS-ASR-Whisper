@@ -26,6 +26,7 @@ class DataCollator:
     stno_max_segment_length: int = 50  # Maximum segment length for augmentation
     spec_aug_prob: float = 0.3
     use_enrollments: bool = False
+    use_prev_prompt: bool = False
 
     def __post_init__(self):
         spec_params = {
@@ -141,6 +142,49 @@ class DataCollator:
     def is_all_true_or_all_false(lst):
         return all(lst) or not any(lst)
 
+    def _build_prompted_labels(self, labels, inputs):
+        """Prepend a `<|startofprev|>` prompt (the target speaker's prior text) to each sample.
+
+        Returns (decoder_input_ids, labels, upp_labels). For each sample the full teacher-forcing
+        sequence is `[<|startofprev|>, prev tokens, <|sot|>, task, (timestamps), text, <|eot|>]`;
+        we set decoder_input_ids = full[:-1] and labels = full[1:], masking the prompt region
+        (prompt tokens + the sot boundary) to -100 so the loss is unchanged on the transcript.
+        Samples with an empty prompt reduce exactly to the standard shift-right behaviour.
+        """
+        input_ids = labels["input_ids"]
+        attn = labels["attention_mask"]
+        half = self.max_length // 2
+        pad_id = self.tokenizer.pad_token_id
+        di_list, lab_list = [], []
+        for i, sample in enumerate(inputs):
+            real_len = int(attn[i].sum().item())
+            tok_ids = input_ids[i, :real_len]
+            prev_text = (sample.get("prev_transcript") or "").strip()
+            if prev_text:
+                prompt_ids = self.tokenizer.get_prompt_ids(prev_text, return_tensors="pt").to(tok_ids)
+                # Keep <|startofprev|> first and the most recent prompt tokens, bounded so that
+                # prompt + transcript still fit inside the decoder budget.
+                budget = min(half, max(0, self.max_length - real_len))
+                if budget < 2:
+                    prompt_ids = prompt_ids[:0]
+                elif prompt_ids.shape[0] > budget:
+                    prompt_ids = torch.cat([prompt_ids[:1], prompt_ids[-(budget - 1):]])
+            else:
+                prompt_ids = tok_ids.new_empty((0,))
+            m = prompt_ids.shape[0]
+            full = torch.cat([prompt_ids, tok_ids])
+            di_list.append(full[:-1])
+            lab = full[1:].clone()
+            if m > 0:
+                lab[:m] = -100
+            lab_list.append(lab)
+        decoder_input_ids = pad_sequence(di_list, batch_first=True, padding_value=pad_id)
+        labels_tensor = pad_sequence(lab_list, batch_first=True, padding_value=-100)
+        upp_labels = labels_tensor.clone().apply_(
+            lambda x: self.tokenizer.upper_cased_tokens.get(int(x)) if int(
+                x) in self.tokenizer.upper_cased_tokens else x)
+        return decoder_input_ids, labels_tensor, upp_labels
+
     def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]], nested=False) -> BatchFeature:
         longform = [sample['is_long_form'] for sample in inputs]
         if len(set(longform)) != 1:
@@ -178,12 +222,18 @@ class DataCollator:
             raise ValueError(
                 f"Some inputs have language and some not. Please unify it if you want to condition by language.")
 
-        batch["labels"] = labels["input_ids"].masked_fill(labels.attention_mask.ne(1), -100)
-        if (batch["labels"][:, 0] == self.bos_token_id).all().cpu().item():
-            batch["labels"] = batch["labels"][:, 1:]
-        batch['upp_labels'] = batch['labels'].clone().apply_(
-            lambda x: self.tokenizer.upper_cased_tokens.get(int(x)) if int(
-                x) in self.tokenizer.upper_cased_tokens else x)
+        if self.use_prev_prompt and not in_longform and not nested:
+            decoder_input_ids, prompted_labels, prompted_upp = self._build_prompted_labels(labels, inputs)
+            batch["decoder_input_ids"] = decoder_input_ids
+            batch["labels"] = prompted_labels
+            batch["upp_labels"] = prompted_upp
+        else:
+            batch["labels"] = labels["input_ids"].masked_fill(labels.attention_mask.ne(1), -100)
+            if (batch["labels"][:, 0] == self.bos_token_id).all().cpu().item():
+                batch["labels"] = batch["labels"][:, 1:]
+            batch['upp_labels'] = batch['labels'].clone().apply_(
+                lambda x: self.tokenizer.upper_cased_tokens.get(int(x)) if int(
+                    x) in self.tokenizer.upper_cased_tokens else x)
 
         # Apply STNO augmentations (only during training, not for long-form generation)
         if not ("is_long_form" in inputs[0] and inputs[0]['is_long_form']) and not nested:

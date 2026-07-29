@@ -1,0 +1,11 @@
+# @package _global_
+defaults:
+  - /train/dicow_v3_more_data
+
+experiment: dicow_v3_more_data_large_w_prompt
+
+decoding:
+  condition_on_prev: true
+
+data:
+  use_prev_prompt: true

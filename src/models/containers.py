@@ -67,16 +67,7 @@ class WhisperContainer:
             self.model = get_peft_model(self.model, lora_config)
 
         if params_to_keep_frozen_keywords is not None:
-            for name, param in self.model.named_parameters():
-                if "lora_" in name:
-                    param.requires_grad = True
-                    continue
-                for keyword in params_to_keep_frozen_keywords:
-                    if keyword in name:
-                        param.requires_grad = False
-                        break
-                else:
-                    param.requires_grad = True
+            self.freeze_by_keywords(params_to_keep_frozen_keywords)
 
     def _init_ctc_head_from_decoder_embeddings(self):
         """Initialize the CTC head (encoder.lm_head) from the decoder's output token
@@ -99,6 +90,23 @@ class WhisperContainer:
             for prefix in prefixes_to_preheat:
                 if name.startswith(prefix):
                     param.requires_grad = True
+
+    def freeze_by_keywords(self, params_to_keep_frozen_keywords):
+        """Make everything trainable except params matching one of the keywords.
+
+        This is the default trainable/frozen layout of the model; it is applied at init and
+        re-applied after the FDDT preheat phase to undo `freeze_except`.
+        """
+        for name, param in self.model.named_parameters():
+            if "lora_" in name:
+                param.requires_grad = True
+                continue
+            for keyword in params_to_keep_frozen_keywords:
+                if keyword in name:
+                    param.requires_grad = False
+                    break
+            else:
+                param.requires_grad = True
 
 
 def get_optimizer(model, training_args, prefixes_with_higher_lr=None):

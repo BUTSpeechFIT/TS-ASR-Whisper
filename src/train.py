@@ -1,10 +1,14 @@
+import copy
+import gc
 import os
 from functools import reduce
 from typing import Dict, Any
 
 import lhotse
+import torch
 from safetensors.torch import load_file
 from transformers import EarlyStoppingCallback
+from transformers.trainer_pt_utils import get_model_param_count
 from transformers.utils import logging
 
 from data.collators import DataCollator
@@ -47,7 +51,8 @@ class ModelTrainer:
 
     def _load_training_cutsets(self):
         """Load and prepare training cutsets."""
-        train_cutsets = load_cutsets(self.data_args.train_cutsets, self.data_args.use_enrollments)
+        train_cutsets = load_cutsets(self.data_args.train_cutsets, self.data_args.use_enrollments,
+                                     use_prev_prompt=self.data_args.use_prev_prompt)
         return train_cutsets
 
     def _create_enrollment_cutset(self):
@@ -65,6 +70,7 @@ class ModelTrainer:
             do_augment=self.aug_args.do_augment,
             dataset_weights=self.data_args.dataset_weights,
             use_timestamps=self.data_args.use_timestamps,
+            use_prev_prompt=self.data_args.use_prev_prompt,
             musan_root=self.aug_args.musan_root,
             musan_augment_prob=self.aug_args.musan_augment_prob,
             text_norm=get_text_norm(self.data_args.train_text_norm),
@@ -144,6 +150,7 @@ class ModelTrainer:
             stno_max_segment_length=self.aug_args.stno_max_segment_length,
             spec_aug_prob=self.aug_args.spec_aug_prob,
             use_enrollments=self.data_args.use_enrollments,
+            use_prev_prompt=self.data_args.use_prev_prompt,
         )
 
     def _create_compute_metrics_fn(self, dev_datasets):
@@ -170,11 +177,98 @@ class ModelTrainer:
             if self.training_args.watch_grads and self.trainer.accelerator.is_main_process:
                 self.trainer.add_callback(GradLogger(self.model))
 
-    def _setup_fddt_training(self):
-        """Setup FDDT-only training if specified."""
-        if (self.training_args.use_fddt_only_n_epochs > 0 or
-                self.training_args.use_fddt_only_n_steps > 0):
-            self.container.freeze_except(self.model_args.prefixes_to_preheat)
+    def _preheat_enabled(self):
+        """Whether an FDDT-only preheat phase should be run before the main training."""
+        if (self.training_args.use_fddt_only_n_epochs <= 0 and
+                self.training_args.use_fddt_only_n_steps <= 0):
+            return False
+        if not self.model_args.prefixes_to_preheat:
+            logger.warning("use_fddt_only_n_steps/epochs is set but prefixes_to_preheat is empty, "
+                           "skipping the preheat phase.")
+            return False
+        if self.training_args.resume_from_checkpoint:
+            # A checkpoint can only come from the main phase (the preheat phase writes none),
+            # so its weights already contain the preheated FDDTs.
+            logger.info(f"Resuming from {self.training_args.resume_from_checkpoint}, skipping the preheat phase.")
+            return False
+        return True
+
+    def _preheat_training_args(self):
+        """Training arguments for the preheat run, derived from the main ones.
+
+        Shallow copy on purpose: `TrainingArguments` carries an already-initialised
+        `distributed_state`, which must be shared rather than deep-copied. Any field
+        overridden below is rebound, never mutated in place.
+        """
+        args = copy.copy(self.training_args)
+        args.output_dir = os.path.join(self.training_args.output_dir, "preheat")
+        args.run_name = f"{self.training_args.run_name}_preheat"
+
+        if self.training_args.use_fddt_only_n_steps > 0:
+            args.max_steps = self.training_args.use_fddt_only_n_steps
+        else:
+            args.max_steps = -1
+            args.num_train_epochs = self.training_args.use_fddt_only_n_epochs
+
+        args.eval_strategy = "no"
+        args.save_strategy = "no"
+        args.load_best_model_at_end = False
+        args.predict_with_generate = False
+        args.report_to = []
+        return args
+
+    def _run_preheat_phase(self, train_dataset, collator):
+        """Train only `prefixes_to_preheat` (FDDTs & friends) as a separate training run.
+
+        Everything is then thrown away except the model weights: the main training that follows
+        builds a brand new trainer, optimizer and LR scheduler (so the warmup is spent on the
+        full model, not on the preheat). Continuing the preheat optimizer/schedule into the
+        unfrozen phase -- what the previous in-training-loop unfreezing did -- dropped the whole
+        model in at peak LR and made the loss explode.
+        """
+        if not self._preheat_enabled():
+            return
+
+        args = self._preheat_training_args()
+        self.container.freeze_except(self.model_args.prefixes_to_preheat)
+        duration = (f"{args.max_steps} steps" if args.max_steps > 0 else f"{args.num_train_epochs} epochs")
+        logger.info(f"***** Preheating {self.model_args.prefixes_to_preheat} for {duration} *****")
+        logger.info(f"  Number of trainable parameters = "
+                    f"{get_model_param_count(self.model, trainable_only=True):,}")
+
+        preheat_trainer = CustomTrainer(
+            model=self.model,
+            args=args,
+            data_collator=collator,
+            train_dataset=train_dataset,
+            processing_class=self.container.tokenizer,
+            container=self.container,
+            optimizers=(get_optimizer(self.model, args, self.model_args.prefixes_to_preheat), None),
+            params_to_keep_frozen=self.model_args.params_to_keep_frozen_keywords,
+        )
+        preheat_trainer.train()
+        # Preheating can take a while, so keep its result around: if the main phase dies before
+        # its first checkpoint, this can be fed back through model.reinit_from.
+        preheat_trainer.save_model(args.output_dir)
+        logger.info(f"***** Preheat finished, weights saved to {args.output_dir} *****")
+
+        # Give up every reference to the preheat run (optimizer states, DDP/accelerate wrappers,
+        # dataloaders) so the main phase starts from a clean slate. `self.model` is untouched.
+        preheat_trainer.accelerator.free_memory()
+        del preheat_trainer
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        # Keep the overall step budget unchanged: max_steps counted the preheat steps before.
+        if self.training_args.max_steps > 0 and self.training_args.use_fddt_only_n_steps > 0:
+            self.training_args.max_steps -= self.training_args.use_fddt_only_n_steps
+            logger.info(f"Main training phase will run for {self.training_args.max_steps} steps.")
+
+        self.container.freeze_by_keywords(self.model_args.params_to_keep_frozen_keywords)
+        logger.info(f"***** Unfreezing params except {self.model_args.params_to_keep_frozen_keywords} *****")
+        logger.info(f"  Number of trainable parameters = "
+                    f"{get_model_param_count(self.model, trainable_only=True):,}")
 
     def do_eval(self, eval_datasets, decoding_ctc_weight, eval_metrics_list, condition_key):
         """Perform evaluation on given datasets."""
@@ -218,8 +312,14 @@ class ModelTrainer:
         update_generation_config(self.model, self.training_args, self.decoding_args,
                                  predict_timestamps=self.data_args.use_timestamps)
 
-        # Create trainer
         collator = self._create_data_collator()
+
+        # FDDT-only preheat, run to completion before anything else is built: the main trainer
+        # below must see the final (unfrozen) requires_grad layout when it builds its optimizer.
+        if not self.training_args.decode_only:
+            self._run_preheat_phase(train_dataset, collator)
+
+        # Create trainer
         callbacks = ([EarlyStoppingCallback(self.training_args.early_stopping_patience)]
                      if self.training_args.early_stopping_patience > 0 else None)
 
@@ -238,7 +338,6 @@ class ModelTrainer:
 
         # Setup additional components
         self._setup_wandb()
-        self._setup_fddt_training()
 
         # Setup metrics computation
         if self.training_args.predict_with_generate:

@@ -1,30 +1,15 @@
 # @package _global_
-# dicow_v3 + the datasets newly prepared via mt-asr-data-prep this round:
-#   - AliMeeting-mdm and AISHELL-4, downmixed (summed) to mono and 30s-windowed
-#     with stochastic offsets
-#   - FastMSS synthetic conversational meetings (1-5 speakers, ~30s each)
-#   - refreshed AMI / NOTSOFAR-1 30s cuts (indexing-bug fix + stochastic offsets,
-#     same filenames as dicow_v3 so they're picked up automatically)
 defaults:
   - /train/dicow_v3
 
+experiment: dicow_v3_more_data_large
 
-wandb:
-  project: "dicow_v4"
-
-experiment: dicow_v3_mtasr
+training:
+  use_lora: true
 
 model:
   whisper_model: openai/whisper-large-v3
   reinit_encoder_from: null
-#  reinit_encoder_from: "/homes/ipoloka/TS-ASR-Whisper/exp/whisper_large_v3_pretrain/checkpoint-9759/model.safetensors"
-  reinit_from: "/homes/ipoloka/TS-ASR-Whisper/exp/dicow_v3_mtasr/checkpoint-2000"
-
-training:
-  overall_batch_size: null
-  per_device_train_batch_size: 16
-  gradient_accumulation_steps: 2
-  use_fddt_only_n_steps: 0
 
 data:
   train_cutsets:
@@ -38,12 +23,6 @@ data:
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-100_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_train-clean-360_noisy_30s.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_custom_cutset_train-3mix.jsonl.gz
-  # Weights: notsofar1/ami/alimeeting-mdm at 6 each (real multi-speaker meetings, as in
-  # dicow_v3). AISHELL-4's 3 train splits (L/M/S) share 2 each so their combined weight
-  # (~6) matches a single real-meeting dataset rather than tripling it. FastMSS gets an
-  # intermediate weight (3): synthetic, but built for realistic conversational
-  # turn-taking/overlap, so weighted above the plain additive librimix/librispeechmix
-  # mixtures (1 each, unchanged from dicow_v3). Adjust to taste.
   dataset_weights:
     - 6
     - 6
@@ -51,7 +30,7 @@ data:
     - 2
     - 2
     - 2
-    - 3
+    - 2
     - 1
     - 1
     - 1
@@ -59,13 +38,12 @@ data:
   - ${oc.env:MANIFEST_DIR}/notsofar1/notsofar1_sdm_eval_set_240629.1_eval_small_with_GT_cutset.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-sdm_cutset_test.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/ami/ami-ihm-mix_cutset_test.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/ali_meeting/alimeeting-mdm_cutset_test_downmix.jsonl.gz
-  - ${oc.env:MANIFEST_DIR}/aishell4/aishell4_cutset_test_downmix.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/ali_meeting/alimeeting-mdm_cutset_test_downmix_break_to_chars.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/aishell4/aishell4_cutset_test_downmix_break_to_chars.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri2mix_test-clean_noisy.jsonl.gz
-#  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean.jsonl.gz
-#  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean_noisy.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean.jsonl.gz
+  - ${oc.env:MANIFEST_DIR}/librimix/librimix_cutset_libri3mix_test-clean_noisy.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-1mix.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-2mix.jsonl.gz
   - ${oc.env:MANIFEST_DIR}/librispeechmix/librispeechmix_cutset_test-clean-3mix.jsonl.gz
-  # dev_cutsets inherited from dicow_v3 (notsofar1 dev split)
