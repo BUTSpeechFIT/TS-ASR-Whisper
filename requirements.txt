@@ -17,9 +17,8 @@ safetensors
 scipy==1.14.1
 simplejson==3.20.1
 soundfile==0.12.1
---extra-index-url https://download.pytorch.org/whl/cu130
 torch==2.13.0
-torchaudio==2.11.0+cu130
+torchaudio==2.11.0
 tqdm==4.66.5
 transformers==4.55.0
 wandb==0.28.1
