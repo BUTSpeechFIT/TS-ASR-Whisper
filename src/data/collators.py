@@ -185,6 +185,19 @@ class DataCollator:
                 x) in self.tokenizer.upper_cased_tokens else x)
         return decoder_input_ids, labels_tensor, upp_labels
 
+    @staticmethod
+    def pad_stno_masks(inputs: List[Dict[str, Union[List[int], torch.Tensor]]]) -> torch.Tensor:
+        """Pad per-sample (T, 4) STNO masks into a (B, 4, T) batch.
+
+        Frames added by padding are marked as silence (channel 0), so FDDT treats them the
+        same way it treats the silent tail of a short recording.
+        """
+        stno_masks = pad_sequence([sample['stno_mask'] for sample in inputs], batch_first=True).transpose(1, -1)
+        orig_stno_masks_len = [sample['stno_mask'].shape[0] for sample in inputs]
+        for i, _ in enumerate(stno_masks):
+            stno_masks[i][0, orig_stno_masks_len[i]:] = 1
+        return stno_masks
+
     def __call__(self, inputs: List[Dict[str, Union[List[int], torch.Tensor]]], nested=False) -> BatchFeature:
         longform = [sample['is_long_form'] for sample in inputs]
         if len(set(longform)) != 1:
@@ -198,11 +211,7 @@ class DataCollator:
             feats= feats.transpose(1, -1)
         masks = pad_sequence([sample['attention_mask'] for sample in inputs], batch_first=True)
 
-        stno_masks = pad_sequence([sample['stno_mask'] for sample in inputs], batch_first=True).transpose(1,-1)
-
-        orig_stno_masks_len = [sample['stno_mask'].shape[0] for sample in inputs]
-        for i, sample in enumerate(stno_masks):
-            stno_masks[i][0, orig_stno_masks_len[i]:] = 1
+        stno_masks = self.pad_stno_masks(inputs)
 
         batch = BatchFeature({'input_features': feats, 'attention_mask': masks, 'stno_mask': stno_masks})
 
@@ -287,6 +296,12 @@ class DataCollatorForPretraining(DataCollator):
             sample['attention_mask'] for sample in inputs], batch_first=True)
 
         batch = BatchFeature({'input_features': feats, 'attention_mask': masks})
+
+        # FDDT needs the STNO mask; without it DiCoWEncoder.forward gets stno_mask=None and
+        # dies inside FDDT. Emit it whenever the dataset provides one so encoder pretraining
+        # works with use_fddt enabled.
+        if all('stno_mask' in sample for sample in inputs):
+            batch['stno_mask'] = self.pad_stno_masks(inputs)
 
         batch["labels"] = labels["input_ids"].masked_fill(labels.attention_mask.ne(1), -100)
         if (batch["labels"][:, 0] == self.bos_token_id).all().cpu().item():

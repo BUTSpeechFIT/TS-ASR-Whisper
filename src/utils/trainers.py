@@ -53,11 +53,19 @@ class CustomTrainerEncoder(Trainer):
         if self.chunk_length is not None and length > self.chunk_length:
             feats = inputs[model.main_input_name].split(self.chunk_length, dim=-1)
             att_masks = inputs['attention_mask'].split(self.chunk_length, dim=-1)
-            inputs_ = zip(feats, att_masks)
+            # the STNO mask lives at encoder-frame rate (half the mel frame rate), so it has to
+            # be split at half the chunk length to stay aligned with its window
+            stno_mask = inputs.get('stno_mask')
+            stno_masks = (stno_mask.split(self.chunk_length // 2, dim=-1) if stno_mask is not None
+                          else [None] * len(feats))
             logits = []
-            for inputs_local, mask in inputs_:
+            for inputs_local, mask, stno in zip(feats, att_masks, stno_masks):
+                chunk_inputs = {model.main_input_name: inputs_local, "attention_mask": mask,
+                                'return_logits': True}
+                if stno is not None:
+                    chunk_inputs['stno_mask'] = stno
                 logits.append(super().prediction_step(
-                    model, {model.main_input_name: inputs_local, "attention_mask": mask, 'return_logits': True}, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs
+                    model, chunk_inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs
                 )[1][0])
             logits = torch.concat(logits, dim=1)
 
