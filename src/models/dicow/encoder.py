@@ -2,9 +2,12 @@ import torch
 from torch import nn
 from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput
 from transformers.models.whisper.modeling_whisper import WhisperEncoder, WhisperEncoderLayer, WhisperAttention
+from transformers.utils import logging
 from .FDDT import FDDT
 from .config import DiCoWConfig
 from .layers import CustomLinear, CustomDiagonalLinear, Gate, SpeakerCommunicationBlock
+
+logger = logging.get_logger("transformers")
 
 
 class DiCoWEncoder(WhisperEncoder):
@@ -105,19 +108,57 @@ class DiCoWEncoder(WhisperEncoder):
             hidden_states = self.subsample_conv2(self.subsample_conv1(hidden_states.transpose(1, 2))).transpose(1, 2)
         return hidden_states
 
-    def get_loss(self, logits, labels):
+    def encoder_to_ctc_lengths(self, encoder_lengths):
+        """Map encoder-frame lengths (50 Hz, 1500 per 30s window) to CTC frame lengths."""
+        if self.config.pre_ctc_sub_sample:
+            return (encoder_lengths + 3) // 4  # subsample_conv1 + subsample_conv2, k3/s2 each
+        return encoder_lengths
+
+    def get_ctc_output_lengths(self, mel_lengths):
+        """Map mel-frame lengths (100 Hz, 3000 per 30s window) to CTC frame lengths."""
+        return self.encoder_to_ctc_lengths((mel_lengths - 1) // 2 + 1)  # conv2, k3/s2
+
+    def get_ctc_input_lengths(self, attention_mask, batch_size, max_frames, device):
+        """Number of CTC frames per item that actually carry audio.
+
+        Without an attention mask this falls back to the full sequence, which makes CTC
+        align the target over the zero-padded tail as well. ``ctc_length_margin`` frames
+        are kept past the boundary: one CTC frame pools ~140ms of context when
+        `pre_ctc_sub_sample` is on, so the tail of the last word bleeds into the first
+        frame of the padded region and slicing exactly at the boundary would clip it.
+        """
+        if attention_mask is None:
+            return torch.full((batch_size,), fill_value=max_frames, device=device)
+        if attention_mask.shape[0] != batch_size:
+            raise ValueError(
+                f"attention_mask batch size ({attention_mask.shape[0]}) does not match the CTC logits batch size "
+                f"({batch_size})."
+            )
+        lengths = self.get_ctc_output_lengths(attention_mask.sum(-1).long())
+        return (lengths + self.config.ctc_length_margin).clamp(max=max_frames).to(device)
+
+    def get_loss(self, logits, labels, attention_mask=None):
         if labels.max() >= self.config.vocab_size:
             raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
         if self.config.remove_timestamps_from_ctc:
             labels = torch.nn.utils.rnn.pad_sequence([label[label < self.first_task_token] for label in labels],
                                                      padding_value=-100).T
-        input_lengths = torch.full((logits.shape[0],), fill_value=logits.shape[1],
-                                   device=logits.device)
+        input_lengths = self.get_ctc_input_lengths(attention_mask, logits.shape[0], logits.shape[1], logits.device)
 
         # assuming that padded tokens are filled with -100
         # when not being attended to
         labels_mask = labels >= 0
         target_lengths = labels_mask.sum(-1)
+
+        # zero_infinity below silently drops targets that cannot fit in the available frames,
+        # which scoring only the unpadded region makes more likely -- so make it visible.
+        infeasible = (target_lengths > input_lengths).sum()
+        if infeasible > 0:
+            logger.warning_once(
+                f"{infeasible.item()}/{logits.shape[0]} CTC targets are longer than their input frames and "
+                f"contribute zero loss (zero_infinity). Consider remove_timestamps_from_ctc or disabling "
+                f"pre_ctc_sub_sample."
+            )
 
         # ctc_loss doesn't support fp16
         log_probs = nn.functional.log_softmax(logits, dim=-1, dtype=torch.float32).transpose(0, 1)

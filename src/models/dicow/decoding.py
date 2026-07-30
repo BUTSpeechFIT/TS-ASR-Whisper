@@ -4,6 +4,8 @@ import pandas as pd
 import torch
 from transformers import LogitsProcessor, PreTrainedTokenizer
 
+LOG_ZERO = -1e10
+
 
 class CTCPrefixScore(object):
     """Compute CTC label sequence scores
@@ -17,7 +19,7 @@ class CTCPrefixScore(object):
     """
 
     def __init__(self, x, blank, eos):
-        self.logzero = -1e10
+        self.logzero = LOG_ZERO
         self.blank = blank
         self.eos = eos
         self.input_length = x.shape[1]
@@ -184,6 +186,16 @@ class CTCRescorerLogitsProcessor(LogitsProcessor):
 
         logits = torch.nn.functional.log_softmax(encoder_logits, dim=-1)
         logits[..., same_logits[:, 1]] = logits[..., same_logits[:, 0]]
+
+        # Frames past the end of the audio get no supervision during training (the CTC loss is
+        # computed over the unpadded region only), so whatever the head emits there is arbitrary.
+        # Force them to blank: for the prefix scorer this is equivalent to truncating the sequence,
+        # since blank-only frames contribute 0 to the forward probabilities.
+        if encoder_output_lens is not None:
+            padding = (torch.arange(logits.shape[1], device=logits.device)[None, :]
+                       >= encoder_output_lens.to(logits.device)[:, None])
+            logits[padding] = LOG_ZERO
+            logits[padding, blank_token_id] = 0.0
 
         self.logits = logits
 

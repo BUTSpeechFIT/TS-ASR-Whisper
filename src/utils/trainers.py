@@ -67,7 +67,9 @@ class CustomTrainerEncoder(Trainer):
                 model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys, **gen_kwargs
             )
             logits = output[1][0]
-        loss = self.model.get_loss(logits, labels)
+        # chunks are always full windows (features are padded to a multiple of the window), so
+        # the mask summed over all chunks maps exactly onto the concatenated logits
+        loss = self.model.get_loss(logits, labels, attention_mask=inputs.get('attention_mask'))
 
         output = (loss, logits, labels)
         return output
@@ -97,7 +99,7 @@ class CustomTrainerEncoder(Trainer):
                 labels = labels[:, 1:]
         labels[labels == self.processing_class.eos_token_id] = -100
 
-        loss = self.model.get_loss(outputs.logits, labels)
+        loss = self.model.get_loss(outputs.logits, labels, attention_mask=inputs.get('attention_mask'))
 
         return (loss, outputs) if return_outputs else loss
 

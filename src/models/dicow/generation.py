@@ -105,6 +105,11 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         kwargs["stno_mask"] = torch.cat(stno_masks, dim=0)
         self.stno_mask_seek = kwargs["stno_mask"]
 
+        # Real (non-padded) encoder frames of the current segment, for the CTC rescorer. The last
+        # segment of a recording is zero-padded up to num_frames_vad, and the CTC head is not
+        # trained on that region.
+        self.encoder_lens_seek = seek_num_frames[batch_idx_map[:cur_bsz]]
+
         if self.config.use_enrollments and "enrollments" in kwargs:
             for key in kwargs["enrollments"]:
                 kwargs["enrollments"][key] = kwargs["enrollments"][key][batch_idx_map]
@@ -221,6 +226,30 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
 
         return lang_ids
 
+    def get_ctc_rescorer_lens(self, enc_logits):
+        """CTC frames of the current segment that actually carry audio.
+
+        Mirrors the training-time masking in `DiCoWEncoder.get_loss`: the head is supervised only
+        up to the end of the audio (plus `ctc_length_margin`), so the rescorer must not score the
+        padded tail either. Falls back to the full sequence when the segment length is unknown.
+        """
+        max_frames = enc_logits.shape[1]
+        encoder_lens = getattr(self, "encoder_lens_seek", None)
+        if encoder_lens is None or encoder_lens.shape[0] != enc_logits.shape[0]:
+            if encoder_lens is not None:
+                logger.warning_once(
+                    f"Segment lengths ({encoder_lens.shape[0]}) do not match the CTC logits batch "
+                    f"({enc_logits.shape[0]}); rescoring the full padded sequence instead."
+                )
+            return torch.full((enc_logits.shape[0],), fill_value=max_frames, device=enc_logits.device)
+        encoder_lens = encoder_lens.to(enc_logits.device)
+        lens = self.get_encoder().encoder_to_ctc_lengths(encoder_lens.clamp(min=0))
+        lens = (lens + self.config.ctc_length_margin).clamp(max=max_frames)
+        # seek can run past the end of the audio, leaving a segment that is entirely padding.
+        # Length 0 is the right answer there -- every frame blank -- and the margin must not
+        # reintroduce frames of pure padding.
+        return torch.where(encoder_lens > 0, lens, torch.zeros_like(lens))
+
     def _get_logits_processor(
             self,
             generation_config: GenerationConfig,
@@ -249,14 +278,15 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
         )
         if hasattr(generation_config, "ctc_weight") and generation_config.ctc_weight > 0:
             enc_logits = self.encoder_logits
+            enc_logits_lens = self.get_ctc_rescorer_lens(enc_logits)
             if generation_config.num_beams <= 1:
                 processors.append(LogSoftmaxProcessor())
             else:
                 enc_logits = enc_logits.repeat_interleave(generation_config.num_beams, dim=0)
+                enc_logits_lens = enc_logits_lens.repeat_interleave(generation_config.num_beams, dim=0)
             self.ctc_rescorer = CTCRescorerLogitsProcessor(
                 enc_logits,
-                torch.full((enc_logits.shape[0],), fill_value=enc_logits.shape[1],
-                           device=enc_logits.device),
+                enc_logits_lens,
                 enc_logits.shape[-1] - 1,
                 generation_config.pad_token_id,
                 generation_config.eos_token_id,
@@ -609,6 +639,7 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
             kwargs_local,
         )
         self.stno_mask_seek = None
+        self.encoder_lens_seek = None
 
         return seek_sequences, seek_outputs, should_skip, do_condition_on_prev_tokens, model_output_type
 

@@ -27,6 +27,7 @@ class WhisperContainer:
             "use_pre_pos_fddt": model_args.use_pre_pos_fddt,
             "use_enrollments": data_args.use_enrollments,
             "pre_ctc_sub_sample": model_args.pre_ctc_sub_sample,
+            "ctc_length_margin": model_args.ctc_length_margin,
             "additional_layer": model_args.additional_layer,
             "additional_self_attention_layer": model_args.additional_self_attention_layer,
             "scb_layers": model_args.scb_layers,

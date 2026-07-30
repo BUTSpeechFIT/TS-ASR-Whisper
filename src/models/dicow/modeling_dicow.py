@@ -231,6 +231,7 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
         self.tokenizer = None
         self.stno_mask = None
         self.stno_mask_seek = None
+        self.encoder_lens_seek = None
         self.soft_label_creator = None
         self.post_init()
 
@@ -348,7 +349,7 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
                             enc_labels = enc_labels[:, 1:]
                     enc_labels[enc_labels == self.config.eos_token_id] = -100
 
-                ctc_loss = self.get_encoder().get_loss(enc_lm_logits, enc_labels)
+                ctc_loss = self.get_encoder().get_loss(enc_lm_logits, enc_labels, attention_mask=attention_mask)
                 loss = (1 - self.config.ctc_weight) * dec_loss + self.config.ctc_weight * ctc_loss
             else:
                 loss = dec_loss
@@ -369,5 +370,5 @@ class DiCoWForConditionalGeneration(DiCoWGenerationMixin, WhisperForConditionalG
             encoder_attentions=outputs.encoder_attentions,
         )
 
-    def _get_feat_extract_output_lengths(self, attention_mask: torch.LongTensor) -> torch.LongTensor:
-        return (self.model.get_encoder()._get_feat_extract_output_lengths(attention_mask) / 4).ceil()
+    def _get_feat_extract_output_lengths(self, input_lengths: torch.LongTensor) -> torch.LongTensor:
+        return self.model.get_encoder().get_ctc_output_lengths(input_lengths)

@@ -18,6 +18,7 @@ class DiCoWConfig(WhisperConfig):
             additional_layer: bool = False,
             additional_self_attention_layer: bool = False,
             pre_ctc_sub_sample: bool = False,
+            ctc_length_margin: int = 2,
             use_fddt: bool = True,
             fddt_is_diagonal: bool = True,
             fddt_bias_only: bool = False,
@@ -43,6 +44,7 @@ class DiCoWConfig(WhisperConfig):
         self.additional_layer = additional_layer
         self.additional_self_attention_layer = additional_self_attention_layer
         self.pre_ctc_sub_sample = pre_ctc_sub_sample
+        self.ctc_length_margin = ctc_length_margin
         self.use_fddt = use_fddt
         self.fddt_is_diagonal = fddt_is_diagonal
         self.fddt_bias_only = fddt_bias_only

@@ -281,8 +281,10 @@ class DataCollatorForPretraining(DataCollator):
                                 padding="longest", max_length=self.max_length, return_tensors="pt")
         feats = pad_sequence([
             sample['input_features'].squeeze().T for sample in inputs]).permute(1, 2, 0)
+        # batch_first instead of squeeze().mT: squeeze() also drops the batch dim when a batch
+        # holds a single sample (last partial batch), leaving a 1-D tensor that .mT rejects
         masks = pad_sequence([
-            sample['attention_mask'] for sample in inputs]).squeeze().mT
+            sample['attention_mask'] for sample in inputs], batch_first=True)
 
         batch = BatchFeature({'input_features': feats, 'attention_mask': masks})
 

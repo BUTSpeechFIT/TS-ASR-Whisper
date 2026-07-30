@@ -61,6 +61,10 @@ class ModelArguments:
         default=False, metadata={"help": "Whether to add additional self attention layer."}
     )
     pre_ctc_sub_sample: Optional[bool] = field(default=False, metadata={"help": "Whether to subsample encoder outputs."})
+    ctc_length_margin: Optional[int] = field(
+        default=2, metadata={"help": "Extra CTC frames scored past the end of the audio, to absorb the receptive "
+                                     "field of the subsampling convs."}
+    )
     whisper_model: Optional[str] = field(default="openai/whisper-small.en",
                                          metadata={"help": "Model to use for Whisper."})
     reinit_encoder_from: Optional[str] = field(default=False,
