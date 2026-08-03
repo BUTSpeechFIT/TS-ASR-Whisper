@@ -1,3 +1,5 @@
+import ctypes
+import gc
 from typing import Any, Union, Dict, List, Optional, Tuple
 
 import torch
@@ -121,6 +123,35 @@ class CustomTrainer(Seq2SeqTrainer):
         self.params_to_keep_frozen = params_to_keep_frozen
         self.metric_key_prefix = ""
 
+    def _use_spawn_workers(self, dataloader: DataLoader) -> DataLoader:
+        """Make DataLoader workers start via `spawn` instead of the platform default (`fork`).
+
+        By the time this DataLoader is first iterated, the model is already loaded and CUDA is
+        already initialized in this process. `fork`'d workers inherit that whole process image
+        via copy-on-write, and CPython's reference counting dirties (i.e. privately duplicates)
+        pages just by touching them -- so over a long run each worker's RSS creeps toward
+        duplicating the model/CUDA state it inherited, the same mechanism that was previously
+        duplicating the (now-lazy) training dataset. `spawn` starts each worker as a fresh
+        interpreter that only imports what it needs, so there's nothing inherited to leak.
+
+        `accelerator.prepare()` wraps the raw DataLoader in an adapter (`DataLoaderShard`/
+        `DataLoaderDispatcher`) that delegates attribute *reads* to `.base_dataloader` but not
+        writes, so the attribute has to be set on `.base_dataloader` directly, not the adapter.
+        `multiprocessing_context` is only consumed when the DataLoader is first iterated (worker
+        creation is lazy), so setting it here -- after construction -- is still in time.
+        """
+        if self.args.dataloader_num_workers <= 0:
+            return dataloader
+        target = getattr(dataloader, "base_dataloader", dataloader)
+        target.multiprocessing_context = "spawn"
+        return dataloader
+
+    def get_train_dataloader(self) -> DataLoader:
+        return self._use_spawn_workers(super().get_train_dataloader())
+
+    def get_eval_dataloader(self, eval_dataset=None) -> DataLoader:
+        return self._use_spawn_workers(super().get_eval_dataloader(eval_dataset))
+
     def _inner_training_loop(
             self, batch_size=None, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None
     ):
@@ -207,4 +238,15 @@ class CustomTrainer(Seq2SeqTrainer):
                                   if key != "source_language"}
             self.log(overall_stats_dict)
             output |= overall_stats_dict
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        # gc.collect() frees Python objects but glibc keeps the underlying heap arenas;
+        # malloc_trim actually hands them back, or RSS never drops after a big eval pass.
+        try:
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except OSError:
+            pass
+
         return output

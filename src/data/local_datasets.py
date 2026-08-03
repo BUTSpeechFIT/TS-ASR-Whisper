@@ -19,6 +19,7 @@ from transformers.utils import logging
 from transformers.models.whisper.tokenization_whisper import TO_LANGUAGE_CODE
 
 from data.augmentations import RandomBackgroundNoise
+from data.lazy_cutset import LazyCutReader
 from utils.general import round_nearest, get_cut_recording_id
 from utils.training_args import DataArguments
 
@@ -73,6 +74,14 @@ class TS_ASR_DatasetSuperclass:
 
         filtered_cutsets = []
         for cutset in cutsets:
+            if isinstance(cutset, LazyCutReader):
+                # Duration filtering already happened while building the lazy index (see
+                # LazyCutReader), so there's nothing left to eagerly re-materialize here.
+                if cutset.n_dropped > 0:
+                    logger.warning(f"Dropped {cutset.n_dropped} cut(s) with duration < 0.1s "
+                                   f"(would crash the feature extractor's STFT)")
+                filtered_cutsets.append(cutset)
+                continue
             kept = cutset.filter(lambda c: c.duration >= 0.1)
             n_dropped = len(cutset) - len(kept)
             if n_dropped > 0:
@@ -193,6 +202,11 @@ class TS_ASR_DatasetSuperclass:
                 # always be 1 per cut anyway, so this avoids an O(corpus size) pass that
                 # dominates dataset construction time for large corpora.
                 spk_per_cut = np.full(len(cutset), weight, dtype=np.int64)
+            elif isinstance(cutset, LazyCutReader):
+                # Already computed once while building the lazy index (LazyCutReader briefly
+                # deserializes each cut there too, but doesn't retain it) -- no need to
+                # re-materialize every cut again just to recount speakers.
+                spk_per_cut = cutset.spk_counts * weight
             else:
                 with ThreadPoolExecutor() as executor:
                     spk_per_cut = list(executor.map(self.get_number_of_speakers_from_monocut, cutset.cuts))
@@ -721,7 +735,7 @@ def resolve_break_to_chars_path(cut_path):
     return cut_path
 
 
-def load_cutsets(cutset_list, use_enrollments, use_prev_prompt=False):
+def load_cutsets(cutset_list, use_enrollments, use_prev_prompt=False, lazy=False):
     def assign_external_usage(cut):
         cut.use_external_enrollment = True
         return cut
@@ -733,7 +747,7 @@ def load_cutsets(cutset_list, use_enrollments, use_prev_prompt=False):
             cut_path = cut_path.replace("_external_enrollment", "")
             should_use_external = True
         cut_path = resolve_break_to_chars_path(cut_path)
-        cutset = lhotse.load_manifest(cut_path)
+        cutset = LazyCutReader(cut_path, min_duration=0.1) if lazy else lhotse.load_manifest(cut_path)
 
         if use_enrollments and should_use_external:
             cutset = cutset.map(assign_external_usage)

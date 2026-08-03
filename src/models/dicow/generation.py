@@ -43,6 +43,9 @@ class DiCoWGenerationMixin(WhisperForConditionalGeneration):
             self, inputs_tensor: torch.Tensor, model_kwargs, model_input_name, generation_config,
     ) -> Dict[str, Any]:
         # pylint: disable=no-memberva
+        # labels/upp_labels are decoder-only; HF's encoder-kwarg filtering can't drop them once
+        # modules_to_save wraps the encoder in a generic *args/**kwargs forward.
+        model_kwargs = {k: v for k, v in model_kwargs.items() if k not in ("labels", "upp_labels")}
         model_kwargs = super()._prepare_encoder_decoder_kwargs_for_generation(
             inputs_tensor, model_kwargs, model_input_name, generation_config
         )

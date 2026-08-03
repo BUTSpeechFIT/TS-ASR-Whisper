@@ -13,6 +13,8 @@ from transformers.utils import logging
 
 from data.collators import DataCollator
 from data.local_datasets import build_datasets, TS_ASR_Dataset, load_cutsets, LhotseLongFormDataset
+from peft.utils import ModulesToSaveWrapper
+
 from models.containers import WhisperContainer, get_optimizer
 from txt_norm import get_text_norm
 from utils.evaluation import compute_longform_metrics
@@ -50,9 +52,15 @@ class ModelTrainer:
         )
 
     def _load_training_cutsets(self):
-        """Load and prepare training cutsets."""
+        """Load and prepare training cutsets.
+
+        Lazily: training corpora are read on demand from disk (via LazyCutReader) instead of
+        being fully materialized into one big in-memory Cut graph, which is what DataLoader
+        workers were duplicating (CPython refcounting defeats fork's copy-on-write sharing on
+        large Python object graphs -- see the more_data worker-RSS investigation).
+        """
         train_cutsets = load_cutsets(self.data_args.train_cutsets, self.data_args.use_enrollments,
-                                     use_prev_prompt=self.data_args.use_prev_prompt)
+                                     use_prev_prompt=self.data_args.use_prev_prompt, lazy=True)
         return train_cutsets
 
     def _create_enrollment_cutset(self):
@@ -109,7 +117,10 @@ class ModelTrainer:
         if self.model_args.reinit_encoder_from:
             enc_state_dict = load_file(self.model_args.reinit_encoder_from)
             enc_state_dict_no_fddt = {k: v for k, v in enc_state_dict.items() if 'fddt' not in k}
-            logger.info(self.model.get_encoder().load_state_dict(enc_state_dict_no_fddt, strict=False))
+            encoder = self.model.get_encoder()
+            if isinstance(encoder, ModulesToSaveWrapper):
+                encoder = encoder.modules_to_save[encoder.active_adapters[0]]
+            logger.info(encoder.load_state_dict(enc_state_dict_no_fddt, strict=False))
 
         if self.model_args.reinit_from:
             state_dict = self._load_state_dict(self.model_args.reinit_from)
