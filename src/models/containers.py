@@ -1,7 +1,9 @@
+import os
 import re
 
 import torch
 from peft import LoraConfig, PeftModel, get_peft_model
+from safetensors.torch import load_file
 from transformers.models.whisper import WhisperFeatureExtractor, WhisperTokenizerFast
 from transformers.utils import logging
 
@@ -75,20 +77,64 @@ class WhisperContainer:
         self.model.set_tokenizer(self.tokenizer)
         self.model.config.forced_decoder_ids = None
 
-        if use_lora:
-            lora_config = LoraConfig(
-                r=16,  # LoRA rank (tune as needed)
-                lora_alpha=32,  # LoRA alpha (scaling)
-                target_modules=r".*decoder.*(q_proj|k_proj|v_proj|out_proj|fc1|fc2).*",
-                lora_dropout=0.0,
-                bias="none",
-                modules_to_save=['encoder']
-            )
+        # reinit_from may point at two very different things: a plain full-model checkpoint
+        # (keys like "model.decoder...", "proj_out.weight") or a previous LoRA run's adapter
+        # checkpoint (an "adapter_config.json" dir, keys already namespaced under
+        # "base_model.model...."). Those must be handled on opposite sides of the LoRA wrap
+        # below: a plain checkpoint has to land on the raw model before get_peft_model()
+        # renames every key (adding the base_model.model. prefix, nesting LoRA targets under
+        # base_layer, and splitting modules_to_save targets like the encoder into
+        # original_module/modules_to_save copies) -- loading it after wrap with strict=False
+        # would silently match nothing. An adapter checkpoint has to be handed to PEFT itself
+        # so it reconstructs the exact LoraConfig (rank, targets, modules_to_save) it was saved
+        # with, rather than us guessing at a hand-built one and manually load_state_dict-ing.
+        adapter_checkpoint = (
+            use_lora and model_args.reinit_from and
+            os.path.isdir(model_args.reinit_from) and
+            os.path.exists(os.path.join(model_args.reinit_from, "adapter_config.json"))
+        )
 
-            self.model = get_peft_model(self.model, lora_config)
+        if model_args.reinit_encoder_from:
+            enc_state_dict = load_file(model_args.reinit_encoder_from)
+            enc_state_dict_no_fddt = {k: v for k, v in enc_state_dict.items() if 'fddt' not in k}
+            logger.info(self.model.get_encoder().load_state_dict(enc_state_dict_no_fddt, strict=False))
+
+        if model_args.reinit_from and not adapter_checkpoint:
+            state_dict = self._load_state_dict(model_args.reinit_from)
+            state_dict['proj_out.weight'] = state_dict['model.decoder.embed_tokens.weight']
+            logger.info(f'Loading model weights from: {model_args.reinit_from}')
+            logger.info(self.model.load_state_dict(state_dict, strict=False))
+
+        if use_lora:
+            if adapter_checkpoint:
+                logger.info(f'Loading LoRA adapter from: {model_args.reinit_from}')
+                self.model = PeftModel.from_pretrained(self.model, model_args.reinit_from, is_trainable=True)
+            else:
+                lora_config = LoraConfig(
+                    r=16,  # LoRA rank (tune as needed)
+                    lora_alpha=32,  # LoRA alpha (scaling)
+                    target_modules=r".*decoder.*(q_proj|k_proj|v_proj|out_proj|fc1|fc2).*",
+                    lora_dropout=0.0,
+                    bias="none",
+                    modules_to_save=['encoder']
+                )
+
+                self.model = get_peft_model(self.model, lora_config)
 
         if params_to_keep_frozen_keywords is not None:
             self.freeze_by_keywords(params_to_keep_frozen_keywords)
+
+    @staticmethod
+    def _load_state_dict(path):
+        """Load state dictionary from a single safetensors file or a directory of them."""
+        if path.endswith('.safetensors'):
+            return load_file(path)
+
+        state_dict = {}
+        for file in os.listdir(path):
+            if file.endswith('.safetensors'):
+                state_dict.update(load_file(os.path.join(path, file)))
+        return state_dict
 
     def _init_ctc_head_from_decoder_embeddings(self):
         """Initialize the CTC head (encoder.lm_head) from the decoder's output token

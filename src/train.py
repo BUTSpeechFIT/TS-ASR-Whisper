@@ -2,18 +2,15 @@ import copy
 import gc
 import os
 from functools import reduce
-from typing import Dict, Any
 
 import lhotse
 import torch
-from safetensors.torch import load_file
 from transformers import EarlyStoppingCallback
 from transformers.trainer_pt_utils import get_model_param_count
 from transformers.utils import logging
 
 from data.collators import DataCollator
 from data.local_datasets import build_datasets, TS_ASR_Dataset, load_cutsets, LhotseLongFormDataset
-from peft.utils import ModulesToSaveWrapper
 
 from models.containers import WhisperContainer, get_optimizer
 from txt_norm import get_text_norm
@@ -111,34 +108,6 @@ class ModelTrainer:
         )
 
         return dev_datasets, eval_datasets
-
-    def _load_model_weights(self):
-        """Load pretrained model weights if specified."""
-        if self.model_args.reinit_encoder_from:
-            enc_state_dict = load_file(self.model_args.reinit_encoder_from)
-            enc_state_dict_no_fddt = {k: v for k, v in enc_state_dict.items() if 'fddt' not in k}
-            encoder = self.model.get_encoder()
-            if isinstance(encoder, ModulesToSaveWrapper):
-                encoder = encoder.modules_to_save[encoder.active_adapters[0]]
-            logger.info(encoder.load_state_dict(enc_state_dict_no_fddt, strict=False))
-
-        if self.model_args.reinit_from:
-            state_dict = self._load_state_dict(self.model_args.reinit_from)
-            state_dict['proj_out.weight'] = state_dict['model.decoder.embed_tokens.weight']
-            logger.info(f'Loading model weights from: {self.model_args.reinit_from}')
-            logger.info(self.model.load_state_dict(state_dict, strict=False))
-
-    def _load_state_dict(self, path: str) -> Dict[str, Any]:
-        """Load state dictionary from file or directory."""
-        if path.endswith('.safetensors'):
-            return load_file(path)
-
-        # Load all safetensors files in directory and merge
-        state_dict = {}
-        for file in os.listdir(path):
-            if file.endswith('.safetensors'):
-                state_dict.update(load_file(os.path.join(path, file)))
-        return state_dict
 
     def _log_model_parameters(self):
         """Log FDDT and SCB parameters."""
@@ -319,7 +288,6 @@ class ModelTrainer:
         self.model = self.container.model
         create_lower_uppercase_mapping(self.container.tokenizer)
         self._log_model_parameters()
-        self._load_model_weights()
         update_generation_config(self.model, self.training_args, self.decoding_args,
                                  predict_timestamps=self.data_args.use_timestamps)
 
